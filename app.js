@@ -1,3 +1,11 @@
+const SUPABASE_URL = "https://anlgfcltudysjnsipsmd.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
 async function testApp() {
   const { data, error } = await supabase
     .from("stalls")
