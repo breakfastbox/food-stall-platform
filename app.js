@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://anlgfcltudysjnsipsmd.supabase.co";
+const SUPABASE_URL = "anlgfcltudysjnsipsmd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
 
 const supabaseClient = window.supabase.createClient(
@@ -21,4 +21,3 @@ async function testApp() {
   document.getElementById("message").textContent =
     "Supabase connected successfully!";
 }
-```
