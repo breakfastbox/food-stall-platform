@@ -22,4 +22,3 @@ async function testApp() {
   document.getElementById("message").textContent =
     "Supabase connected successfully!";
 }
-```
