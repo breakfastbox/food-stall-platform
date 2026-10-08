@@ -114,13 +114,62 @@
 
       <section class="panel">
 
-        <h2>Menu</h2>
+  <h2>Add Menu Item</h2>
 
-        <div id="menuList">
-          Loading menu...
-        </div>
+  <input
+    type="text"
+    id="itemName"
+    placeholder="Food item name"
+  >
 
-      </section>
+  <textarea
+    id="itemDescription"
+    placeholder="Description"
+  ></textarea>
+
+  <input
+    type="number"
+    id="itemPrice"
+    placeholder="Price"
+    min="0"
+    step="0.01"
+  >
+
+  <input
+    type="text"
+    id="itemImage"
+    placeholder="Photo URL (optional)"
+  >
+
+  <label>
+    <input
+      type="checkbox"
+      id="itemAvailable"
+      checked
+    >
+    Available
+  </label>
+
+  <br><br>
+
+  <button onclick="addMenuItem()">
+    Add Menu Item
+  </button>
+
+  <p id="menuMessage"></p>
+
+</section>
+
+
+<section class="panel">
+
+  <h2>Menu</h2>
+
+  <div id="menuList">
+    Loading menu...
+  </div>
+
+</section>
 
     </main>
 
