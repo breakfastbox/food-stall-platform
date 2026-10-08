@@ -17,13 +17,15 @@ async function loginAdmin() {
 
   loginMessage.textContent = "Logging in...";
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
+  const { data, error } =
+    await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
   if (error) {
-    loginMessage.textContent = "Login failed: " + error.message;
+    loginMessage.textContent =
+      "Login failed: " + error.message;
     return;
   }
 
@@ -42,7 +44,6 @@ async function logoutAdmin() {
 
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("loginBox").style.display = "block";
-
 }
 
 
@@ -55,6 +56,7 @@ async function loadStalls() {
     )
     .order("created_at", { ascending: false });
 
+
   if (error) {
 
     console.error(error);
@@ -66,7 +68,8 @@ async function loadStalls() {
   }
 
 
-  document.getElementById("totalStalls").textContent = data.length;
+  document.getElementById("totalStalls").textContent =
+    data.length;
 
   document.getElementById("activeStalls").textContent =
     data.filter(stall => stall.status === "active").length;
@@ -78,44 +81,102 @@ async function loadStalls() {
     data.filter(stall => stall.status === "suspended").length;
 
 
-  const stallList = document.getElementById("stallList");
+  const stallList =
+    document.getElementById("stallList");
 
 
   if (data.length === 0) {
 
-    stallList.textContent = "No stalls found.";
+    stallList.textContent =
+      "No stalls found.";
 
     return;
   }
 
 
-  stallList.innerHTML = data.map(stall => `
+  stallList.innerHTML = data.map(stall => {
 
-    <div class="stall">
+    const action =
+      stall.status === "suspended"
+        ? "Activate"
+        : "Suspend";
 
-      <h3>${stall.name}</h3>
 
-      <p>
-        <strong>Owner:</strong>
-        ${stall.owner_name || "Not added"}
-      </p>
+    const newStatus =
+      stall.status === "suspended"
+        ? "active"
+        : "suspended";
 
-      <p>
-        <strong>Phone:</strong>
-        ${stall.phone || "Not added"}
-      </p>
 
-      <p>
-        <strong>Address:</strong>
-        ${stall.address || "Not added"}
-      </p>
+    return `
 
-      <span class="status">
-        ${stall.status}
-      </span>
+      <div class="stall">
 
-    </div>
+        <h3>${stall.name}</h3>
 
-  `).join("");
+        <p>
+          <strong>Owner:</strong>
+          ${stall.owner_name || "Not added"}
+        </p>
 
+        <p>
+          <strong>Phone:</strong>
+          ${stall.phone || "Not added"}
+        </p>
+
+        <p>
+          <strong>Address:</strong>
+          ${stall.address || "Not added"}
+        </p>
+
+        <span class="status">
+          ${stall.status}
+        </span>
+
+        <br><br>
+
+        <button
+          onclick="changeStallStatus('${stall.id}', '${newStatus}')"
+        >
+          ${action}
+        </button>
+
+      </div>
+
+    `;
+
+  }).join("");
+}
+
+
+async function changeStallStatus(stallId, newStatus) {
+
+  const { error } = await supabaseClient
+    .from("stalls")
+    .update({
+      status: newStatus
+    })
+    .eq("id", stallId);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Unable to change stall status: " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  alert(
+    "Stall status changed to " +
+    newStatus
+  );
+
+
+  loadStalls();
 }
