@@ -239,7 +239,7 @@ async function loadStallDashboard() {
   }
 
 
-  menuList.innerHTML = menuItems.map(item => `
+menuList.innerHTML = menuItems.map(item => `
 
     <div class="stall">
 
@@ -252,6 +252,14 @@ async function loadStallDashboard() {
       <span class="status">
         ${item.is_available ? "Available" : "Unavailable"}
       </span>
+
+      <br><br>
+
+      <button
+        onclick="toggleMenuItem('${item.id}', ${item.is_available})"
+      >
+        ${item.is_available ? "Mark Unavailable" : "Mark Available"}
+      </button>
 
     </div>
 
@@ -368,6 +376,31 @@ async function addMenuItem() {
   document.getElementById("itemPrice").value = "";
   document.getElementById("itemImage").value = "";
   document.getElementById("itemAvailable").checked = true;
+
+
+  loadStallDashboard();
+}
+async function toggleMenuItem(itemId, currentStatus) {
+
+  const { error } = await supabaseClient
+    .from("menu_items")
+    .update({
+      is_available: !currentStatus
+    })
+    .eq("id", itemId);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Unable to change item availability: " +
+      error.message
+    );
+
+    return;
+  }
 
 
   loadStallDashboard();
