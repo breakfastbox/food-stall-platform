@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Stall Dashboard - Food Stall Platform</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="dashboard">
+
+    <header class="topbar">
+      <div>
+        <h1 id="stallName">Stall Dashboard</h1>
+        <p>Food Stall Management</p>
+      </div>
+
+      <button onclick="logoutAdmin()">Logout</button>
+    </header>
+
+
+    <main>
+
+      <section class="welcome">
+
+        <h2>Welcome 👋</h2>
+
+        <p>
+          Manage your menu, orders, stock and business.
+        </p>
+
+      </section>
+
+
+      <section class="stats">
+
+        <div class="card">
+          <h3>Today's Orders</h3>
+          <strong id="todayOrders">0</strong>
+        </div>
+
+        <div class="card">
+          <h3>Today's Sales</h3>
+          <strong id="todaySales">₹0</strong>
+        </div>
+
+        <div class="card">
+          <h3>Menu Items</h3>
+          <strong id="menuCount">0</strong>
+        </div>
+
+        <div class="card">
+          <h3>Stall Status</h3>
+          <strong id="stallStatus">Loading...</strong>
+        </div>
+
+      </section>
+
+
+      <section class="panel">
+
+        <div class="panel-header">
+
+          <h2>Quick Actions</h2>
+
+        </div>
+
+
+        <div class="stats">
+
+          <div class="card">
+            <h3>🍽️ Menu</h3>
+            <p>Add and manage food items.</p>
+            <button onclick="openMenu()">
+              Manage Menu
+            </button>
+          </div>
+
+
+          <div class="card">
+            <h3>📦 Orders</h3>
+            <p>View and manage customer orders.</p>
+            <button onclick="openOrders()">
+              View Orders
+            </button>
+          </div>
+
+
+          <div class="card">
+            <h3>📊 Reports</h3>
+            <p>View sales and business reports.</p>
+            <button onclick="openReports()">
+              View Reports
+            </button>
+          </div>
+
+
+          <div class="card">
+            <h3>📦 Stock</h3>
+            <p>Manage your inventory.</p>
+            <button onclick="openInventory()">
+              Manage Stock
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <section class="panel">
+
+        <h2>Menu</h2>
+
+        <div id="menuList">
+          Loading menu...
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
