@@ -180,3 +180,100 @@ async function changeStallStatus(stallId, newStatus) {
 
   loadStalls();
 }
+async function loadStallDashboard() {
+
+  const { data: stalls, error } = await supabaseClient
+    .from("stalls")
+    .select("id, name, status")
+    .eq("name", "Breakfast Box")
+    .limit(1);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (!stalls || stalls.length === 0) {
+    document.getElementById("stallName").textContent =
+      "Stall not found";
+    return;
+  }
+
+  const stall = stalls[0];
+
+  document.getElementById("stallName").textContent =
+    stall.name;
+
+  document.getElementById("stallStatus").textContent =
+    stall.status;
+
+
+  const { data: menuItems, error: menuError } =
+    await supabaseClient
+      .from("menu_items")
+      .select("id, name, price, is_available")
+      .eq("stall_id", stall.id)
+      .order("created_at", { ascending: true });
+
+
+  if (menuError) {
+    console.error(menuError);
+    return;
+  }
+
+
+  document.getElementById("menuCount").textContent =
+    menuItems.length;
+
+
+  const menuList =
+    document.getElementById("menuList");
+
+
+  if (menuItems.length === 0) {
+
+    menuList.innerHTML =
+      "<p>No menu items added yet.</p>";
+
+    return;
+  }
+
+
+  menuList.innerHTML = menuItems.map(item => `
+
+    <div class="stall">
+
+      <h3>${item.name}</h3>
+
+      <p>
+        Price: ₹${item.price}
+      </p>
+
+      <span class="status">
+        ${item.is_available ? "Available" : "Unavailable"}
+      </span>
+
+    </div>
+
+  `).join("");
+}
+
+
+function openMenu() {
+  alert("Menu Management is coming next.");
+}
+
+
+function openOrders() {
+  alert("Order Management is coming next.");
+}
+
+
+function openReports() {
+  alert("Reports are coming next.");
+}
+
+
+function openInventory() {
+  alert("Inventory Management is coming next.");
+}
