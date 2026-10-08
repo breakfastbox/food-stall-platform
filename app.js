@@ -270,7 +270,11 @@ menuList.innerHTML = menuItems.map(item => `
       >
         ${item.is_available ? "Mark Unavailable" : "Mark Available"}
       </button>
-
+<button
+  onclick="deleteMenuItem('${item.id}', '${item.name.replace(/'/g, "\\'")}')"
+>
+  Delete
+</button>
     </div>
 
   `).join("");
@@ -469,6 +473,43 @@ async function editMenuItem(itemId) {
 
 
   alert("Menu item updated successfully!");
+
+  loadStallDashboard();
+}
+async function deleteMenuItem(itemId, itemName) {
+
+  const confirmed = confirm(
+    "Are you sure you want to delete " +
+    itemName +
+    "?"
+  );
+
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  const { error } = await supabaseClient
+    .from("menu_items")
+    .delete()
+    .eq("id", itemId);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Unable to delete item: " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  alert("Menu item deleted successfully!");
 
   loadStallDashboard();
 }
