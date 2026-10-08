@@ -241,9 +241,13 @@ async function loadStallDashboard() {
 
 menuList.innerHTML = menuItems.map(item => `
 
-    <div class="stall">
+    <div class="stall" id="menu-item-${item.id}">
 
       <h3>${item.name}</h3>
+
+      <p>
+        ${item.description || "No description"}
+      </p>
 
       <p>
         Price: ₹${item.price}
@@ -254,6 +258,12 @@ menuList.innerHTML = menuItems.map(item => `
       </span>
 
       <br><br>
+
+      <button
+        onclick="editMenuItem('${item.id}')"
+      >
+        Edit
+      </button>
 
       <button
         onclick="toggleMenuItem('${item.id}', ${item.is_available})"
@@ -402,6 +412,63 @@ async function toggleMenuItem(itemId, currentStatus) {
     return;
   }
 
+
+  loadStallDashboard();
+}
+async function editMenuItem(itemId) {
+
+  const newName =
+    prompt("Enter new item name:");
+
+  if (newName === null) {
+    return;
+  }
+
+
+  const newPrice =
+    prompt("Enter new price:");
+
+  if (newPrice === null) {
+    return;
+  }
+
+
+  const price = Number(newPrice);
+
+
+  if (!newName.trim() || isNaN(price) || price < 0) {
+
+    alert(
+      "Please enter a valid name and price."
+    );
+
+    return;
+  }
+
+
+  const { error } = await supabaseClient
+    .from("menu_items")
+    .update({
+      name: newName.trim(),
+      price: price
+    })
+    .eq("id", itemId);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Unable to update item: " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  alert("Menu item updated successfully!");
 
   loadStallDashboard();
 }
