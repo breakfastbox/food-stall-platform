@@ -280,3 +280,95 @@ function openInventory() {
 if (window.location.pathname.endsWith("stall.html")) {
   loadStallDashboard();
 }
+async function addMenuItem() {
+
+  const name =
+    document.getElementById("itemName").value.trim();
+
+  const description =
+    document.getElementById("itemDescription").value.trim();
+
+  const price =
+    Number(document.getElementById("itemPrice").value);
+
+  const imageUrl =
+    document.getElementById("itemImage").value.trim();
+
+  const isAvailable =
+    document.getElementById("itemAvailable").checked;
+
+  const message =
+    document.getElementById("menuMessage");
+
+
+  if (!name) {
+    message.textContent = "Please enter the food item name.";
+    return;
+  }
+
+
+  if (price < 0 || isNaN(price)) {
+    message.textContent = "Please enter a valid price.";
+    return;
+  }
+
+
+  message.textContent = "Adding menu item...";
+
+
+  const { data: stalls, error: stallError } =
+    await supabaseClient
+      .from("stalls")
+      .select("id")
+      .eq("name", "Breakfast Box")
+      .limit(1);
+
+
+  if (stallError || !stalls || stalls.length === 0) {
+
+    message.textContent =
+      "Breakfast Box stall could not be found.";
+
+    return;
+  }
+
+
+  const stallId = stalls[0].id;
+
+
+  const { error } = await supabaseClient
+    .from("menu_items")
+    .insert({
+      stall_id: stallId,
+      name: name,
+      description: description || null,
+      price: price,
+      image_url: imageUrl || null,
+      is_available: isAvailable
+    });
+
+
+  if (error) {
+
+    console.error(error);
+
+    message.textContent =
+      "Unable to add item: " + error.message;
+
+    return;
+  }
+
+
+  message.textContent =
+    "Menu item added successfully!";
+
+
+  document.getElementById("itemName").value = "";
+  document.getElementById("itemDescription").value = "";
+  document.getElementById("itemPrice").value = "";
+  document.getElementById("itemImage").value = "";
+  document.getElementById("itemAvailable").checked = true;
+
+
+  loadStallDashboard();
+}
