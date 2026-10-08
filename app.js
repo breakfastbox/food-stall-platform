@@ -277,3 +277,6 @@ function openReports() {
 function openInventory() {
   alert("Inventory Management is coming next.");
 }
+if (window.location.pathname.endsWith("stall.html")) {
+  loadStallDashboard();
+}
