@@ -301,6 +301,7 @@ function openInventory() {
 }
 if (window.location.pathname.endsWith("stall.html")) {
   loadStallDashboard();
+  loadMenuCategories();
 }
 async function addMenuCategory() {
 
@@ -312,6 +313,43 @@ async function addMenuCategory() {
     return;
   }
 
+async function loadMenuCategories() {
+  const categorySelect = document.getElementById("itemCategory");
+
+  if (!categorySelect) return;
+
+  categorySelect.innerHTML =
+    '<option value="">Select a category</option>';
+
+  const { data: stall, error: stallError } = await supabaseClient
+    .from("stalls")
+    .select("id")
+    .eq("name", "Breakfast Box")
+    .single();
+
+  if (stallError) {
+    console.error("Could not find stall:", stallError);
+    return;
+  }
+
+  const { data: categories, error } = await supabaseClient
+    .from("menu_categories")
+    .select("id, name")
+    .eq("stall_id", stall.id)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Could not load categories:", error);
+    return;
+  }
+
+  categories.forEach(category => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.name;
+    categorySelect.appendChild(option);
+  });
+}
   message.textContent = "Adding category...";
 
   // Find Breakfast Box stall
