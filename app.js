@@ -556,18 +556,30 @@ async function editMenuItem(itemId) {
 
   loadStallDashboard();
 }
+
 async function deleteMenuItem(itemId, itemName) {
-
   const confirmed = confirm(
-    "Are you sure you want to delete " +
-    itemName +
-    "?"
+    "Are you sure you want to delete " + itemName + "?"
   );
-
 
   if (!confirmed) {
     return;
   }
+
+  const { error } = await supabaseClient
+    .from("menu_items")
+    .delete()
+    .eq("id", itemId);
+
+  if (error) {
+    console.error(error);
+    alert("Unable to delete item: " + error.message);
+    return;
+  }
+
+  alert("Menu item deleted successfully!");
+  await loadStallDashboard();
+}
 async function loadMenuCategories() {
   const categorySelect = document.getElementById("itemCategory");
 
