@@ -180,104 +180,118 @@ async function changeStallStatus(stallId, newStatus) {
 
   loadStalls();
 }
-async function loadStallDashboard() {
 
+async function loadStallDashboard() {
   const { data: stalls, error } = await supabaseClient
     .from("stalls")
     .select("id, name, status")
     .eq("name", "Breakfast Box")
     .limit(1);
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  if (!stalls || stalls.length === 0) {
-    document.getElementById("stallName").textContent =
-      "Stall not found";
+  if (error || !stalls || stalls.length === 0) {
+    console.error(error || "Breakfast Box stall not found");
+    document.getElementById("stallName").textContent = "Stall not found";
     return;
   }
 
   const stall = stalls[0];
 
-  document.getElementById("stallName").textContent =
-    stall.name;
+  document.getElementById("stallName").textContent = stall.name;
+  document.getElementById("stallStatus").textContent = stall.status;
 
-  document.getElementById("stallStatus").textContent =
-    stall.status;
+  const { data: categories, error: categoryError } = await supabaseClient
+    .from("menu_categories")
+    .select("id, name, sort_order")
+    .eq("stall_id", stall.id)
+    .order("sort_order", { ascending: true });
 
+  if (categoryError) {
+    console.error("Could not load categories:", categoryError);
+    return;
+  }
 
-  const { data: menuItems, error: menuError } =
-    await supabaseClient
-      .from("menu_items")
-      .select("id, name, price, is_available")
-      .eq("stall_id", stall.id)
-      .order("created_at", { ascending: true });
-
+  const { data: menuItems, error: menuError } = await supabaseClient
+    .from("menu_items")
+    .select("id, name, description, price, is_available, category_id")
+    .eq("stall_id", stall.id)
+    .order("created_at", { ascending: true });
 
   if (menuError) {
-    console.error(menuError);
+    console.error("Could not load menu items:", menuError);
     return;
   }
 
+  document.getElementById("menuCount").textContent = menuItems.length;
 
-  document.getElementById("menuCount").textContent =
-    menuItems.length;
+  const menuList = document.getElementById("menuList");
 
-
-  const menuList =
-    document.getElementById("menuList");
-
-
-  if (menuItems.length === 0) {
-
-    menuList.innerHTML =
-      "<p>No menu items added yet.</p>";
-
+  if (!menuItems || menuItems.length === 0) {
+    menuList.innerHTML = "<p>No menu items added yet.</p>";
     return;
   }
 
+  const categoryGroups = (categories || []).map(category => {
+    const items = menuItems.filter(
+      item => item.category_id === category.id
+    );
 
-menuList.innerHTML = menuItems.map(item => `
+    return `
+      <section class="menu-category">
+        <h2>${category.name}</h2>
+        ${items.map(item => `
+          <div class="stall" id="menu-item-${item.id}">
+            <h3>${item.name}</h3>
+            <p>${item.description || "No description"}</p>
+            <p>Price: ₹${item.price}</p>
+            <span class="status">
+              ${item.is_available ? "Available" : "Unavailable"}
+            </span>
+            <br><br>
+            <button onclick="editMenuItem('${item.id}')">Edit</button>
+            <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
+              ${item.is_available ? "Mark Unavailable" : "Mark Available"}
+            </button>
+            <button onclick="deleteMenuItem('${item.id}', ${JSON.stringify(item.name).replace(/</g, "\\u003c")})">
+              Delete
+            </button>
+          </div>
+        `).join("")}
+      </section>
+    `;
+  });
 
-    <div class="stall" id="menu-item-${item.id}">
+  const uncategorizedItems = menuItems.filter(
+    item => !item.category_id ||
+      !(categories || []).some(category => category.id === item.category_id)
+  );
 
-      <h3>${item.name}</h3>
+  if (uncategorizedItems.length > 0) {
+    categoryGroups.push(`
+      <section class="menu-category">
+        <h2>Uncategorized</h2>
+        ${uncategorizedItems.map(item => `
+          <div class="stall" id="menu-item-${item.id}">
+            <h3>${item.name}</h3>
+            <p>${item.description || "No description"}</p>
+            <p>Price: ₹${item.price}</p>
+            <span class="status">
+              ${item.is_available ? "Available" : "Unavailable"}
+            </span>
+            <br><br>
+            <button onclick="editMenuItem('${item.id}')">Edit</button>
+            <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
+              ${item.is_available ? "Mark Unavailable" : "Mark Available"}
+            </button>
+            <button onclick="deleteMenuItem('${item.id}', ${JSON.stringify(item.name).replace(/</g, "\\u003c")})">
+              Delete
+            </button>
+          </div>
+        `).join("")}
+      </section>
+    `);
+  }
 
-      <p>
-        ${item.description || "No description"}
-      </p>
-
-      <p>
-        Price: ₹${item.price}
-      </p>
-
-      <span class="status">
-        ${item.is_available ? "Available" : "Unavailable"}
-      </span>
-
-      <br><br>
-
-      <button
-        onclick="editMenuItem('${item.id}')"
-      >
-        Edit
-      </button>
-
-      <button
-        onclick="toggleMenuItem('${item.id}', ${item.is_available})"
-      >
-        ${item.is_available ? "Mark Unavailable" : "Mark Available"}
-      </button>
-<button
-  onclick="deleteMenuItem('${item.id}', '${item.name.replace(/'/g, "\\'")}')"
->
-  Delete
-</button>
-    </div>
-
-  `).join("");
+  menuList.innerHTML = categoryGroups.join("");
 }
 
 
