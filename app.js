@@ -532,6 +532,7 @@ async function deleteMenuItem(itemId, itemName) {
   alert("Menu item deleted successfully!");
   await loadStallDashboard();
 }
+
 async function loadMenuCategories() {
   const categorySelect = document.getElementById("itemCategory");
 
@@ -551,26 +552,21 @@ async function loadMenuCategories() {
     return;
   }
 
-  const { error } = await supabaseClient
-    .from("menu_items")
-    .delete()
-    .eq("id", itemId);
-
+  const { data: categories, error } = await supabaseClient
+    .from("menu_categories")
+    .select("id, name")
+    .eq("stall_id", stall.id)
+    .order("sort_order", { ascending: true });
 
   if (error) {
-
-    console.error(error);
-
-    alert(
-      "Unable to delete item: " +
-      error.message
-    );
-
+    console.error("Could not load categories:", error);
     return;
   }
 
-
-  alert("Menu item deleted successfully!");
-
-  loadStallDashboard();
+  (categories || []).forEach(category => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.name;
+    categorySelect.appendChild(option);
+  });
 }
