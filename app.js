@@ -347,7 +347,8 @@ async function addMenuItem() {
 
   const imageUrl =
     document.getElementById("itemImage").value.trim();
-
+const categoryId =
+  document.getElementById("itemCategory").value;
   const isAvailable =
     document.getElementById("itemAvailable").checked;
 
@@ -392,15 +393,16 @@ async function addMenuItem() {
 
   const { error } = await supabaseClient
     .from("menu_items")
-    .insert({
-      stall_id: stallId,
-      name: name,
-      description: description || null,
-      price: price,
-      image_url: imageUrl || null,
-      is_available: isAvailable
-    });
-
+   
+.insert({
+  stall_id: stallId,
+  category_id: categoryId || null,
+  name: name,
+  description: description || null,
+  price: price,
+  image_url: imageUrl || null,
+  is_available: isAvailable
+});
 
   if (error) {
 
