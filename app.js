@@ -313,24 +313,7 @@ async function addMenuCategory() {
     return;
   }
 
-async function loadMenuCategories() {
-  const categorySelect = document.getElementById("itemCategory");
 
-  if (!categorySelect) return;
-
-  categorySelect.innerHTML =
-    '<option value="">Select a category</option>';
-
-  const { data: stall, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .single();
-
-  if (stallError) {
-    console.error("Could not find stall:", stallError);
-    return;
-  }
 
   const { data: categories, error } = await supabaseClient
     .from("menu_categories")
@@ -585,7 +568,24 @@ async function deleteMenuItem(itemId, itemName) {
   if (!confirmed) {
     return;
   }
+async function loadMenuCategories() {
+  const categorySelect = document.getElementById("itemCategory");
 
+  if (!categorySelect) return;
+
+  categorySelect.innerHTML =
+    '<option value="">Select a category</option>';
+
+  const { data: stall, error: stallError } = await supabaseClient
+    .from("stalls")
+    .select("id")
+    .eq("name", "Breakfast Box")
+    .single();
+
+  if (stallError) {
+    console.error("Could not find stall:", stallError);
+    return;
+  }
 
   const { error } = await supabaseClient
     .from("menu_items")
