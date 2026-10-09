@@ -333,55 +333,7 @@ async function addMenuCategory() {
     categorySelect.appendChild(option);
   });
 }
-  message.textContent = "Adding category...";
 
-  // Find Breakfast Box stall
-  const { data: stall, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .single();
-
-  if (stallError) {
-    console.error(stallError);
-    message.textContent = "Could not find the stall.";
-    return;
-  }
-
-  // Get the next sort order
-  const { data: lastCategory } = await supabaseClient
-    .from("menu_categories")
-    .select("sort_order")
-    .eq("stall_id", stall.id)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const nextSortOrder = lastCategory
-    ? lastCategory.sort_order + 1
-    : 1;
-
-  // Insert category
-  const { error } = await supabaseClient
-    .from("menu_categories")
-    .insert([
-      {
-        stall_id: stall.id,
-        name: categoryName,
-        sort_order: nextSortOrder
-      }
-    ]);
-
-  if (error) {
-    console.error(error);
-    message.textContent = "Error adding category.";
-    return;
-  }
-
-  message.textContent = "Category added successfully!";
-
-  document.getElementById("categoryName").value = "";
-}
 async function addMenuItem() {
 
   const name =
