@@ -313,6 +313,89 @@ function openReports() {
 function openInventory() {
   alert("Inventory Management is coming next.");
 }
+
+async function loadCategoriesForEditing() {
+  const select = document.getElementById("editCategorySelect");
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Select a category</option>';
+
+  const { data: stall, error: stallError } = await supabaseClient
+    .from("stalls")
+    .select("id")
+    .eq("name", "Breakfast Box")
+    .single();
+
+  if (stallError || !stall) {
+    console.error("Could not find Breakfast Box:", stallError);
+    return;
+  }
+
+  const { data: categories, error } = await supabaseClient
+    .from("menu_categories")
+    .select("id, name")
+    .eq("stall_id", stall.id)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Could not load categories:", error);
+    return;
+  }
+
+  (categories || []).forEach(category => {
+    const option = document.createElement("option");
+    option.value = category.id;
+    option.textContent = category.name;
+    select.appendChild(option);
+  });
+
+  select.onchange = () => {
+    const selected = categories.find(
+      category => category.id === select.value
+    );
+
+    document.getElementById("editCategoryName").value =
+      selected ? selected.name : "";
+  };
+}
+
+async function updateMenuCategory() {
+  const select = document.getElementById("editCategorySelect");
+  const nameInput = document.getElementById("editCategoryName");
+  const message = document.getElementById("editCategoryMessage");
+
+  const categoryId = select.value;
+  const newName = nameInput.value.trim();
+
+  if (!categoryId) {
+    message.textContent = "Please select a category.";
+    return;
+  }
+
+  if (!newName) {
+    message.textContent = "Please enter a category name.";
+    return;
+  }
+
+  message.textContent = "Saving category name...";
+
+  const { error } = await supabaseClient
+    .from("menu_categories")
+    .update({ name: newName })
+    .eq("id", categoryId);
+
+  if (error) {
+    console.error(error);
+    message.textContent = "Unable to update category: " + error.message;
+    return;
+  }
+
+  message.textContent = "Category name updated successfully!";
+
+  await loadCategoriesForEditing();
+  await loadMenuCategories();
+  await loadStallDashboard();
+}
 if (window.location.pathname.endsWith("stall.html")) {
   loadStallDashboard();
   loadMenuCategories();
