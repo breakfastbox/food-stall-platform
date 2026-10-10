@@ -352,7 +352,7 @@ async function loadOrders() {
       <h3>Order Token: ${order.token_number ?? "Not assigned"}</h3>
       <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
       <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
-      <p><strong>Subtotal:</strong> ₹${order.sub_total ?? 0}</p>
+      <p><strong>Subtotal:</strong> ₹${order.subtotal ?? 0}</p>
       <p><strong>Total:</strong> ₹${order.total_amount ?? 0}</p>
       <p><strong>Placed:</strong> ${
         order.created_at
@@ -428,7 +428,7 @@ async function loadOrders() {
 
   const { data: orders, error } = await supabaseClient
     .from("orders")
-    .select("id, token_number, order_status, payment_status, sub_total, total_amount, created_at")
+    .select("id, token_number, order_status, payment_status, subtotal, total_amount, created_at")
     .eq("stall_id", stalls[0].id)
     .order("created_at", { ascending: false });
 
@@ -450,7 +450,7 @@ async function loadOrders() {
       <h3>Order Token: ${order.token_number ?? "Not assigned"}</h3>
       <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
       <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
-      <p><strong>Subtotal:</strong> ₹${order.sub_total ?? 0}</p>
+      <p><strong>Subtotal:</strong> ₹${order.subtotal ?? 0}</p>
       <p><strong>Total:</strong> ₹${order.total_amount ?? 0}</p>
       <p><strong>Placed:</strong> ${order.created_at ? new Date(order.created_at).toLocaleString() : "Unknown"}</p>
       <label for="status-${order.id}">Update order status:</label>
