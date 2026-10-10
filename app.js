@@ -396,10 +396,13 @@ async function updateMenuCategory() {
   await loadMenuCategories();
   await loadStallDashboard();
 }
+
 if (window.location.pathname.endsWith("stall.html")) {
   loadStallDashboard();
   loadMenuCategories();
+  loadCategoriesForEditing();
 }
+
 async function addMenuCategory() {
 
   const categoryName = document.getElementById("categoryName").value.trim();
