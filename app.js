@@ -397,6 +397,65 @@ async function updateMenuCategory() {
   await loadStallDashboard();
 }
 
+async function deleteMenuCategory() {
+  const select = document.getElementById("editCategorySelect");
+  const message = document.getElementById("editCategoryMessage");
+
+  const categoryId = select.value;
+
+  if (!categoryId) {
+    message.textContent = "Please select a category first.";
+    return;
+  }
+
+  const confirmed = confirm(
+    "Are you sure you want to delete this category? " +
+    "Categories containing menu items cannot be deleted."
+  );
+
+  if (!confirmed) return;
+
+  message.textContent = "Checking category...";
+
+  const { data: items, error: itemsError } = await supabaseClient
+    .from("menu_items")
+    .select("id")
+    .eq("category_id", categoryId)
+    .limit(1);
+
+  if (itemsError) {
+    console.error(itemsError);
+    message.textContent =
+      "Could not check menu items: " + itemsError.message;
+    return;
+  }
+
+  if (items && items.length > 0) {
+    message.textContent =
+      "This category contains menu items. Move those items to another category before deleting it.";
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("menu_categories")
+    .delete()
+    .eq("id", categoryId);
+
+  if (error) {
+    console.error(error);
+    message.textContent =
+      "Unable to delete category: " + error.message;
+    return;
+  }
+
+  message.textContent = "Category deleted successfully!";
+  document.getElementById("editCategoryName").value = "";
+
+  await loadCategoriesForEditing();
+  await loadMenuCategories();
+  await loadStallDashboard();
+}
+
 if (window.location.pathname.endsWith("stall.html")) {
   loadStallDashboard();
   loadMenuCategories();
