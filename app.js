@@ -300,8 +300,9 @@ function openMenu() {
 }
 
 
+
 function openOrders() {
-  alert("Order Management is coming next.");
+  window.location.href = "orders.html";
 }
 
 
