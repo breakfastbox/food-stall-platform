@@ -363,7 +363,7 @@ async function loadOrders() {
       <label for="status-${order.id}">Update order status:</label>
       <select id="status-${order.id}">
         <option value="pending">Pending</option>
-        <option value="confirmed">Confirmed</option>
+        <option value="accepted">accepted</option>
         <option value="preparing">Preparing</option>
         <option value="ready">Ready</option>
         <option value="completed">Completed</option>
@@ -456,7 +456,7 @@ async function loadOrders() {
       <label for="status-${order.id}">Update order status:</label>
       <select id="status-${order.id}">
         <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
-        <option value="confirmed" ${order.order_status === "confirmed" ? "selected" : ""}>Confirmed</option>
+        <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>accepted</option>
         <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
         <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
         <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
@@ -594,12 +594,12 @@ async function deleteMenuCategory() {
     return;
   }
 
-  const confirmed = confirm(
+  const accepted = confirm(
     "Are you sure you want to delete this category? " +
     "Categories containing menu items cannot be deleted."
   );
 
-  if (!confirmed) return;
+  if (!accepted) return;
 
   message.textContent = "Checking category...";
 
@@ -857,11 +857,11 @@ async function editMenuItem(itemId) {
 }
 
 async function deleteMenuItem(itemId, itemName) {
-  const confirmed = confirm(
+  const accepted = confirm(
     "Are you sure you want to delete " + itemName + "?"
   );
 
-  if (!confirmed) {
+  if (!accepted) {
     return;
   }
 
