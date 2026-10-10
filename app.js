@@ -328,6 +328,106 @@ async function loadOrders() {
 
   const { data: orders, error } = await supabaseClient
     .from("orders")
+    .select(
+      "id, token_number, order_status, payment_status, sub_total, total_amount, created_at"
+    )
+    .eq("stall_id", stalls[0].id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Could not load orders:", error);
+    message.textContent = "Unable to load orders: " + error.message;
+    return;
+  }
+
+  if (!orders || orders.length === 0) {
+    message.textContent = "No orders yet.";
+    return;
+  }
+
+  message.textContent = orders.length + " order(s) found.";
+
+  list.innerHTML = orders.map(order => `
+    <div class="card">
+      <h3>Order Token: ${order.token_number ?? "Not assigned"}</h3>
+      <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
+      <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
+      <p><strong>Subtotal:</strong> ₹${order.sub_total ?? 0}</p>
+      <p><strong>Total:</strong> ₹${order.total_amount ?? 0}</p>
+      <p><strong>Placed:</strong> ${
+        order.created_at
+          ? new Date(order.created_at).toLocaleString()
+          : "Unknown"
+      }</p>
+
+      <label for="status-${order.id}">Update order status:</label>
+      <select id="status-${order.id}">
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="preparing">Preparing</option>
+        <option value="ready">Ready</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+
+      <button onclick="updateOrderStatus('${order.id}')">
+        Save Status
+      </button>
+    </div>
+  `).join("");
+
+  orders.forEach(order => {
+    const select = document.getElementById("status-" + order.id);
+    if (select) select.value = order.order_status || "pending";
+  });
+}
+
+async function updateOrderStatus(orderId) {
+  const select = document.getElementById("status-" + orderId);
+  const message = document.getElementById("ordersMessage");
+
+  if (!select || !message) return;
+
+  message.textContent = "Updating order status...";
+
+  const { error } = await supabaseClient
+    .from("orders")
+    .update({ order_status: select.value })
+    .eq("id", orderId);
+
+  if (error) {
+    console.error("Could not update order:", error);
+    message.textContent = "Unable to update status: " + error.message;
+    return;
+  }
+
+  message.textContent = "Order status updated successfully!";
+  await loadOrders();
+}
+
+async function loadOrders() {
+  const message = document.getElementById("ordersMessage");
+  const list = document.getElementById("ordersList");
+
+  if (!message || !list) return;
+
+  message.textContent = "Loading orders...";
+  list.innerHTML = "";
+
+  const { data: stalls, error: stallError } = await supabaseClient
+    .from("stalls")
+    .select("id")
+    .eq("name", "Breakfast Box")
+    .limit(1);
+
+  if (stallError || !stalls || stalls.length === 0) {
+    console.error("Could not find stall:", stallError);
+    message.textContent = "Could not load the Breakfast Box stall.";
+    return;
+  }
+
+  const { data: orders, error } = await supabaseClient
+    .from("orders")
     .select("id, token_number, order_status, payment_status, sub_total, total_amount, created_at")
     .eq("stall_id", stalls[0].id)
     .order("created_at", { ascending: false });
