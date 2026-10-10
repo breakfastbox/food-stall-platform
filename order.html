@@ -1,0 +1,399 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Breakfast Box | Order Online</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f2;
+      color: #222;
+    }
+
+    header {
+      background: #176b45;
+      color: white;
+      padding: 25px 16px;
+      text-align: center;
+    }
+
+    header h1 { margin: 0 0 8px; }
+    header p { margin: 0; }
+
+    main {
+      max-width: 720px;
+      margin: 22px auto;
+      padding: 0 14px 30px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px #0000000d;
+    }
+
+    h2 { margin-top: 0; font-size: 20px; }
+
+    .menu-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .menu-item:last-child { border-bottom: 0; }
+
+    .item-name { font-weight: bold; }
+    .item-description { color: #666; font-size: 13px; margin-top: 5px; }
+    .item-price { color: #176b45; margin-top: 6px; font-weight: bold; }
+
+    input, button {
+      font: inherit;
+    }
+
+    input[type="number"] {
+      width: 66px;
+      padding: 9px 5px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+    }
+
+    .total {
+      font-size: 21px;
+      font-weight: bold;
+      margin: 18px 0;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 13px 16px;
+      cursor: pointer;
+    }
+
+    .order-button {
+      width: 100%;
+      background: #176b45;
+      color: white;
+      font-weight: bold;
+    }
+
+    .order-button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    #message {
+      white-space: pre-wrap;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .success { color: #176b45; }
+    .error { color: #b42318; }
+
+    footer {
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+      padding: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Breakfast Box</h1>
+    <p>A Better Way to Begin.</p>
+    <p>Pure Vegetarian Breakfast</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Our Menu</h2>
+      <p>Select the quantity of each item you want.</p>
+      <div id="menuList">Loading menu...</div>
+    </section>
+
+    <section class="panel">
+      <h2>Your Details</h2>
+
+      <form id="orderForm">
+        <div class="field">
+          <label for="customerName">Full name *</label>
+          <input id="customerName" maxlength="100" required>
+        </div>
+
+        <div class="field">
+          <label for="customerPhone">Phone number *</label>
+          <input id="customerPhone" type="tel" maxlength="30"
+                 autocomplete="tel" required>
+        </div>
+
+        <div class="field">
+          <label for="customerEmail">Email (optional)</label>
+          <input id="customerEmail" type="email" maxlength="254"
+                 autocomplete="email">
+        </div>
+
+        <div class="total">
+          Total: ₹<span id="orderTotal">0.00</span>
+        </div>
+
+        <button class="order-button" id="placeOrderButton" type="submit">
+          Place Test Order
+        </button>
+      </form>
+
+      <p id="message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer>Breakfast Box · Fresh vegetarian breakfast</footer>
+
+  <script>
+    const SUPABASE_URL =
+      "https://anlgfcltudysjnsipsmd.supabase.co";
+
+    // Use the public publishable key already used in your app.js.
+    // Never put a service-role or secret key in this page.
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+    const ORDER_FUNCTION_URL =
+      "https://anlgfcltudysjnsipsmd.supabase.co/functions/v1/rapid-processor";
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    let stallId = null;
+    let menuItems = [];
+
+    const menuList = document.getElementById("menuList");
+    const message = document.getElementById("message");
+    const placeOrderButton = document.getElementById("placeOrderButton");
+
+    function showMessage(text, type = "") {
+      message.textContent = text;
+      message.className = type;
+    }
+
+    function money(value) {
+      return Number(value).toFixed(2);
+    }
+
+    async function loadMenu() {
+      try {
+        const { data: stall, error: stallError } = await client
+          .from("stalls")
+          .select("id, name")
+          .eq("name", "Breakfast Box")
+          .limit(1)
+          .maybeSingle();
+
+        if (stallError) throw stallError;
+
+        if (!stall) {
+          menuList.textContent = "Breakfast Box could not be found.";
+          return;
+        }
+
+        stallId = stall.id;
+
+        const { data, error } = await client
+          .from("menu_items")
+          .select("id, name, description, price, image_url, is_available")
+          .eq("stall_id", stallId)
+          .eq("is_available", true)
+          .order("name");
+
+        if (error) throw error;
+
+        menuItems = data || [];
+
+        if (menuItems.length === 0) {
+          menuList.textContent = "No available menu items yet.";
+          return;
+        }
+
+        menuList.replaceChildren();
+
+        menuItems.forEach(item => {
+          const row = document.createElement("div");
+          row.className = "menu-item";
+
+          const details = document.createElement("div");
+          const name = document.createElement("div");
+          name.className = "item-name";
+          name.textContent = item.name;
+
+          const price = document.createElement("div");
+          price.className = "item-price";
+          price.textContent = "₹" + money(item.price);
+
+          details.append(name);
+
+          if (item.description) {
+            const description = document.createElement("div");
+            description.className = "item-description";
+            description.textContent = item.description;
+            details.append(description);
+          }
+
+          details.append(price);
+
+          const quantity = document.createElement("input");
+          quantity.type = "number";
+          quantity.min = "0";
+          quantity.max = "50";
+          quantity.step = "1";
+          quantity.value = "0";
+          quantity.setAttribute("aria-label", "Quantity of " + item.name);
+          quantity.dataset.itemId = item.id;
+          quantity.addEventListener("input", updateTotal);
+
+          row.append(details, quantity);
+          menuList.append(row);
+        });
+
+        updateTotal();
+      } catch (error) {
+        console.error(error);
+        menuList.textContent =
+          "Could not load the menu. Check the page's browser console and Supabase permissions.";
+      }
+    }
+
+    function getSelectedItems() {
+      return Array.from(menuList.querySelectorAll("input[data-item-id]"))
+        .map(input => ({
+          menu_item_id: input.dataset.itemId,
+          quantity: Number(input.value)
+        }))
+        .filter(item => item.quantity > 0);
+    }
+
+    function updateTotal() {
+      let total = 0;
+
+      document.querySelectorAll("input[data-item-id]").forEach(input => {
+        let quantity = Number(input.value);
+
+        if (!Number.isInteger(quantity) || quantity < 0) quantity = 0;
+        if (quantity > 50) quantity = 50;
+
+        const item = menuItems.find(
+          entry => entry.id === input.dataset.itemId
+        );
+
+        if (item) total += Number(item.price) * quantity;
+      });
+
+      document.getElementById("orderTotal").textContent = money(total);
+    }
+
+    document.getElementById("orderForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      showMessage("");
+
+      if (!stallId) {
+        showMessage("The stall menu is not ready. Refresh and try again.", "error");
+        return;
+      }
+
+      const items = getSelectedItems();
+
+      if (items.length === 0) {
+        showMessage("Please select at least one menu item.", "error");
+        return;
+      }
+
+      const name = document.getElementById("customerName").value.trim();
+      const phone = document.getElementById("customerPhone").value.trim();
+      const email = document.getElementById("customerEmail").value.trim();
+
+      if (!name || !phone) {
+        showMessage("Please enter your name and phone number.", "error");
+        return;
+      }
+
+      placeOrderButton.disabled = true;
+      placeOrderButton.textContent = "Submitting...";
+      showMessage("Submitting your test order...");
+
+      try {
+        const response = await fetch(ORDER_FUNCTION_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({
+            name,
+            phone,
+            email,
+            stall_id: stallId,
+            items
+          })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.error || "Order could not be submitted. Please try again."
+          );
+        }
+
+        showMessage(
+          "Test order placed successfully!\n" +
+          "Token: " + result.order.token_number + "\n" +
+          "Status: " + result.order.order_status + "\n" +
+          "Total: ₹" + money(result.order.total_amount),
+          "success"
+        );
+
+        document.getElementById("orderForm").reset();
+        updateTotal();
+      } catch (error) {
+        console.error(error);
+        showMessage(error.message || "Something went wrong.", "error");
+      } finally {
+        placeOrderButton.disabled = false;
+        placeOrderButton.textContent = "Place Test Order";
+      }
+    });
+
+    loadMenu();
+  </script>
+</body>
+</html>
+```
