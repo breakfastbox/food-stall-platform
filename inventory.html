@@ -1,129 +1,167 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventory Management | Food Stall Platform</title>
+  <title>Food Stall Platform - Inventory</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     * { box-sizing: border-box; }
+
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
       background: #f4f6f8;
       color: #222;
     }
-    header {
-      background: #176b45;
-      color: white;
-      padding: 22px 16px;
-      text-align: center;
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
     }
-    main { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+
+    h1 { margin-bottom: 6px; }
+
     .card {
       background: white;
-      border-radius: 12px;
       padding: 20px;
-      margin-bottom: 20px;
+      margin: 18px 0;
+      border-radius: 12px;
       box-shadow: 0 2px 8px #0000000d;
     }
+
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
     }
-    label { display: block; font-size: 14px; margin-bottom: 6px; }
-    input, select, button {
-      width: 100%;
-      padding: 12px;
+
+    input, button {
+      font: inherit;
+      padding: 11px;
       border-radius: 7px;
-      font-size: 15px;
     }
-    input, select { border: 1px solid #ccd3d8; background: white; }
+
+    input {
+      width: 100%;
+      border: 1px solid #ccc;
+      margin-top: 5px;
+    }
+
+    label { display: block; }
+
     button {
       border: 0;
-      background: #176b45;
-      color: white;
       cursor: pointer;
-      font-weight: bold;
+      background: #176b43;
+      color: white;
+      margin: 3px;
     }
-    button:disabled { opacity: .6; cursor: not-allowed; }
-    .add-button { margin-top: 14px; }
-    .message { margin-top: 12px; overflow-wrap: anywhere; }
-    .error { color: #b42318; }
-    .success { color: #176b45; }
-    .muted { color: #667085; }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .secondary { background: #2463a6; }
+    .warning { background: #b56b00; }
+    .danger { background: #b42318; }
+
+    .muted { color: #666; }
+
+    #message {
+      margin-top: 14px;
+      overflow-wrap: anywhere;
+    }
+
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
     th, td {
       padding: 12px 10px;
       border-bottom: 1px solid #e5e7eb;
       text-align: left;
-      white-space: nowrap;
     }
-    th { background: #f8faf9; }
-    .low-stock { color: #b42318; font-weight: bold; }
-    .normal-stock { color: #176b45; }
+
+    th { background: #f8fafc; }
+
+    .low { color: #b42318; font-weight: bold; }
+    .ok { color: #176b43; font-weight: bold; }
+
+    .actions { white-space: nowrap; }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .card { padding: 14px; }
+    }
   </style>
 </head>
-<body>
-  <header>
-    <h1>Inventory Management</h1>
-    <p>Food Stall Platform — Breakfast Box</p>
-  </header>
 
-  <main>
+<body>
+  <main class="container">
+    <h1>Inventory Management</h1>
+    <p class="muted">Manage stock for your food stall.</p>
+
+    <div class="card">
+      <strong id="connectionStatus">Connecting to Supabase...</strong>
+      <p id="message" role="status" aria-live="polite"></p>
+    </div>
+
     <section class="card">
-      <h2>Add Stock Item</h2>
-      <p class="muted">Enter the current quantity and cost per unit.</p>
+      <h2>Add New Inventory Item</h2>
 
       <form id="inventoryForm">
         <div class="form-grid">
-          <div>
-            <label for="itemName">Item name</label>
-            <input id="itemName" maxlength="100" required
+          <label>
+            Item Name
+            <input id="itemName" required maxlength="100"
                    placeholder="e.g. Potatoes">
-          </div>
-          <div>
-            <label for="itemQuantity">Current quantity</label>
-            <input id="itemQuantity" type="number" min="0" step="any"
-                   required placeholder="e.g. 10">
-          </div>
-          <div>
-            <label for="itemUnit">Unit</label>
-            <select id="itemUnit" required>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="g">Grams (g)</option>
-              <option value="litre">Litres</option>
-              <option value="ml">Millilitres (ml)</option>
-              <option value="piece">Pieces</option>
-              <option value="packet">Packets</option>
-            </select>
-          </div>
-          <div>
-            <label for="itemCost">Cost per unit (₹)</label>
-            <input id="itemCost" type="number" min="0" step="0.01"
-                   required placeholder="e.g. 30">
-          </div>
-          <div>
-            <label for="lowStock">Low-stock alert quantity</label>
-            <input id="lowStock" type="number" min="0" step="any"
-                   value="2" required>
-          </div>
+          </label>
+
+          <label>
+            Unit
+            <input id="itemUnit" required maxlength="20"
+                   placeholder="e.g. kg">
+          </label>
+
+          <label>
+            Starting Quantity
+            <input id="itemQuantity" type="number" min="0"
+                   step="any" required placeholder="e.g. 10">
+          </label>
+
+          <label>
+            Cost per Unit (₹)
+            <input id="itemCost" type="number" min="0"
+                   step="any" required placeholder="e.g. 30">
+          </label>
+
+          <label>
+            Low Stock Threshold
+            <input id="itemMinimum" type="number" min="0"
+                   step="any" required value="2">
+          </label>
         </div>
 
-        <button id="addButton" class="add-button" type="submit" disabled>
-          Connecting to database…
-        </button>
-        <p id="formMessage" class="message" role="status" aria-live="polite">
-          Connecting to inventory…
-        </p>
+        <button id="addButton" type="submit">Add Inventory Item</button>
       </form>
     </section>
 
     <section class="card">
       <h2>Current Stock</h2>
+      <button id="refreshButton" class="secondary" type="button">
+        Refresh Stock
+      </button>
+
       <div class="table-wrap">
         <table>
           <thead>
@@ -131,50 +169,67 @@
               <th>Item</th>
               <th>Quantity</th>
               <th>Unit</th>
-              <th>Cost per unit</th>
-              <th>Low-stock limit</th>
+              <th>Cost / Unit</th>
+              <th>Minimum</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="inventoryBody">
-            <tr><td colspan="6">Loading inventory…</td></tr>
+          <tbody id="inventoryTable">
+            <tr><td colspan="7">Loading inventory...</td></tr>
           </tbody>
         </table>
       </div>
     </section>
-
-    <p><a href="stall.html">Back to Stall Dashboard</a></p>
   </main>
 
   <script>
-    // Use the same project URL and publishable key as your existing app.js.
     const SUPABASE_URL = "https://anlgfcltudysjnsipsmd.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
 
-    const client = window.supabase.createClient(
+    // Keep your existing Supabase publishable key here.
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+    const supabaseClient = window.supabase.createClient(
       SUPABASE_URL,
       SUPABASE_PUBLISHABLE_KEY
     );
 
-    const form = document.getElementById("inventoryForm");
-    const addButton = document.getElementById("addButton");
-    const formMessage = document.getElementById("formMessage");
-    const inventoryBody = document.getElementById("inventoryBody");
-
     let stallId = null;
+    let inventoryItems = [];
+    let busy = false;
 
-    function showMessage(message, type = "") {
-      formMessage.textContent = message;
-      formMessage.className = "message " + type;
+    const message = document.getElementById("message");
+    const tableBody = document.getElementById("inventoryTable");
+    const addButton = document.getElementById("addButton");
+    const refreshButton = document.getElementById("refreshButton");
+
+    function showMessage(text, isError = false) {
+      message.textContent = text;
+      message.style.color = isError ? "#b42318" : "#176b43";
     }
 
     function validNonNegativeNumber(value) {
-      return value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0;
+      const number = Number(value);
+      return value.trim() !== "" &&
+        Number.isFinite(number) &&
+        number >= 0;
+    }
+
+    function makeButton(text, className, onClick) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = text;
+
+      if (className) button.className = className;
+
+      button.addEventListener("click", onClick);
+      return button;
     }
 
     async function initializeInventory() {
       try {
-        const { data: stalls, error } = await client
+        const { data, error } = await supabaseClient
           .from("stalls")
           .select("id, name")
           .eq("name", "Breakfast Box")
@@ -182,133 +237,306 @@
 
         if (error) throw error;
 
-        if (!stalls || stalls.length !== 1) {
+        if (!data || data.length !== 1) {
           throw new Error(
-            "Could not identify exactly one Breakfast Box stall. No changes were saved."
+            "Could not identify exactly one Breakfast Box stall."
           );
         }
 
-        stallId = stalls[0].id;
-        await loadInventory();
+        stallId = data[0].id;
 
-        addButton.disabled = false;
-        addButton.textContent = "Add Stock Item";
-        showMessage("Connected to Breakfast Box inventory.", "success");
+        document.getElementById("connectionStatus").textContent =
+          "Connected to " + data[0].name + " inventory.";
+
+        await loadInventory();
       } catch (error) {
-        console.error("Inventory initialization failed:", error);
-        showMessage(
-          "Could not load inventory. Check the Supabase key and database permissions, then refresh.",
-          "error"
-        );
-        inventoryBody.innerHTML =
-          '<tr><td colspan="6">Inventory could not be loaded.</td></tr>';
+        document.getElementById("connectionStatus").textContent =
+          "Connection or loading problem.";
+
+        showMessage(error.message, true);
+        console.error(error);
       }
     }
 
     async function loadInventory() {
-      const { data, error } = await client
+      if (!stallId) return;
+
+      tableBody.replaceChildren();
+      const loadingRow = document.createElement("tr");
+      const loadingCell = document.createElement("td");
+      loadingCell.colSpan = 7;
+      loadingCell.textContent = "Loading inventory...";
+      loadingRow.appendChild(loadingCell);
+      tableBody.appendChild(loadingRow);
+
+      const { data, error } = await supabaseClient
         .from("inventory_items")
-        .select("id, name, unit, quantity, minimum_quantity, cost_per_unit, created_at")
+        .select(
+          "id, stall_id, name, unit, quantity, minimum_quantity, cost_per_unit, created_at"
+        )
         .eq("stall_id", stallId)
         .order("name", { ascending: true });
 
-      if (error) throw error;
-
-      inventoryBody.replaceChildren();
-
-      if (!data || data.length === 0) {
-        const row = document.createElement("tr");
-        const cell = document.createElement("td");
-        cell.colSpan = 6;
-        cell.textContent = "No inventory items yet. Add your first stock item above.";
-        row.appendChild(cell);
-        inventoryBody.appendChild(row);
+      if (error) {
+        tableBody.replaceChildren();
+        showMessage("Could not load inventory: " + error.message, true);
+        console.error(error);
         return;
       }
 
-      for (const item of data) {
-        const row = document.createElement("tr");
-        const isLow = Number(item.quantity) <= Number(item.minimum_quantity);
-        const values = [
-          item.name,
-          `${item.quantity}`,
-          item.unit,
-          `₹${Number(item.cost_per_unit).toFixed(2)}`,
-          `${item.minimum_quantity} ${item.unit}`,
-          isLow ? "Low stock" : "In stock"
-        ];
-
-        values.forEach((value, index) => {
-          const cell = document.createElement("td");
-          cell.textContent = value;
-          if (index === 5) {
-            cell.className = isLow ? "low-stock" : "normal-stock";
-          }
-          row.appendChild(cell);
-        });
-
-        inventoryBody.appendChild(row);
-      }
+      inventoryItems = data || [];
+      renderInventory();
     }
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    function renderInventory() {
+      tableBody.replaceChildren();
 
-      if (!stallId) {
-        showMessage("The stall is not connected. No changes were saved.", "error");
+      if (inventoryItems.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 7;
+        cell.textContent = "No inventory items yet. Add your first item above.";
+        row.appendChild(cell);
+        tableBody.appendChild(row);
         return;
       }
 
-      const name = document.getElementById("itemName").value.trim();
-      const quantityText = document.getElementById("itemQuantity").value;
-      const unit = document.getElementById("itemUnit").value;
-      const costText = document.getElementById("itemCost").value;
-      const minimumText = document.getElementById("lowStock").value;
+      inventoryItems.forEach(item => {
+        const row = document.createElement("tr");
 
-      if (!name || name.length > 100 ||
+        function addCell(value) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+          return cell;
+        }
+
+        addCell(item.name);
+        addCell(String(item.quantity));
+        addCell(item.unit);
+        addCell("₹" + Number(item.cost_per_unit).toFixed(2));
+        addCell(String(item.minimum_quantity));
+
+        const statusCell = addCell("");
+        const isLow = Number(item.quantity) <=
+          Number(item.minimum_quantity);
+
+        statusCell.textContent = isLow ? "Low Stock" : "In Stock";
+        statusCell.className = isLow ? "low" : "ok";
+
+        const actionsCell = addCell("");
+        actionsCell.className = "actions";
+
+        actionsCell.appendChild(makeButton(
+          "Add Stock",
+          "",
+          () => adjustStock(item, "add")
+        ));
+
+        actionsCell.appendChild(makeButton(
+          "Reduce Stock",
+          "warning",
+          () => adjustStock(item, "reduce")
+        ));
+
+        actionsCell.appendChild(makeButton(
+          "Edit",
+          "secondary",
+          () => editItem(item)
+        ));
+      });
+    }
+
+    async function addInventoryItem(event) {
+      event.preventDefault();
+
+      if (!stallId || busy) return;
+
+      const name = document.getElementById("itemName").value.trim();
+      const unit = document.getElementById("itemUnit").value.trim();
+      const quantityText = document.getElementById("itemQuantity").value;
+      const costText = document.getElementById("itemCost").value;
+      const minimumText = document.getElementById("itemMinimum").value;
+
+      if (!name || !unit ||
           !validNonNegativeNumber(quantityText) ||
           !validNonNegativeNumber(costText) ||
           !validNonNegativeNumber(minimumText)) {
-        showMessage("Enter a valid item name, quantity, cost, and low-stock limit.", "error");
+        showMessage("Enter valid item details and non-negative numbers.", true);
         return;
       }
 
+      busy = true;
       addButton.disabled = true;
-      addButton.textContent = "Saving…";
-      showMessage("Saving inventory item…");
 
       try {
-        const { error } = await client
+        const { error } = await supabaseClient
           .from("inventory_items")
           .insert({
             stall_id: stallId,
-            name,
-            unit,
+            name: name,
+            unit: unit,
             quantity: Number(quantityText),
-            minimum_quantity: Number(minimumText),
-            cost_per_unit: Number(costText)
+            cost_per_unit: Number(costText),
+            minimum_quantity: Number(minimumText)
           });
 
         if (error) throw error;
 
-        form.reset();
-        document.getElementById("lowStock").value = "2";
+        document.getElementById("inventoryForm").reset();
+        document.getElementById("itemMinimum").value = "2";
+
+        showMessage("Inventory item added successfully.");
         await loadInventory();
-        showMessage("Stock item saved successfully.", "success");
       } catch (error) {
-        console.error("Inventory save failed:", error);
-        showMessage(
-          "Could not save the item. Check inventory_items permissions and column constraints in Supabase.",
-          "error"
-        );
+        showMessage("Could not add item: " + error.message, true);
+        console.error(error);
       } finally {
+        busy = false;
         addButton.disabled = false;
-        addButton.textContent = "Add Stock Item";
       }
-    });
+    }
+
+    async function adjustStock(item, action) {
+      if (busy) return;
+
+      const label = action === "add" ? "add" : "reduce";
+      const entered = prompt(
+        "Enter quantity to " + label + " for " + item.name + ":",
+        "1"
+      );
+
+      if (entered === null) return;
+
+      const amountText = entered.trim();
+
+      if (!validNonNegativeNumber(amountText) || Number(amountText) <= 0) {
+        showMessage("Enter a quantity greater than zero.", true);
+        return;
+      }
+
+      const amount = Number(amountText);
+      const currentQuantity = Number(item.quantity);
+      const newQuantity = action === "add"
+        ? currentQuantity + amount
+        : currentQuantity - amount;
+
+      if (!Number.isFinite(newQuantity) || newQuantity < 0) {
+        showMessage("Not enough stock. Quantity cannot go below zero.", true);
+        return;
+      }
+
+      const confirmed = confirm(
+        (action === "add" ? "Add " : "Reduce ") +
+        amount + " " + item.unit + " for " + item.name +
+        "?\nNew quantity: " + newQuantity + " " + item.unit
+      );
+
+      if (!confirmed) return;
+
+      busy = true;
+      showMessage("Updating stock...");
+
+      try {
+        const { data, error } = await supabaseClient
+          .from("inventory_items")
+          .update({ quantity: newQuantity })
+          .eq("id", item.id)
+          .eq("stall_id", stallId)
+          .select("id, quantity")
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error(
+            "No item was updated. Check your database permissions and try again."
+          );
+        }
+
+        showMessage("Stock updated successfully.");
+        await loadInventory();
+      } catch (error) {
+        showMessage("Could not update stock: " + error.message, true);
+        console.error(error);
+      } finally {
+        busy = false;
+      }
+    }
+
+    async function editItem(item) {
+      if (busy) return;
+
+      const name = prompt("Item name:", item.name);
+      if (name === null) return;
+
+      const unit = prompt("Unit (e.g. kg, litre, piece):", item.unit);
+      if (unit === null) return;
+
+      const costText = prompt(
+        "Cost per unit (₹):",
+        String(item.cost_per_unit)
+      );
+      if (costText === null) return;
+
+      const minimumText = prompt(
+        "Low-stock threshold:",
+        String(item.minimum_quantity)
+      );
+      if (minimumText === null) return;
+
+      const cleanName = name.trim();
+      const cleanUnit = unit.trim();
+
+      if (!cleanName || cleanName.length > 100 ||
+          !cleanUnit || cleanUnit.length > 20 ||
+          !validNonNegativeNumber(costText) ||
+          !validNonNegativeNumber(minimumText)) {
+        showMessage("Please enter a valid name, unit, cost, and threshold.", true);
+        return;
+      }
+
+      if (!confirm("Save changes to " + item.name + "?")) return;
+
+      busy = true;
+      showMessage("Saving item changes...");
+
+      try {
+        const { data, error } = await supabaseClient
+          .from("inventory_items")
+          .update({
+            name: cleanName,
+            unit: cleanUnit,
+            cost_per_unit: Number(costText),
+            minimum_quantity: Number(minimumText)
+          })
+          .eq("id", item.id)
+          .eq("stall_id", stallId)
+          .select("id")
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error(
+            "No item was updated. Check your database permissions and try again."
+          );
+        }
+
+        showMessage("Inventory item updated successfully.");
+        await loadInventory();
+      } catch (error) {
+        showMessage("Could not edit item: " + error.message, true);
+        console.error(error);
+      } finally {
+        busy = false;
+      }
+    }
+
+    document.getElementById("inventoryForm")
+      .addEventListener("submit", addInventoryItem);
+
+    refreshButton.addEventListener("click", loadInventory);
 
     initializeInventory();
   </script>
 </body>
 </html>
-```
