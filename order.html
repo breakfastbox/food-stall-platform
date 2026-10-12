@@ -126,6 +126,9 @@
       padding: 15px;
     }
   </style>
+  
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
 </head>
 
 <body>
@@ -170,6 +173,11 @@
         <button class="order-button" id="placeOrderButton" type="submit">
           Place Test Order
         </button>
+        
+<div class="cf-turnstile"
+     data-sitekey="0x4AAAAAAFUCfdT5Zr6G-kWs"
+     data-action="place_order"></div>
+
       </form>
 
       <p id="message" role="status" aria-live="polite"></p>
@@ -345,11 +353,19 @@
         return;
       }
 
+          const turnstileToken = window.turnstile?.getResponse();
+
+      if (!turnstileToken) {
+        showMessage("Please complete the security check and try again.", "error");
+        return;
+      }
+
       placeOrderButton.disabled = true;
       placeOrderButton.textContent = "Submitting...";
       showMessage("Submitting your test order...");
 
       try {
+
         const response = await fetch(ORDER_FUNCTION_URL, {
           method: "POST",
           headers: {
@@ -361,9 +377,12 @@
             phone,
             email,
             stall_id: stallId,
-            items
+            items,
+            turnstile_token: turnstileToken
           })
         });
+
+
 
         const result = await response.json().catch(() => ({}));
 
