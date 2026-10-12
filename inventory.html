@@ -258,99 +258,68 @@
       }
     }
 
-    async function loadInventory() {
-      if (!stallId) return;
+    ```javascript
+function renderInventory() {
+  tableBody.replaceChildren();
 
-      tableBody.replaceChildren();
-      const loadingRow = document.createElement("tr");
-      const loadingCell = document.createElement("td");
-      loadingCell.colSpan = 7;
-      loadingCell.textContent = "Loading inventory...";
-      loadingRow.appendChild(loadingCell);
-      tableBody.appendChild(loadingRow);
+  if (inventoryItems.length === 0) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 7;
+    cell.textContent = "No inventory items yet. Add your first item above.";
+    row.appendChild(cell);
+    tableBody.appendChild(row);
+    return;
+  }
 
-      const { data, error } = await supabaseClient
-        .from("inventory_items")
-        .select(
-          "id, stall_id, name, unit, quantity, minimum_quantity, cost_per_unit, created_at"
-        )
-        .eq("stall_id", stallId)
-        .order("name", { ascending: true });
+  inventoryItems.forEach(item => {
+    const row = document.createElement("tr");
 
-      if (error) {
-        tableBody.replaceChildren();
-        showMessage("Could not load inventory: " + error.message, true);
-        console.error(error);
-        return;
-      }
-console.log("Stall ID:", stallId);
-console.log("Inventory records returned:", data);
-      inventoryItems = data || [];
-      renderInventory();
+    function addCell(value) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.appendChild(cell);
+      return cell;
     }
 
-    function renderInventory() {
-      tableBody.replaceChildren();
+    addCell(item.name);
+    addCell(String(item.quantity));
+    addCell(item.unit);
+    addCell("₹" + Number(item.cost_per_unit).toFixed(2));
+    addCell(String(item.minimum_quantity));
 
-      if (inventoryItems.length === 0) {
-        const row = document.createElement("tr");
-        const cell = document.createElement("td");
-        cell.colSpan = 7;
-        cell.textContent = "No inventory items yet. Add your first item above.";
-        row.appendChild(cell);
-        tableBody.appendChild(row);
-        return;
-      }
-console.log("Table body:", tableBody);
-console.log("Rows before rendering:", tableBody.children.length);
-      inventoryItems.forEach(item => {
-        console.log("Rendering inventory item:", item);
-        const row = document.createElement("tr");
+    const statusCell = addCell("");
+    const isLow =
+      Number(item.quantity) <= Number(item.minimum_quantity);
 
-        function addCell(value) {
-          const cell = document.createElement("td");
-          cell.textContent = value;
-          row.appendChild(cell);
-          return cell;
-        }
+    statusCell.textContent = isLow ? "Low Stock" : "In Stock";
+    statusCell.className = isLow ? "low" : "ok";
 
-        addCell(item.name);
-        addCell(String(item.quantity));
-        addCell(item.unit);
-        addCell("₹" + Number(item.cost_per_unit).toFixed(2));
-        addCell(String(item.minimum_quantity));
+    const actionsCell = addCell("");
+    actionsCell.className = "actions";
 
-        const statusCell = addCell("");
-        const isLow = Number(item.quantity) <=
-          Number(item.minimum_quantity);
+    actionsCell.appendChild(makeButton(
+      "Add Stock",
+      "",
+      () => adjustStock(item, "add")
+    ));
 
-        statusCell.textContent = isLow ? "Low Stock" : "In Stock";
-        statusCell.className = isLow ? "low" : "ok";
+    actionsCell.appendChild(makeButton(
+      "Reduce Stock",
+      "warning",
+      () => adjustStock(item, "reduce")
+    ));
 
-        const actionsCell = addCell("");
-        actionsCell.className = "actions";
+    actionsCell.appendChild(makeButton(
+      "Edit",
+      "secondary",
+      () => editItem(item)
+    ));
 
-        actionsCell.appendChild(makeButton(
-          "Add Stock",
-          "",
-          () => adjustStock(item, "add")
-        ));
-console.log("Rows after rendering:", tableBody.children.length);
-        actionsCell.appendChild(makeButton(
-          "Reduce Stock",
-          "warning",
-          () => adjustStock(item, "reduce")
-        ));
-
-                actionsCell.appendChild(makeButton(
-          "Edit",
-          "secondary",
-          () => editItem(item)
-        ));
-
-        tableBody.appendChild(row);
-      });
-    }
+    tableBody.appendChild(row);
+  });
+}
+```
     async function addInventoryItem(event) {
       event.preventDefault();
 
