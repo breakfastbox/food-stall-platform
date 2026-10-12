@@ -272,6 +272,37 @@
     ```javascript
 function renderInventory() {
   tableBody.replaceChildren();
+```javascript
+const alertBox = document.getElementById("lowStockAlert");
+
+const lowStockItems = inventoryItems.filter(item =>
+  Number(item.quantity) <= Number(item.minimum_quantity)
+);
+
+if (lowStockItems.length > 0) {
+  alertBox.style.display = "block";
+  alertBox.innerHTML = "";
+
+  const heading = document.createElement("strong");
+  heading.textContent = "⚠️ Low Stock Alert";
+  alertBox.appendChild(heading);
+
+  const list = document.createElement("ul");
+
+  lowStockItems.forEach(item => {
+    const listItem = document.createElement("li");
+    listItem.textContent =
+      `${item.name}: ${item.quantity} ${item.unit} remaining (minimum: ${item.minimum_quantity})`;
+    list.appendChild(listItem);
+  });
+
+  alertBox.appendChild(list);
+} else {
+  alertBox.style.display = "none";
+  alertBox.innerHTML = "";
+}
+```
+
 
   if (inventoryItems.length === 0) {
     const row = document.createElement("tr");
