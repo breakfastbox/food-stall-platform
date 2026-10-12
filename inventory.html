@@ -283,7 +283,8 @@
         console.error(error);
         return;
       }
-
+console.log("Stall ID:", stallId);
+console.log("Inventory records returned:", data);
       inventoryItems = data || [];
       renderInventory();
     }
