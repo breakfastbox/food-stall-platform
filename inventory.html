@@ -301,7 +301,8 @@ console.log("Inventory records returned:", data);
         tableBody.appendChild(row);
         return;
       }
-
+console.log("Table body:", tableBody);
+console.log("Rows before rendering:", tableBody.children.length);
       inventoryItems.forEach(item => {
         console.log("Rendering inventory item:", item);
         const row = document.createElement("tr");
@@ -334,20 +335,21 @@ console.log("Inventory records returned:", data);
           "",
           () => adjustStock(item, "add")
         ));
-
+console.log("Rows after rendering:", tableBody.children.length);
         actionsCell.appendChild(makeButton(
           "Reduce Stock",
           "warning",
           () => adjustStock(item, "reduce")
         ));
 
-        actionsCell.appendChild(makeButton(
+                actionsCell.appendChild(makeButton(
           "Edit",
           "secondary",
           () => editItem(item)
         ));
+
+        tableBody.appendChild(row);
       });
-    }
 
     async function addInventoryItem(event) {
       event.preventDefault();
