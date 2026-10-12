@@ -273,7 +273,7 @@
     ```javascript
 function renderInventory() {
   tableBody.replaceChildren();
-```javascript
+
 const alertBox = document.getElementById("lowStockAlert");
 
 const lowStockItems = inventoryItems.filter(item =>
@@ -303,8 +303,6 @@ if (lowStockItems.length > 0) {
   alertBox.innerHTML = "";
 }
 ```
-
-
   if (inventoryItems.length === 0) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
