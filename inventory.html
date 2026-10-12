@@ -20,11 +20,7 @@
       padding: 22px 16px;
       text-align: center;
     }
-    main {
-      max-width: 950px;
-      margin: 24px auto;
-      padding: 0 16px;
-    }
+    main { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
     .card {
       background: white;
       border-radius: 12px;
@@ -32,7 +28,6 @@
       margin-bottom: 20px;
       box-shadow: 0 2px 8px #0000000d;
     }
-    h2 { margin-top: 0; }
     .form-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -58,6 +53,7 @@
     .message { margin-top: 12px; overflow-wrap: anywhere; }
     .error { color: #b42318; }
     .success { color: #176b45; }
+    .muted { color: #667085; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td {
@@ -68,34 +64,31 @@
     }
     th { background: #f8faf9; }
     .low-stock { color: #b42318; font-weight: bold; }
-    .muted { color: #667085; }
+    .normal-stock { color: #176b45; }
   </style>
 </head>
 <body>
   <header>
     <h1>Inventory Management</h1>
-    <p>Food Stall Platform</p>
+    <p>Food Stall Platform — Breakfast Box</p>
   </header>
 
   <main>
     <section class="card">
       <h2>Add Stock Item</h2>
-      <p class="muted">
-        Inventory saving will be enabled after this page is connected
-        to your existing database columns.
-      </p>
+      <p class="muted">Enter the current quantity and cost per unit.</p>
 
       <form id="inventoryForm">
         <div class="form-grid">
           <div>
             <label for="itemName">Item name</label>
-            <input id="itemName" maxlength="100"
-                   placeholder="e.g. Potatoes" required>
+            <input id="itemName" maxlength="100" required
+                   placeholder="e.g. Potatoes">
           </div>
           <div>
-            <label for="itemQuantity">Quantity</label>
-            <input id="itemQuantity" type="number"
-                   min="0" step="any" placeholder="e.g. 10" required>
+            <label for="itemQuantity">Current quantity</label>
+            <input id="itemQuantity" type="number" min="0" step="any"
+                   required placeholder="e.g. 10">
           </div>
           <div>
             <label for="itemUnit">Unit</label>
@@ -110,30 +103,27 @@
           </div>
           <div>
             <label for="itemCost">Cost per unit (₹)</label>
-            <input id="itemCost" type="number"
-                   min="0" step="0.01" placeholder="e.g. 30" required>
+            <input id="itemCost" type="number" min="0" step="0.01"
+                   required placeholder="e.g. 30">
           </div>
           <div>
             <label for="lowStock">Low-stock alert quantity</label>
-            <input id="lowStock" type="number"
-                   min="0" step="any" value="2" required>
+            <input id="lowStock" type="number" min="0" step="any"
+                   value="2" required>
           </div>
         </div>
 
-        <button class="add-button" type="submit" disabled>
-          Connect database first
+        <button id="addButton" class="add-button" type="submit" disabled>
+          Connecting to database…
         </button>
-        <p id="formMessage" class="message" role="status">
-          Preview only — no inventory records will be saved yet.
+        <p id="formMessage" class="message" role="status" aria-live="polite">
+          Connecting to inventory…
         </p>
       </form>
     </section>
 
     <section class="card">
       <h2>Current Stock</h2>
-      <p class="muted">
-        Your saved inventory items will appear here after database integration.
-      </p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -142,24 +132,183 @@
               <th>Quantity</th>
               <th>Unit</th>
               <th>Cost per unit</th>
-              <th>Stock status</th>
+              <th>Low-stock limit</th>
+              <th>Status</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td colspan="5" class="muted">
-                Inventory database connection pending.
-              </td>
-            </tr>
+          <tbody id="inventoryBody">
+            <tr><td colspan="6">Loading inventory…</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <p>
-      <a href="stall.html">Back to Stall Dashboard</a>
-    </p>
+    <p><a href="stall.html">Back to Stall Dashboard</a></p>
   </main>
+
+  <script>
+    // Use the same project URL and publishable key as your existing app.js.
+    const SUPABASE_URL = "https://anlgfcltudysjnsipsmd.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const form = document.getElementById("inventoryForm");
+    const addButton = document.getElementById("addButton");
+    const formMessage = document.getElementById("formMessage");
+    const inventoryBody = document.getElementById("inventoryBody");
+
+    let stallId = null;
+
+    function showMessage(message, type = "") {
+      formMessage.textContent = message;
+      formMessage.className = "message " + type;
+    }
+
+    function validNonNegativeNumber(value) {
+      return value !== "" && Number.isFinite(Number(value)) && Number(value) >= 0;
+    }
+
+    async function initializeInventory() {
+      try {
+        const { data: stalls, error } = await client
+          .from("stalls")
+          .select("id, name")
+          .eq("name", "Breakfast Box")
+          .limit(2);
+
+        if (error) throw error;
+
+        if (!stalls || stalls.length !== 1) {
+          throw new Error(
+            "Could not identify exactly one Breakfast Box stall. No changes were saved."
+          );
+        }
+
+        stallId = stalls[0].id;
+        await loadInventory();
+
+        addButton.disabled = false;
+        addButton.textContent = "Add Stock Item";
+        showMessage("Connected to Breakfast Box inventory.", "success");
+      } catch (error) {
+        console.error("Inventory initialization failed:", error);
+        showMessage(
+          "Could not load inventory. Check the Supabase key and database permissions, then refresh.",
+          "error"
+        );
+        inventoryBody.innerHTML =
+          '<tr><td colspan="6">Inventory could not be loaded.</td></tr>';
+      }
+    }
+
+    async function loadInventory() {
+      const { data, error } = await client
+        .from("inventory_items")
+        .select("id, name, unit, quantity, minimum_quantity, cost_per_unit, created_at")
+        .eq("stall_id", stallId)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+
+      inventoryBody.replaceChildren();
+
+      if (!data || data.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 6;
+        cell.textContent = "No inventory items yet. Add your first stock item above.";
+        row.appendChild(cell);
+        inventoryBody.appendChild(row);
+        return;
+      }
+
+      for (const item of data) {
+        const row = document.createElement("tr");
+        const isLow = Number(item.quantity) <= Number(item.minimum_quantity);
+        const values = [
+          item.name,
+          `${item.quantity}`,
+          item.unit,
+          `₹${Number(item.cost_per_unit).toFixed(2)}`,
+          `${item.minimum_quantity} ${item.unit}`,
+          isLow ? "Low stock" : "In stock"
+        ];
+
+        values.forEach((value, index) => {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          if (index === 5) {
+            cell.className = isLow ? "low-stock" : "normal-stock";
+          }
+          row.appendChild(cell);
+        });
+
+        inventoryBody.appendChild(row);
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      if (!stallId) {
+        showMessage("The stall is not connected. No changes were saved.", "error");
+        return;
+      }
+
+      const name = document.getElementById("itemName").value.trim();
+      const quantityText = document.getElementById("itemQuantity").value;
+      const unit = document.getElementById("itemUnit").value;
+      const costText = document.getElementById("itemCost").value;
+      const minimumText = document.getElementById("lowStock").value;
+
+      if (!name || name.length > 100 ||
+          !validNonNegativeNumber(quantityText) ||
+          !validNonNegativeNumber(costText) ||
+          !validNonNegativeNumber(minimumText)) {
+        showMessage("Enter a valid item name, quantity, cost, and low-stock limit.", "error");
+        return;
+      }
+
+      addButton.disabled = true;
+      addButton.textContent = "Saving…";
+      showMessage("Saving inventory item…");
+
+      try {
+        const { error } = await client
+          .from("inventory_items")
+          .insert({
+            stall_id: stallId,
+            name,
+            unit,
+            quantity: Number(quantityText),
+            minimum_quantity: Number(minimumText),
+            cost_per_unit: Number(costText)
+          });
+
+        if (error) throw error;
+
+        form.reset();
+        document.getElementById("lowStock").value = "2";
+        await loadInventory();
+        showMessage("Stock item saved successfully.", "success");
+      } catch (error) {
+        console.error("Inventory save failed:", error);
+        showMessage(
+          "Could not save the item. Check inventory_items permissions and column constraints in Supabase.",
+          "error"
+        );
+      } finally {
+        addButton.disabled = false;
+        addButton.textContent = "Add Stock Item";
+      }
+    });
+
+    initializeInventory();
+  </script>
 </body>
 </html>
 ```
