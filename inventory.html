@@ -1,0 +1,165 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Management | Food Stall Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #222;
+    }
+    header {
+      background: #176b45;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+    }
+    main {
+      max-width: 950px;
+      margin: 24px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px #0000000d;
+    }
+    h2 { margin-top: 0; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    label { display: block; font-size: 14px; margin-bottom: 6px; }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 7px;
+      font-size: 15px;
+    }
+    input, select { border: 1px solid #ccd3d8; background: white; }
+    button {
+      border: 0;
+      background: #176b45;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .add-button { margin-top: 14px; }
+    .message { margin-top: 12px; overflow-wrap: anywhere; }
+    .error { color: #b42318; }
+    .success { color: #176b45; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th { background: #f8faf9; }
+    .low-stock { color: #b42318; font-weight: bold; }
+    .muted { color: #667085; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Inventory Management</h1>
+    <p>Food Stall Platform</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Add Stock Item</h2>
+      <p class="muted">
+        Inventory saving will be enabled after this page is connected
+        to your existing database columns.
+      </p>
+
+      <form id="inventoryForm">
+        <div class="form-grid">
+          <div>
+            <label for="itemName">Item name</label>
+            <input id="itemName" maxlength="100"
+                   placeholder="e.g. Potatoes" required>
+          </div>
+          <div>
+            <label for="itemQuantity">Quantity</label>
+            <input id="itemQuantity" type="number"
+                   min="0" step="any" placeholder="e.g. 10" required>
+          </div>
+          <div>
+            <label for="itemUnit">Unit</label>
+            <select id="itemUnit" required>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="g">Grams (g)</option>
+              <option value="litre">Litres</option>
+              <option value="ml">Millilitres (ml)</option>
+              <option value="piece">Pieces</option>
+              <option value="packet">Packets</option>
+            </select>
+          </div>
+          <div>
+            <label for="itemCost">Cost per unit (₹)</label>
+            <input id="itemCost" type="number"
+                   min="0" step="0.01" placeholder="e.g. 30" required>
+          </div>
+          <div>
+            <label for="lowStock">Low-stock alert quantity</label>
+            <input id="lowStock" type="number"
+                   min="0" step="any" value="2" required>
+          </div>
+        </div>
+
+        <button class="add-button" type="submit" disabled>
+          Connect database first
+        </button>
+        <p id="formMessage" class="message" role="status">
+          Preview only — no inventory records will be saved yet.
+        </p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Current Stock</h2>
+      <p class="muted">
+        Your saved inventory items will appear here after database integration.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Unit</th>
+              <th>Cost per unit</th>
+              <th>Stock status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5" class="muted">
+                Inventory database connection pending.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p>
+      <a href="stall.html">Back to Stall Dashboard</a>
+    </p>
+  </main>
+</body>
+</html>
+```
