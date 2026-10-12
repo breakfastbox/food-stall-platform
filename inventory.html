@@ -270,7 +270,7 @@
       }
     }
 
-    ```javascript
+
 function renderInventory() {
   tableBody.replaceChildren();
 
@@ -291,8 +291,9 @@ function renderInventory() {
 
     lowStockItems.forEach(item => {
       const listItem = document.createElement("li");
-      listItem.textContent =
-        `${item.name}: ${item.quantity} ${item.unit} remaining (minimum: ${item.minimum_quantity})`;
+     listItem.textContent =
+  item.name + ": " + item.quantity + " " + item.unit +
+  " remaining (minimum: " + item.minimum_quantity + ")";
       list.appendChild(listItem);
     });
 
