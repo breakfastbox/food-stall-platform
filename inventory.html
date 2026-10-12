@@ -303,6 +303,7 @@ console.log("Inventory records returned:", data);
       }
 
       inventoryItems.forEach(item => {
+        console.log("Rendering inventory item:", item);
         const row = document.createElement("tr");
 
         function addCell(value) {
