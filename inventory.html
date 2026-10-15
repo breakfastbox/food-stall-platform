@@ -117,6 +117,27 @@
     </div>
 
     <section class="card">
+      <h2>Inventory Mode</h2>
+      <p>Choose how this stall tracks stock.</p>
+
+      <label for="inventoryMode">Stock tracking method</label>
+      <select id="inventoryMode">
+        <option value="finished_items">Finished Items</option>
+        <option value="recipe_ingredients">Recipe Ingredients</option>
+      </select>
+
+      <p class="muted">
+        Finished Items tracks ready-to-sell products.
+        Recipe Ingredients tracks raw materials used by menu items.
+      </p>
+
+      <button id="saveInventoryMode" type="button">
+        Save Inventory Mode
+      </button>
+      <p id="inventoryModeMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
       <h2>Add New Inventory Item</h2>
 
       <form id="inventoryForm">
