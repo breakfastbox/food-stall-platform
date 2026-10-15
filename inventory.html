@@ -260,6 +260,58 @@
       return button;
     }
 
+    async function loadInventoryMode() {
+      const modeSelect = document.getElementById("inventoryMode");
+      const modeMessage = document.getElementById("inventoryModeMessage");
+
+      if (!stallId || !modeSelect || !modeMessage) return;
+
+      const { data, error } = await supabaseClient
+        .from("stalls")
+        .select("inventory_mode")
+        .eq("id", stallId)
+        .single();
+
+      if (error) {
+        modeMessage.textContent = "Could not load inventory mode: " + error.message;
+        return;
+      }
+
+      modeSelect.value = data.inventory_mode || "finished_items";
+      modeMessage.textContent = "Current mode loaded.";
+    }
+
+    async function saveInventoryMode() {
+      const modeSelect = document.getElementById("inventoryMode");
+      const modeMessage = document.getElementById("inventoryModeMessage");
+
+      if (!stallId || !modeSelect || !modeMessage) return;
+
+      const newMode = modeSelect.value;
+
+      if (!confirm(
+        "Change inventory mode to " +
+        (newMode === "finished_items" ? "Finished Items" : "Recipe Ingredients") +
+        "?\n\nThis saves the setting only. It does not convert or deduct existing stock."
+      )) {
+        return;
+      }
+
+      modeMessage.textContent = "Saving inventory mode...";
+
+      const { error } = await supabaseClient
+        .from("stalls")
+        .update({ inventory_mode: newMode })
+        .eq("id", stallId);
+
+      if (error) {
+        modeMessage.textContent = "Could not save mode: " + error.message;
+        return;
+      }
+
+      modeMessage.textContent = "Inventory mode saved successfully.";
+    }
+
     async function initializeInventory() {
       try {
         const { data, error } = await supabaseClient
@@ -281,7 +333,10 @@
         document.getElementById("connectionStatus").textContent =
           "Connected to " + data[0].name + " inventory.";
 
+       
+        await loadInventoryMode();
         await loadInventory();
+
       } catch (error) {
         document.getElementById("connectionStatus").textContent =
           "Connection or loading problem.";
@@ -586,6 +641,9 @@ function renderInventory() {
 
     document.getElementById("inventoryForm")
       .addEventListener("submit", addInventoryItem);
+
+    document.getElementById("saveInventoryMode")
+      .addEventListener("click", saveInventoryMode);
 
     refreshButton.addEventListener("click", loadInventory);
 
