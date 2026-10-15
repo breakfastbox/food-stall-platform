@@ -157,8 +157,17 @@
     </section>
 
     <section class="card">
-      ```html
-<div id="lowStockAlert" style="
+
+      <div id="lowStockAlert" style="
+        display: none;
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffe69c;
+        padding: 12px;
+        margin: 15px 0;
+        border-radius: 8px;
+      "></div>
+
   display: none;
   background: #fff3cd;
   color: #856404;
@@ -269,7 +278,25 @@
         console.error(error);
       }
     }
+    async function loadInventory() {
+      if (!stallId) return;
 
+      try {
+        const { data, error } = await supabaseClient
+          .from("inventory_items")
+          .select("id, stall_id, name, unit, quantity, minimum_quantity, cost_per_unit")
+          .eq("stall_id", stallId)
+          .order("name");
+
+        if (error) throw error;
+
+        inventoryItems = data || [];
+        renderInventory();
+      } catch (error) {
+        showMessage("Could not load inventory: " + error.message, true);
+        console.error(error);
+      }
+    }
 
 function renderInventory() {
   tableBody.replaceChildren();
