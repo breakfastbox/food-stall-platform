@@ -382,28 +382,7 @@ async function loadOrders() {
   });
 }
 
-async function updateOrderStatus(orderId) {
-  const select = document.getElementById("status-" + orderId);
-  const message = document.getElementById("ordersMessage");
 
-  if (!select || !message) return;
-
-  message.textContent = "Updating order status...";
-
-  const { error } = await supabaseClient
-    .from("orders")
-    .update({ order_status: select.value })
-    .eq("id", orderId);
-
-  if (error) {
-    console.error("Could not update order:", error);
-    message.textContent = "Unable to update status: " + error.message;
-    return;
-  }
-
-  message.textContent = "Order status updated successfully!";
-  await loadOrders();
-}
 
 async function loadOrders() {
   const message = document.getElementById("ordersMessage");
