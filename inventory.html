@@ -293,6 +293,93 @@
       return button;
     }
 
+    let menuItemsForRecipes = [];
+
+    async function loadRecipeOptions() {
+      const menuSelect = document.getElementById("recipeMenuItem");
+      const ingredientSelect = document.getElementById("recipeIngredient");
+
+      if (!menuSelect || !ingredientSelect || !stallId) return;
+
+      const { data: menuItems, error: menuError } = await supabaseClient
+        .from("menu_items")
+        .select("id, name")
+        .eq("stall_id", stallId)
+        .order("name");
+
+      if (menuError) {
+        document.getElementById("recipeMessage").textContent =
+          "Could not load menu items: " + menuError.message;
+        return;
+      }
+
+      menuItemsForRecipes = menuItems || [];
+      menuSelect.replaceChildren(new Option("Select menu item", ""));
+
+      menuItemsForRecipes.forEach(item => {
+        menuSelect.add(new Option(item.name, item.id));
+      });
+
+      const { data: ingredients, error: ingredientError } = await supabaseClient
+        .from("inventory_items")
+        .select("id, name, unit")
+        .eq("stall_id", stallId)
+        .order("name");
+
+      if (ingredientError) {
+        document.getElementById("recipeMessage").textContent =
+          "Could not load ingredients: " + ingredientError.message;
+        return;
+      }
+
+      ingredientSelect.replaceChildren(new Option("Select ingredient", ""));
+
+      (ingredients || []).forEach(item => {
+        ingredientSelect.add(
+          new Option(item.name + " (" + item.unit + ")", item.id)
+        );
+      });
+
+      await loadSavedRecipe();
+    }
+
+    async function loadSavedRecipe() {
+      const menuItemId = document.getElementById("recipeMenuItem").value;
+      const recipeList = document.getElementById("recipeList");
+      const recipeMessage = document.getElementById("recipeMessage");
+
+      recipeList.replaceChildren();
+
+      if (!menuItemId || !stallId) return;
+
+      const { data, error } = await supabaseClient
+        .from("menu_item_ingredients")
+        .select("id, quantity_required, inventory_item_id, inventory_items(name, unit)")
+        .eq("stall_id", stallId)
+        .eq("menu_item_id", menuItemId);
+
+      if (error) {
+        recipeMessage.textContent = "Could not load saved ingredients: " + error.message;
+        return;
+      }
+
+      (data || []).forEach(recipe => {
+        const li = document.createElement("li");
+        const ingredient = recipe.inventory_items;
+
+        li.textContent =
+          (ingredient ? ingredient.name : "Ingredient") + ": " +
+          recipe.quantity_required + " " +
+          (ingredient ? ingredient.unit : "") + " per serving";
+
+        recipeList.appendChild(li);
+      });
+
+      recipeMessage.textContent = (data || []).length
+        ? "Saved recipe ingredients loaded."
+        : "No ingredients saved for this menu item yet.";
+    }
+
     async function loadInventoryMode() {
       const modeSelect = document.getElementById("inventoryMode");
       const modeMessage = document.getElementById("inventoryModeMessage");
@@ -368,6 +455,7 @@
 
        
         await loadInventoryMode();
+        await loadRecipeOptions();
         await loadInventory();
 
       } catch (error) {
@@ -674,6 +762,12 @@ function renderInventory() {
 
     document.getElementById("inventoryForm")
       .addEventListener("submit", addInventoryItem);
+
+    document.getElementById("recipeMenuItem")
+      .addEventListener("change", loadSavedRecipe);
+
+    document.getElementById("recipeForm")
+      .addEventListener("submit", saveRecipeIngredient);
 
     document.getElementById("saveInventoryMode")
       .addEventListener("click", saveInventoryMode);
