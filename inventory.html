@@ -177,6 +177,39 @@
       </form>
     </section>
 
+    <section class="card" id="recipeCard" style="display: none;">
+      <h2>Recipe Management</h2>
+      <p>Set the ingredients and quantities needed for one serving of a menu item.</p>
+
+      <label for="recipeMenuItem">Menu Item</label>
+      <select id="recipeMenuItem">
+        <option value="">Loading menu items...</option>
+      </select>
+
+      <form id="recipeForm">
+        <div class="form-grid">
+          <label>
+            Ingredient
+            <select id="recipeIngredient" required>
+              <option value="">Select ingredient</option>
+            </select>
+          </label>
+
+          <label>
+            Quantity per serving
+            <input id="recipeQuantity" type="number" min="0.001"
+                   step="any" required placeholder="e.g. 0.20">
+          </label>
+        </div>
+
+        <button type="submit">Save Ingredient</button>
+      </form>
+
+      <p id="recipeMessage" role="status" aria-live="polite"></p>
+      <h3>Saved Ingredients</h3>
+      <ul id="recipeList"></ul>
+    </section>
+
     <section class="card">
 
       <div id="lowStockAlert" style="
