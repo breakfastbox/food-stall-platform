@@ -380,6 +380,50 @@
         : "No ingredients saved for this menu item yet.";
     }
 
+async function saveRecipeIngredient(event) {
+  event.preventDefault();
+
+  const menuItemId = document.getElementById("recipeMenuItem").value;
+  const ingredientId = document.getElementById("recipeIngredient").value;
+  const quantity = Number(document.getElementById("recipeQuantity").value);
+  const message = document.getElementById("recipeMessage");
+
+  if (!menuItemId || !ingredientId) {
+    message.textContent = "Please select a menu item and an ingredient.";
+    return;
+  }
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    message.textContent = "Please enter a quantity greater than zero.";
+    return;
+  }
+
+  message.textContent = "Saving ingredient...";
+
+  const { error } = await supabaseClient
+    .from("menu_item_ingredients")
+    .upsert(
+      {
+        stall_id: stallId,
+        menu_item_id: menuItemId,
+        inventory_item_id: ingredientId,
+        quantity_required: quantity
+      },
+      {
+        onConflict: "menu_item_id,inventory_item_id"
+      }
+    );
+
+  if (error) {
+    message.textContent = "Could not save ingredient: " + error.message;
+    return;
+  }
+
+  document.getElementById("recipeQuantity").value = "";
+  await loadSavedRecipe();
+  message.textContent = "Ingredient saved successfully.";
+}
+
     async function loadInventoryMode() {
       const modeSelect = document.getElementById("inventoryMode");
       const modeMessage = document.getElementById("inventoryModeMessage");
