@@ -442,6 +442,12 @@ async function saveRecipeIngredient(event) {
       }
 
       modeSelect.value = data.inventory_mode || "finished_items";
+      const recipeCard = document.getElementById("recipeCard");
+
+if (recipeCard) {
+  recipeCard.style.display =
+    modeSelect.value === "recipe_ingredients" ? "block" : "none";
+}
       modeMessage.textContent = "Current mode loaded.";
     }
 
@@ -474,6 +480,12 @@ async function saveRecipeIngredient(event) {
       }
 
       modeMessage.textContent = "Inventory mode saved successfully.";
+      const recipeCard = document.getElementById("recipeCard");
+
+if (recipeCard) {
+  recipeCard.style.display =
+    modeSelect.value === "recipe_ingredients" ? "block" : "none";
+}
     }
 
     async function initializeInventory() {
