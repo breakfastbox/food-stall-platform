@@ -476,7 +476,7 @@ function openReports() {
 
 
 function openInventory() {
-  alert("Inventory Management is coming next.");
+window.location.href = "inventory.html";
 }
 
 async function loadCategoriesForEditing() {
