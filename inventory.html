@@ -149,11 +149,19 @@
           </label>
 
           <label>
-            Unit
-            <input id="itemUnit" required maxlength="20"
-                   placeholder="e.g. kg">
-          </label>
-
+  Unit
+  <select id="itemUnit" required>
+    <option value="">Select unit</option>
+    <option value="kg">Kilogram (kg)</option>
+    <option value="g">Gram (g)</option>
+    <option value="litre">Litre</option>
+    <option value="ml">Millilitre (ml)</option>
+    <option value="piece">Piece</option>
+    <option value="packet">Packet</option>
+    <option value="dozen">Dozen</option>
+    <option value="box">Box</option>
+  </select>
+</label>
           <label>
             Starting Quantity
             <input id="itemQuantity" type="number" min="0"
@@ -623,12 +631,18 @@ function renderInventory() {
     ));
 
     actionsCell.appendChild(makeButton(
-      "Edit",
-      "secondary",
-      () => editItem(item)
-    ));
+  "Edit",
+  "secondary",
+  () => editItem(item)
+));
 
-    tableBody.appendChild(row);
+actionsCell.appendChild(makeButton(
+  "Delete",
+  "warning",
+  () => deleteItem(item)
+));
+
+tableBody.appendChild(row);
   });
 }
 
@@ -747,15 +761,113 @@ function renderInventory() {
         busy = false;
       }
     }
+async function deleteItem(item) {
+  if (busy) return;
 
+  const { data: recipes, error: recipeError } = await supabaseClient
+    .from("menu_item_ingredients")
+    .select("id")
+    .eq("inventory_item_id", item.id)
+    .limit(1);
+
+  if (recipeError) {
+    showMessage("Could not check recipe links: " + recipeError.message, true);
+    return;
+  }
+
+  const { data: stockLinks, error: stockError } = await supabaseClient
+    .from("menu_item_stock")
+    .select("id")
+    .eq("inventory_item_id", item.id)
+    .limit(1);
+
+  if (stockError) {
+    showMessage("Could not check stock links: " + stockError.message, true);
+    return;
+  }
+
+  if ((recipes && recipes.length > 0) ||
+      (stockLinks && stockLinks.length > 0)) {
+    showMessage(
+      "This item is linked to a menu item. Remove its recipe or stock link before deleting it.",
+      true
+    );
+    return;
+  }
+
+  if (!confirm(
+    "Delete " + item.name + " permanently? This cannot be undone."
+  )) return;
+
+  busy = true;
+  showMessage("Deleting inventory item...");
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("inventory_items")
+      .delete()
+      .eq("id", item.id)
+      .eq("stall_id", stallId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      throw new Error(
+        "No item was deleted. Check database permissions and try again."
+      );
+    }
+
+    showMessage("Inventory item deleted successfully.");
+    await loadInventory();
+  } catch (error) {
+    showMessage("Could not delete item: " + error.message, true);
+    console.error(error);
+  } finally {
+    busy = false;
+  }
+}
     async function editItem(item) {
       if (busy) return;
 
       const name = prompt("Item name:", item.name);
       if (name === null) return;
 
-      const unit = prompt("Unit (e.g. kg, litre, piece):", item.unit);
-      if (unit === null) return;
+     const units = [
+  ["kg", "Kilogram (kg)"],
+  ["g", "Gram (g)"],
+  ["litre", "Litre"],
+  ["ml", "Millilitre (ml)"],
+  ["piece", "Piece"],
+  ["packet", "Packet"],
+  ["dozen", "Dozen"],
+  ["box", "Box"]
+];
+
+const unitChoices = units.map(([value, label], index) =>
+  (index + 1) + ". " + label
+).join("\n");
+
+const currentUnit = units.findIndex(([value]) => value === item.unit);
+
+const unitChoice = prompt(
+  "Choose a unit by number:\n" + unitChoices,
+  String(currentUnit >= 0 ? currentUnit + 1 : 1)
+);
+
+if (unitChoice === null) return;
+
+const selectedUnitIndex = Number(unitChoice) - 1;
+
+if (!Number.isInteger(selectedUnitIndex) ||
+    selectedUnitIndex < 0 ||
+    selectedUnitIndex >= units.length) {
+  showMessage("Please enter a valid unit number.", true);
+  return;
+}
+
+const unit = units[selectedUnitIndex][0];
 
       const costText = prompt(
         "Cost per unit (₹):",
