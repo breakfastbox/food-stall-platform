@@ -357,10 +357,26 @@
       const phone = document.getElementById("customerPhone").value.trim();
       const email = document.getElementById("customerEmail").value.trim();
 
-      if (!name || !phone) {
-        showMessage("Please enter your name and phone number.", "error");
-        return;
-      }
+      
+if (!name || !phone) {
+  showMessage("Please enter your name and phone number.", "error");
+  return;
+}
+
+// Remove spaces, brackets, hyphens and an optional leading +.
+const normalizedPhone = phone.replace(/[()\s-]/g, "");
+
+// Accept 10-digit Indian mobile numbers, optionally with +91 or 91.
+const validPhone = /^(?:\+91|91)?[6-9]\d{9}$/.test(normalizedPhone);
+
+if (!validPhone) {
+  showMessage(
+    "Please enter a valid 10-digit Indian mobile number.",
+    "error"
+  );
+  return;
+}
+
 
           const turnstileToken = window.turnstile?.getResponse();
 
