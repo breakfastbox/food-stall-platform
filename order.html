@@ -154,11 +154,20 @@
           <input id="customerName" maxlength="100" required>
         </div>
 
-        <div class="field">
-          <label for="customerPhone">Phone number *</label>
-          <input id="customerPhone" type="tel" maxlength="30"
-                 autocomplete="tel" required>
-        </div>
+        
+<div class="field">
+  <label for="customerPhone">Phone number *</label>
+  <input
+    id="customerPhone"
+    type="tel"
+    maxlength="15"
+    autocomplete="tel"
+    inputmode="tel"
+    pattern="[+]?[0-9 ()-]{10,15}"
+    title="Enter a valid phone number using digits, spaces, +, parentheses, or hyphens."
+    required
+  >
+</div>
 
         <div class="field">
           <label for="customerEmail">Email (optional)</label>
