@@ -446,38 +446,57 @@ async function loadOrders() {
   `).join("");
 }
 
+
 async function updateOrderStatus(orderId) {
   const select = document.getElementById("status-" + orderId);
   const message = document.getElementById("ordersMessage");
 
-  if (!select) return;
+  if (!select || !message) return;
 
+  const newStatus = select.value;
   message.textContent = "Updating order status...";
 
-  const { error } = await supabaseClient
-    .from("orders")
-    .update({ order_status: select.value })
-    .eq("id", orderId);
+  let result;
 
-  if (error) {
-    console.error("Could not update order:", error);
-    message.textContent = "Unable to update status: " + error.message;
+  if (newStatus === "accepted") {
+    result = await supabaseClient.rpc(
+      "accept_order_and_deduct_stock",
+      { p_order_id: orderId }
+    );
+  } else {
+    result = await supabaseClient
+      .from("orders")
+      .update({ order_status: newStatus })
+      .eq("id", orderId)
+      .eq("order_status", "pending")
+      .select("id");
+  }
+
+  if (result.error) {
+    console.error("Could not update order:", result.error);
+    message.textContent =
+      "Unable to update order: " + result.error.message;
     return;
   }
 
-  message.textContent = "Order status updated successfully!";
+  if (
+    newStatus !== "accepted" &&
+    (!result.data || result.data.length === 0)
+  ) {
+    message.textContent =
+      "Order was not changed. It may no longer be pending.";
+    await loadOrders();
+    return;
+  }
+
+  message.textContent =
+    newStatus === "accepted"
+      ? "Order accepted and stock deduction completed!"
+      : "Order status updated successfully!";
+
   await loadOrders();
 }
 
-
-function openReports() {
-  alert("Reports are coming next.");
-}
-
-
-function openInventory() {
-window.location.href = "inventory.html";
-}
 
 async function loadCategoriesForEditing() {
   const select = document.getElementById("editCategorySelect");
