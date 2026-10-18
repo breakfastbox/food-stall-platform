@@ -107,5 +107,86 @@
 
     <p id="message" role="status" aria-live="polite"></p>
   </main>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://anlgfcltudysjnsipsmd.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    document
+      .getElementById("trackOrderForm")
+      .addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const token = document.getElementById("token").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const message = document.getElementById("message");
+        const button = this.querySelector('button[type="submit"]');
+
+        message.textContent = "";
+        button.disabled = true;
+        button.textContent = "Checking...";
+
+        try {
+          const { data, error } = await supabaseClient.functions.invoke(
+            "check-order-status",
+            {
+              body: { token, phone }
+            }
+          );
+
+          if (error || !data) {
+            throw new Error("Unable to check status. Please try again.");
+          }
+
+          if (data.error) {
+            message.textContent = data.error;
+            return;
+          }
+
+          if (!data.order) {
+            message.textContent = "No matching order was found.";
+            return;
+          }
+
+          const order = data.order;
+          const result = document.createElement("div");
+          result.style.marginTop = "16px";
+
+          const heading = document.createElement("strong");
+          heading.textContent = "Order found!";
+          result.appendChild(heading);
+
+          const details = [
+            "Token: " + order.token_number,
+            "Order status: " + order.order_status,
+            "Payment status: " + order.payment_status,
+            "Total: ₹" + Number(order.total_amount).toFixed(2)
+          ];
+
+          details.forEach(function (detail) {
+            const line = document.createElement("p");
+            line.textContent = detail;
+            result.appendChild(line);
+          });
+
+          message.replaceChildren(result);
+        } catch (error) {
+          console.error("Status check failed:", error);
+          message.textContent =
+            "Unable to check status right now. Please try again.";
+        } finally {
+          button.disabled = false;
+          button.textContent = "Check Order Status";
+        }
+      });
+  </script>
+
 </body>
 </html>
