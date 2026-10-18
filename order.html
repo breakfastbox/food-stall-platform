@@ -422,7 +422,10 @@ if (!validPhone) {
         const whatsappMessage =
           "Hello Breakfast Box! I have placed an order.\n" +
           "Token: " + order.token_number + "\n" +
-          "Status: " + order.order_status + "\n" +
+          "Status: " +
+(order.order_status.toLowerCase() === "pending"
+  ? "Pending — awaiting stall confirmation"
+  : order.order_status) + "\n" +
           "Total: ₹" + money(order.total_amount) + "\n" +
           "Thank you!";
 
