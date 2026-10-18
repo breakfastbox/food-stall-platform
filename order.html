@@ -417,13 +417,44 @@ if (!validPhone) {
           );
         }
 
+       
+        const order = result.order;
+        const whatsappMessage =
+          "Hello Breakfast Box! I have placed an order.\n" +
+          "Token: " + order.token_number + "\n" +
+          "Status: " + order.order_status + "\n" +
+          "Total: ₹" + money(order.total_amount) + "\n" +
+          "Thank you!";
+
+        const whatsappUrl =
+          "https://wa.me/?text=" + encodeURIComponent(whatsappMessage);
+
         showMessage(
           "Test order placed successfully!\n" +
-          "Token: " + result.order.token_number + "\n" +
-          "Status: " + result.order.order_status + "\n" +
-          "Total: ₹" + money(result.order.total_amount),
+          "Token: " + order.token_number + "\n" +
+          "Status: " + order.order_status + "\n" +
+          "Total: ₹" + money(order.total_amount) +
+          "\n\nOpen WhatsApp to send your confirmation:",
           "success"
         );
+
+        const whatsappLink = document.createElement("a");
+        whatsappLink.href = whatsappUrl;
+        whatsappLink.target = "_blank";
+        whatsappLink.rel = "noopener noreferrer";
+        whatsappLink.textContent = "Confirm on WhatsApp";
+        whatsappLink.style.display = "inline-block";
+        whatsappLink.style.marginTop = "12px";
+        whatsappLink.style.padding = "12px 18px";
+        whatsappLink.style.background = "#25D366";
+        whatsappLink.style.color = "#ffffff";
+        whatsappLink.style.borderRadius = "8px";
+        whatsappLink.style.textDecoration = "none";
+        whatsappLink.style.fontWeight = "bold";
+
+        const messageElement = document.getElementById("message");
+        messageElement.appendChild(document.createElement("br"));
+        messageElement.appendChild(whatsappLink);
 
         document.getElementById("orderForm").reset();
         updateTotal();
