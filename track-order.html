@@ -119,73 +119,107 @@
       SUPABASE_PUBLISHABLE_KEY
     );
 
-    document
-      .getElementById("trackOrderForm")
-      .addEventListener("submit", async function (event) {
-        event.preventDefault();
 
-        const token = document.getElementById("token").value.trim();
-        const phone = document.getElementById("phone").value.trim();
-        const message = document.getElementById("message");
-        const button = this.querySelector('button[type="submit"]');
+let statusRefreshTimer = null;
+let statusCheckInProgress = false;
 
-        message.textContent = "";
-        button.disabled = true;
-        button.textContent = "Checking...";
+async function checkOrderStatus(token, phone, button = null) {
+  if (statusCheckInProgress) return false;
 
-        try {
-          const { data, error } = await supabaseClient.functions.invoke(
-            "check-order-status",
-            {
-              body: { token, phone }
-            }
-          );
+  statusCheckInProgress = true;
 
-          if (error || !data) {
-            throw new Error("Unable to check status. Please try again.");
-          }
+  const message = document.getElementById("message");
 
-          if (data.error) {
-            message.textContent = data.error;
-            return;
-          }
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Checking...";
+  }
 
-          if (!data.order) {
-            message.textContent = "No matching order was found.";
-            return;
-          }
+  try {
+    const { data, error } = await supabaseClient.functions.invoke(
+      "check-order-status",
+      {
+        body: { token, phone }
+      }
+    );
 
-          const order = data.order;
-          const result = document.createElement("div");
-          result.style.marginTop = "16px";
+    if (error || !data) {
+      throw new Error("Unable to check status. Please try again.");
+    }
 
-          const heading = document.createElement("strong");
-          heading.textContent = "Order found!";
-          result.appendChild(heading);
+    if (data.error) {
+      message.textContent = data.error;
+      return false;
+    }
 
-          const details = [
-            "Token: " + order.token_number,
-            "Order status: " + order.order_status,
-            "Payment status: " + order.payment_status,
-            "Total: ₹" + Number(order.total_amount).toFixed(2)
-          ];
+    if (!data.order) {
+      message.textContent = "No matching order was found.";
+      return false;
+    }
 
-          details.forEach(function (detail) {
-            const line = document.createElement("p");
-            line.textContent = detail;
-            result.appendChild(line);
-          });
+    const order = data.order;
+    const result = document.createElement("div");
+    result.style.marginTop = "16px";
 
-          message.replaceChildren(result);
-        } catch (error) {
-          console.error("Status check failed:", error);
-          message.textContent =
-            "Unable to check status right now. Please try again.";
-        } finally {
-          button.disabled = false;
-          button.textContent = "Check Order Status";
-        }
-      });
+    const heading = document.createElement("strong");
+    heading.textContent = "Order found!";
+    result.appendChild(heading);
+
+    const details = [
+      "Token: " + order.token_number,
+      "Order status: " + order.order_status,
+      "Payment status: " + order.payment_status,
+      "Total: ₹" + Number(order.total_amount).toFixed(2)
+    ];
+
+    details.forEach(function (detail) {
+      const line = document.createElement("p");
+      line.textContent = detail;
+      result.appendChild(line);
+    });
+
+    message.replaceChildren(result);
+    return true;
+
+  } catch (error) {
+    console.error("Status check failed:", error);
+    message.textContent =
+      "Unable to check status right now. Please try again.";
+    return false;
+
+  } finally {
+    statusCheckInProgress = false;
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Check Order Status";
+    }
+  }
+}
+
+document
+  .getElementById("trackOrderForm")
+  .addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const token = document.getElementById("token").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const button = this.querySelector('button[type="submit"]');
+
+    if (statusRefreshTimer) {
+      clearInterval(statusRefreshTimer);
+      statusRefreshTimer = null;
+    }
+
+    const success = await checkOrderStatus(token, phone, button);
+
+    if (success) {
+      statusRefreshTimer = setInterval(function () {
+        checkOrderStatus(token, phone);
+      }, 15000);
+    }
+  });
+
   </script>
 
 </body>
