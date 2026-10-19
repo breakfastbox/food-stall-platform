@@ -456,7 +456,8 @@ async function updateOrderStatus(orderId) {
 
   const newStatus = select.value;
   message.textContent = "Updating order status...";
-
+console.log("Saving order:", orderId, "New status:", newStatus);
+console.log("Current user:", (await supabaseClient.auth.getUser()).data.user?.id);
   let result;
 
   if (newStatus === "accepted") {
