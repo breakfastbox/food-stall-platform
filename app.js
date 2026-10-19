@@ -447,6 +447,7 @@ async function loadOrders() {
 }
 
 
+
 async function updateOrderStatus(orderId) {
   const select = document.getElementById("status-" + orderId);
   const message = document.getElementById("ordersMessage");
@@ -468,7 +469,6 @@ async function updateOrderStatus(orderId) {
       .from("orders")
       .update({ order_status: newStatus })
       .eq("id", orderId)
-      .eq("order_status", "pending")
       .select("id");
   }
 
@@ -479,12 +479,9 @@ async function updateOrderStatus(orderId) {
     return;
   }
 
-  if (
-    newStatus !== "accepted" &&
-    (!result.data || result.data.length === 0)
-  ) {
+  if (!result.data || result.data.length === 0) {
     message.textContent =
-      "Order was not changed. It may no longer be pending.";
+      "Order was not changed. Check your permissions or current order status.";
     await loadOrders();
     return;
   }
@@ -496,6 +493,7 @@ async function updateOrderStatus(orderId) {
 
   await loadOrders();
 }
+
 
 
 async function loadCategoriesForEditing() {
