@@ -1091,66 +1091,89 @@ const unit = units[selectedUnitIndex][0];
       });
     }
 
-    async function recordInventoryPurchase(event) {
-      event.preventDefault();
 
-      const purchaseMessage =
-        document.getElementById("purchaseMessage");
-      const purchaseButton =
-        document.getElementById("purchaseButton");
+async function recordInventoryPurchase(event) {
+  event.preventDefault();
 
-      if (!stallId || busy) return;
+  const purchaseMessage =
+    document.getElementById("purchaseMessage");
+  const purchaseButton =
+    document.getElementById("purchaseButton");
 
-      const itemId =
-        document.getElementById("purchaseItem").value;
-      const quantityText =
-        document.getElementById("purchaseQuantity").value;
-      const unitCostText =
-        document.getElementById("purchaseUnitCost").value;
-      const purchaseDate =
-        document.getElementById("purchaseDate").value;
-      const notes =
-        document.getElementById("purchaseNotes").value.trim();
+  if (!stallId || busy) {
+    purchaseMessage.textContent =
+      "Please wait for the inventory page to finish loading.";
+    return;
+  }
 
-      if (!itemId ||
-          !validNonNegativeNumber(quantityText) ||
-          Number(quantityText) <= 0 ||
-          !validNonNegativeNumber(unitCostText) ||
-          !purchaseDate) {
-        purchaseMessage.textContent =
-          "Please enter a valid item, date, quantity, and unit cost.";
-        return;
+  const itemId =
+    document.getElementById("purchaseItem").value;
+  const quantityText =
+    document.getElementById("purchaseQuantity").value;
+  const unitCostText =
+    document.getElementById("purchaseUnitCost").value;
+  const purchaseDate =
+    document.getElementById("purchaseDate").value;
+  const notes =
+    document.getElementById("purchaseNotes").value.trim();
+
+  if (
+    !itemId ||
+    !validNonNegativeNumber(quantityText) ||
+    Number(quantityText) <= 0 ||
+    !validNonNegativeNumber(unitCostText) ||
+    !purchaseDate
+  ) {
+    purchaseMessage.textContent =
+      "Please enter a valid item, date, quantity, and unit cost.";
+    return;
+  }
+
+  if (!confirm(
+    "Record this purchase and increase inventory stock?\n\n" +
+    "Quantity: " + quantityText +
+    "\nUnit cost: ₹" + Number(unitCostText).toFixed(2) +
+    "\nTotal: ₹" +
+    (Number(quantityText) * Number(unitCostText)).toFixed(2)
+  )) return;
+
+  busy = true;
+  purchaseButton.disabled = true;
+  purchaseMessage.textContent = "Recording purchase...";
+
+  try {
+    const { error } = await supabaseClient.rpc(
+      "record_inventory_purchase",
+      {
+        p_inventory_item_id: itemId,
+        p_quantity: Number(quantityText),
+        p_unit_cost: Number(unitCostText),
+        p_purchased_at: purchaseDate,
+        p_notes: notes || null
       }
+    );
 
-      if (!confirm(
-        "Record this purchase and increase inventory stock?\n\n" +
-        "Quantity: " + quantityText +
-        "\nUnit cost: ₹" + Number(unitCostText).toFixed(2) +
-        "\nTotal: ₹" +
-        (Number(quantityText) * Number(unitCostText)).toFixed(2)
-      )) return;
+    if (error) throw error;
 
-      busy = true;
-      purchaseButton.disabled = true;
-      purchaseMessage.textContent = "Recording purchase...";
+    document.getElementById("purchaseForm").reset();
+    document.getElementById("purchaseDate").value =
+      new Date().toLocaleDateString("en-CA");
 
-      try {
-        const { error } = await supabaseClient.rpc(
-          "record_inventory_purchase",
-          {
-            p_inventory_item_id: itemId,
-            p_quantity: Number(quantityText),
-            p_unit_cost: Number(unitCostText),
-            p_purchased_at: purchaseDate,
-            p_notes: notes || null
-          }
-        );
+    setPurchaseTotal();
+    await loadInventory();
+    await loadPurchaseItems();
 
-        if (error) throw error;
-
-        document.getElementById("purchaseForm").reset();
-        document.getElementById("purchaseDate").value =
-          new Date().toLocaleDateString("en-CA");
+    purchaseMessage.textContent =
+      "Purchase recorded and inventory stock updated successfully.";
+  } catch (error) {
+    purchaseMessage.textContent =
+      "Could not record purchase: " + error.message;
+    console.error(error);
+  } finally {
+    busy = false;
+    purchaseButton.disabled = false;
+  }
+}
 
 function setExpenseDate() {
   document.getElementById("expenseDate").value =
@@ -1164,13 +1187,17 @@ async function saveDailyExpense(event) {
   const button = document.getElementById("expenseButton");
 
   if (!stallId || busy) {
-    message.textContent = "Please wait for the inventory page to finish loading.";
+    message.textContent =
+      "Please wait for the inventory page to finish loading.";
     return;
   }
 
-  const category = document.getElementById("expenseCategory").value;
-  const amountText = document.getElementById("expenseAmount").value;
-  const expenseDate = document.getElementById("expenseDate").value;
+  const category =
+    document.getElementById("expenseCategory").value;
+  const amountText =
+    document.getElementById("expenseAmount").value;
+  const expenseDate =
+    document.getElementById("expenseDate").value;
   const description =
     document.getElementById("expenseDescription").value.trim();
 
@@ -1193,9 +1220,7 @@ async function saveDailyExpense(event) {
     "Category: " + category +
     "\nAmount: ₹" + amount.toFixed(2) +
     "\nDate: " + expenseDate
-  )) {
-    return;
-  }
+  )) return;
 
   busy = true;
   button.disabled = true;
@@ -1219,102 +1244,8 @@ async function saveDailyExpense(event) {
 
     message.textContent = "Expense saved successfully.";
   } catch (error) {
-    message.textContent = "Could not save expense: " + error.message;
-    console.error("Daily expense error:", error);
-  } finally {
-    busy = false;
-    button.disabled = false;
-  }
-}
-
-document.getElementById("expenseForm")
-  .addEventListener("submit", saveDailyExpense);
-
-setExpenseDate();
-
-        setPurchaseTotal();
-        await loadInventory();
-        await loadPurchaseItems();
-
-        purchaseMessage.textContent =
-          "Purchase recorded and inventory stock updated successfully.";
-      } catch (error) {
-        purchaseMessage.textContent =
-          "Could not record purchase: " + error.message;
-        console.error(error);
-      } finally {
-        busy = false;
-        purchaseButton.disabled = false;
-      }
-    }
-function setExpenseDate() {
-  document.getElementById("expenseDate").value =
-    new Date().toLocaleDateString("en-CA");
-}
-
-async function saveDailyExpense(event) {
-  event.preventDefault();
-
-  const message = document.getElementById("expenseMessage");
-  const button = document.getElementById("expenseButton");
-
-  if (!stallId || busy) {
-    message.textContent = "Please wait for the inventory page to finish loading.";
-    return;
-  }
-
-  const category = document.getElementById("expenseCategory").value;
-  const amountText = document.getElementById("expenseAmount").value;
-  const expenseDate = document.getElementById("expenseDate").value;
-  const description =
-    document.getElementById("expenseDescription").value.trim();
-
-  const amount = Number(amountText);
-
-  if (
-    !category ||
-    !amountText ||
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
-    !expenseDate
-  ) {
     message.textContent =
-      "Please enter a category, a valid amount, and an expense date.";
-    return;
-  }
-
-  if (!confirm(
-    "Save this business expense?\n\n" +
-    "Category: " + category +
-    "\nAmount: ₹" + amount.toFixed(2) +
-    "\nDate: " + expenseDate
-  )) {
-    return;
-  }
-
-  busy = true;
-  button.disabled = true;
-  message.textContent = "Saving expense...";
-
-  try {
-    const { error } = await supabaseClient
-      .from("business_expenses")
-      .insert({
-        stall_id: stallId,
-        category: category,
-        amount: amount,
-        expense_date: expenseDate,
-        description: description || null
-      });
-
-    if (error) throw error;
-
-    document.getElementById("expenseForm").reset();
-    setExpenseDate();
-
-    message.textContent = "Expense saved successfully.";
-  } catch (error) {
-    message.textContent = "Could not save expense: " + error.message;
+      "Could not save expense: " + error.message;
     console.error("Daily expense error:", error);
   } finally {
     busy = false;
@@ -1326,6 +1257,7 @@ document.getElementById("expenseForm")
   .addEventListener("submit", saveDailyExpense);
 
 setExpenseDate();
+
     document.getElementById("purchaseQuantity")
       .addEventListener("input", setPurchaseTotal);
 
