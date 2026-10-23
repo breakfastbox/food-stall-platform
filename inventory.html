@@ -185,6 +185,60 @@
       </form>
     </section>
 
+    <section class="card" id="purchaseCard">
+      <h2>🧾 Record Inventory Purchase</h2>
+      <p>
+        Record ingredients or stock purchased. Opening stock and manual
+        stock adjustments remain separate from purchases.
+      </p>
+
+      <form id="purchaseForm">
+        <div class="form-grid">
+          <label>
+            Inventory Item
+            <select id="purchaseItem" required>
+              <option value="">Select inventory item</option>
+            </select>
+          </label>
+
+          <label>
+            Purchase Date
+            <input id="purchaseDate" type="date" required>
+          </label>
+
+          <label>
+            Quantity Purchased
+            <input id="purchaseQuantity" type="number"
+                   min="0.000001" step="any" required
+                   placeholder="e.g. 5">
+          </label>
+
+          <label>
+            Cost per Unit (₹)
+            <input id="purchaseUnitCost" type="number"
+                   min="0" step="any" required
+                   placeholder="e.g. 30">
+          </label>
+
+          <label>
+            Notes (optional)
+            <input id="purchaseNotes" maxlength="500"
+                   placeholder="e.g. Purchased from local market">
+          </label>
+        </div>
+
+        <p>
+          Total purchase cost: ₹<strong id="purchaseTotal">0.00</strong>
+        </p>
+
+        <button id="purchaseButton" type="submit">
+          Record Purchase
+        </button>
+
+        <p id="purchaseMessage" role="status"></p>
+      </form>
+    </section>
+
     <section class="card" id="recipeCard" style="display: none;">
       <h2>Recipe Management</h2>
       <p>Set the ingredients and quantities needed for one serving of a menu item.</p>
@@ -519,8 +573,9 @@ if (recipeCard) {
 
        
         await loadInventoryMode();
-        await loadRecipeOptions();
-        await loadInventory();
+       await loadRecipeOptions();
+await loadInventory();
+await loadPurchaseItems();
 
       } catch (error) {
         document.getElementById("connectionStatus").textContent =
@@ -943,6 +998,141 @@ const unit = units[selectedUnitIndex][0];
     refreshButton.addEventListener("click", loadInventory);
 
     initializeInventory();
+    
+    function setPurchaseTotal() {
+      const quantity = Number(
+        document.getElementById("purchaseQuantity").value
+      );
+      const unitCost = Number(
+        document.getElementById("purchaseUnitCost").value
+      );
+
+      const total =
+        Number.isFinite(quantity) && quantity > 0 &&
+        Number.isFinite(unitCost) && unitCost >= 0
+          ? quantity * unitCost
+          : 0;
+
+      document.getElementById("purchaseTotal").textContent =
+        total.toFixed(2);
+    }
+
+    async function loadPurchaseItems() {
+      const select = document.getElementById("purchaseItem");
+      if (!select || !stallId) return;
+
+      const { data, error } = await supabaseClient
+        .from("inventory_items")
+        .select("id, name, unit")
+        .eq("stall_id", stallId)
+        .order("name");
+
+      if (error) {
+        document.getElementById("purchaseMessage").textContent =
+          "Could not load items: " + error.message;
+        return;
+      }
+
+      select.replaceChildren(
+        new Option("Select inventory item", "")
+      );
+
+      (data || []).forEach(item => {
+        select.add(
+          new Option(item.name + " (" + item.unit + ")", item.id)
+        );
+      });
+    }
+
+    async function recordInventoryPurchase(event) {
+      event.preventDefault();
+
+      const purchaseMessage =
+        document.getElementById("purchaseMessage");
+      const purchaseButton =
+        document.getElementById("purchaseButton");
+
+      if (!stallId || busy) return;
+
+      const itemId =
+        document.getElementById("purchaseItem").value;
+      const quantityText =
+        document.getElementById("purchaseQuantity").value;
+      const unitCostText =
+        document.getElementById("purchaseUnitCost").value;
+      const purchaseDate =
+        document.getElementById("purchaseDate").value;
+      const notes =
+        document.getElementById("purchaseNotes").value.trim();
+
+      if (!itemId ||
+          !validNonNegativeNumber(quantityText) ||
+          Number(quantityText) <= 0 ||
+          !validNonNegativeNumber(unitCostText) ||
+          !purchaseDate) {
+        purchaseMessage.textContent =
+          "Please enter a valid item, date, quantity, and unit cost.";
+        return;
+      }
+
+      if (!confirm(
+        "Record this purchase and increase inventory stock?\n\n" +
+        "Quantity: " + quantityText +
+        "\nUnit cost: ₹" + Number(unitCostText).toFixed(2) +
+        "\nTotal: ₹" +
+        (Number(quantityText) * Number(unitCostText)).toFixed(2)
+      )) return;
+
+      busy = true;
+      purchaseButton.disabled = true;
+      purchaseMessage.textContent = "Recording purchase...";
+
+      try {
+        const { error } = await supabaseClient.rpc(
+          "record_inventory_purchase",
+          {
+            p_inventory_item_id: itemId,
+            p_quantity: Number(quantityText),
+            p_unit_cost: Number(unitCostText),
+            p_purchased_at: purchaseDate,
+            p_notes: notes || null
+          }
+        );
+
+        if (error) throw error;
+
+        document.getElementById("purchaseForm").reset();
+        document.getElementById("purchaseDate").value =
+          new Date().toLocaleDateString("en-CA");
+
+        setPurchaseTotal();
+        await loadInventory();
+        await loadPurchaseItems();
+
+        purchaseMessage.textContent =
+          "Purchase recorded and inventory stock updated successfully.";
+      } catch (error) {
+        purchaseMessage.textContent =
+          "Could not record purchase: " + error.message;
+        console.error(error);
+      } finally {
+        busy = false;
+        purchaseButton.disabled = false;
+      }
+    }
+
+    document.getElementById("purchaseQuantity")
+      .addEventListener("input", setPurchaseTotal);
+
+    document.getElementById("purchaseUnitCost")
+      .addEventListener("input", setPurchaseTotal);
+
+    document.getElementById("purchaseForm")
+      .addEventListener("submit", recordInventoryPurchase);
+
+    document.getElementById("purchaseDate").value =
+      new Date().toLocaleDateString("en-CA");
+
   </script>
 </body>
 </html>
