@@ -1247,7 +1247,85 @@ setExpenseDate();
         purchaseButton.disabled = false;
       }
     }
+function setExpenseDate() {
+  document.getElementById("expenseDate").value =
+    new Date().toLocaleDateString("en-CA");
+}
 
+async function saveDailyExpense(event) {
+  event.preventDefault();
+
+  const message = document.getElementById("expenseMessage");
+  const button = document.getElementById("expenseButton");
+
+  if (!stallId || busy) {
+    message.textContent = "Please wait for the inventory page to finish loading.";
+    return;
+  }
+
+  const category = document.getElementById("expenseCategory").value;
+  const amountText = document.getElementById("expenseAmount").value;
+  const expenseDate = document.getElementById("expenseDate").value;
+  const description =
+    document.getElementById("expenseDescription").value.trim();
+
+  const amount = Number(amountText);
+
+  if (
+    !category ||
+    !amountText ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    !expenseDate
+  ) {
+    message.textContent =
+      "Please enter a category, a valid amount, and an expense date.";
+    return;
+  }
+
+  if (!confirm(
+    "Save this business expense?\n\n" +
+    "Category: " + category +
+    "\nAmount: ₹" + amount.toFixed(2) +
+    "\nDate: " + expenseDate
+  )) {
+    return;
+  }
+
+  busy = true;
+  button.disabled = true;
+  message.textContent = "Saving expense...";
+
+  try {
+    const { error } = await supabaseClient
+      .from("business_expenses")
+      .insert({
+        stall_id: stallId,
+        category: category,
+        amount: amount,
+        expense_date: expenseDate,
+        description: description || null
+      });
+
+    if (error) throw error;
+
+    document.getElementById("expenseForm").reset();
+    setExpenseDate();
+
+    message.textContent = "Expense saved successfully.";
+  } catch (error) {
+    message.textContent = "Could not save expense: " + error.message;
+    console.error("Daily expense error:", error);
+  } finally {
+    busy = false;
+    button.disabled = false;
+  }
+}
+
+document.getElementById("expenseForm")
+  .addEventListener("submit", saveDailyExpense);
+
+setExpenseDate();
     document.getElementById("purchaseQuantity")
       .addEventListener("input", setPurchaseTotal);
 
