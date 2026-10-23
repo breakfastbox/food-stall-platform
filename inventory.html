@@ -185,6 +185,53 @@
       </form>
     </section>
 
+    <section class="card" id="expenseCard">
+      <h2>💸 Record Daily Expense</h2>
+      <p>Record business expenses separately from inventory purchases.</p>
+
+      <form id="expenseForm">
+        <div class="form-grid">
+          <label>
+            Expense Category
+            <select id="expenseCategory" required>
+              <option value="">Select category</option>
+              <option value="Gas and Fuel">Gas and Fuel</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Transport">Transport</option>
+              <option value="Electricity">Electricity</option>
+              <option value="Rent">Rent</option>
+              <option value="Labour">Labour</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+
+          <label>
+            Amount (₹)
+            <input id="expenseAmount" type="number"
+                   min="0.01" step="0.01" required
+                   placeholder="e.g. 150">
+          </label>
+
+          <label>
+            Expense Date
+            <input id="expenseDate" type="date" required>
+          </label>
+
+          <label>
+            Description (optional)
+            <input id="expenseDescription" maxlength="500"
+                   placeholder="e.g. Gas cylinder refill">
+          </label>
+        </div>
+
+        <button id="expenseButton" type="submit">
+          Save Expense
+        </button>
+
+        <p id="expenseMessage" role="status"></p>
+      </form>
+    </section>
+
     <section class="card" id="purchaseCard">
       <h2>🧾 Record Inventory Purchase</h2>
       <p>
