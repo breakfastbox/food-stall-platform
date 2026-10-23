@@ -214,7 +214,14 @@
 
           <label>
             Expense Date
-            <input id="expenseDate" type="date" required>
+            <input
+  id="expenseDate"
+  type="text"
+  placeholder="DD-MM-YY"
+  pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}"
+  title="Enter date as DD-MM-YY, e.g. 23-10-26"
+  required
+>
           </label>
 
           <label>
@@ -250,7 +257,14 @@
 
           <label>
             Purchase Date
-            <input id="purchaseDate" type="date" required>
+            <input
+  id="purchaseDate"
+  type="text"
+  placeholder="DD-MM-YY"
+  pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}"
+  title="Enter date as DD-MM-YY, e.g. 23-10-26"
+  required
+>
           </label>
 
           <label>
@@ -1091,6 +1105,51 @@ const unit = units[selectedUnitIndex][0];
       });
     }
 
+function formatDateDDMMYY(dateValue) {
+  if (!dateValue) return "";
+  const parts = dateValue.split("-");
+  if (parts.length !== 3) return dateValue;
+  return parts[2] + "-" + parts[1] + "-" + parts[0].slice(-2);
+}
+
+function displayDateDDMMYY(dateValue) {
+  if (!dateValue) return "";
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return dateValue;
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+
+  return day + "-" + month + "-" + year;
+}
+
+function dateDDMMYYToISO(dateValue) {
+  const match = /^(\d{2})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = 2000 + Number(match[3]);
+
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return (
+    String(year).padStart(4, "0") + "-" +
+    String(month).padStart(2, "0") + "-" +
+    String(day).padStart(2, "0")
+  );
+}
+
 
 async function recordInventoryPurchase(event) {
   event.preventDefault();
@@ -1114,6 +1173,7 @@ async function recordInventoryPurchase(event) {
     document.getElementById("purchaseUnitCost").value;
   const purchaseDate =
     document.getElementById("purchaseDate").value;
+  const purchaseDateISO = dateDDMMYYToISO(purchaseDate);
   const notes =
     document.getElementById("purchaseNotes").value.trim();
 
@@ -1122,7 +1182,7 @@ async function recordInventoryPurchase(event) {
     !validNonNegativeNumber(quantityText) ||
     Number(quantityText) <= 0 ||
     !validNonNegativeNumber(unitCostText) ||
-    !purchaseDate
+    !purchaseDateISO
   ) {
     purchaseMessage.textContent =
       "Please enter a valid item, date, quantity, and unit cost.";
@@ -1130,13 +1190,13 @@ async function recordInventoryPurchase(event) {
   }
 
   if (!confirm(
-    "Record this purchase and increase inventory stock?\n\n" +
-    "Quantity: " + quantityText +
-    "\nUnit cost: ₹" + Number(unitCostText).toFixed(2) +
-    "\nTotal: ₹" +
-    (Number(quantityText) * Number(unitCostText)).toFixed(2)
-  )) return;
-
+  "Record this purchase and increase inventory stock?\n\n" +
+  "Date: " + purchaseDate +
+  "\nQuantity: " + quantityText +
+  "\nUnit cost: ₹" + Number(unitCostText).toFixed(2) +
+  "\nTotal: ₹" +
+  (Number(quantityText) * Number(unitCostText)).toFixed(2)
+)) return;
   busy = true;
   purchaseButton.disabled = true;
   purchaseMessage.textContent = "Recording purchase...";
@@ -1148,7 +1208,7 @@ async function recordInventoryPurchase(event) {
         p_inventory_item_id: itemId,
         p_quantity: Number(quantityText),
         p_unit_cost: Number(unitCostText),
-        p_purchased_at: purchaseDate,
+        p_purchased_at: purchaseDateISO,
         p_notes: notes || null
       }
     );
@@ -1177,7 +1237,7 @@ async function recordInventoryPurchase(event) {
 
 function setExpenseDate() {
   document.getElementById("expenseDate").value =
-    new Date().toLocaleDateString("en-CA");
+    displayDateDDMMYY(new Date());
 }
 
 async function saveDailyExpense(event) {
@@ -1197,9 +1257,10 @@ async function saveDailyExpense(event) {
   const amountText =
     document.getElementById("expenseAmount").value;
   const expenseDate =
-    document.getElementById("expenseDate").value;
-  const description =
-    document.getElementById("expenseDescription").value.trim();
+  document.getElementById("expenseDate").value;
+const expenseDateISO = dateDDMMYYToISO(expenseDate);
+const description =
+  document.getElementById("expenseDescription").value.trim();
 
   const amount = Number(amountText);
 
@@ -1219,7 +1280,7 @@ async function saveDailyExpense(event) {
     "Save this business expense?\n\n" +
     "Category: " + category +
     "\nAmount: ₹" + amount.toFixed(2) +
-    "\nDate: " + expenseDate
+    "\nDate: " + formatDateDDMMYY(expenseDate)
   )) return;
 
   busy = true;
@@ -1233,7 +1294,7 @@ async function saveDailyExpense(event) {
         stall_id: stallId,
         category: category,
         amount: amount,
-        expense_date: expenseDate,
+        expense_date: !expenseDateISO,
         description: description || null
       });
 
@@ -1268,7 +1329,7 @@ setExpenseDate();
       .addEventListener("submit", recordInventoryPurchase);
 
     document.getElementById("purchaseDate").value =
-      new Date().toLocaleDateString("en-CA");
+  displayDateDDMMYY(new Date());
 
   </script>
 </body>
