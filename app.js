@@ -1066,13 +1066,13 @@ if (window.location.pathname.endsWith("reports.html")) {
 
   if (reportDateInput) {
     const today = new Date();
-    const localToday = [
-      today.getFullYear(),
-      String(today.getMonth() + 1).padStart(2, "0"),
-      String(today.getDate()).padStart(2, "0")
-    ].join("-");
 
-    reportDateInput.value = localToday;
+const localToday =
+  String(today.getDate()).padStart(2, "0") + "-" +
+  String(today.getMonth() + 1).padStart(2, "0") + "-" +
+  String(today.getFullYear()).slice(-2);
+
+reportDateInput.value = localToday;
     loadDailyReport();
   }
 }
