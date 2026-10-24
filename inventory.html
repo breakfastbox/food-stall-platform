@@ -239,6 +239,76 @@
       </form>
     </section>
 
+<div class="card" id="expenseHistoryCard">
+  <h2>📋 Daily Expenses History</h2>
+  <p>View and filter your previously recorded business expenses.</p>
+
+  <div class="form-group">
+    <label for="expenseHistoryFrom">From Date (DD-MM-YY)</label>
+    <input
+      type="text"
+      id="expenseHistoryFrom"
+      placeholder="DD-MM-YY"
+      pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}"
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="expenseHistoryTo">To Date (DD-MM-YY)</label>
+    <input
+      type="text"
+      id="expenseHistoryTo"
+      placeholder="DD-MM-YY"
+      pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}"
+    >
+  </div>
+
+  <div class="form-group">
+    <label for="expenseHistoryCategory">Category</label>
+    <select id="expenseHistoryCategory">
+      <option value="">All categories</option>
+      <option value="Ingredients">Ingredients</option>
+      <option value="Packaging">Packaging</option>
+      <option value="Gas/Fuel">Gas/Fuel</option>
+      <option value="Transport">Transport</option>
+      <option value="Rent">Rent</option>
+      <option value="Utilities">Utilities</option>
+      <option value="Maintenance">Maintenance</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+
+  <button type="button" id="expenseHistoryFilterButton">
+    Filter Expenses
+  </button>
+
+  <button type="button" id="expenseHistoryResetButton">
+    Clear Filters
+  </button>
+
+  <p id="expenseHistoryMessage" role="status"></p>
+
+  <h3>Total: ₹<span id="expenseHistoryTotal">0.00</span></h3>
+
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody id="expenseHistoryRows">
+        <tr>
+          <td colspan="4">Loading expenses...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
     <section class="card" id="purchaseCard">
       <h2>🧾 Record Inventory Purchase</h2>
       <p>
@@ -632,12 +702,11 @@ if (recipeCard) {
         document.getElementById("connectionStatus").textContent =
           "Connected to " + data[0].name + " inventory.";
 
-       
-        await loadInventoryMode();
-       await loadRecipeOptions();
-await loadInventory();
-await loadPurchaseItems();
-
+      await loadInventoryMode();
+        await loadRecipeOptions();
+        await loadInventory();
+        await loadPurchaseItems();
+        await loadExpenseHistory();
       } catch (error) {
         document.getElementById("connectionStatus").textContent =
           "Connection or loading problem.";
@@ -646,6 +715,112 @@ await loadPurchaseItems();
         console.error(error);
       }
     }
+    
+async function loadExpenseHistory() {
+  const message = document.getElementById("expenseHistoryMessage");
+  const rows = document.getElementById("expenseHistoryRows");
+  const totalElement = document.getElementById("expenseHistoryTotal");
+
+  if (!stallId) {
+    message.textContent = "Stall information is not ready yet.";
+    return;
+  }
+
+  const fromText = document.getElementById("expenseHistoryFrom").value.trim();
+  const toText = document.getElementById("expenseHistoryTo").value.trim();
+  const category = document.getElementById("expenseHistoryCategory").value;
+
+  const fromISO = fromText ? dateDDMMYYToISO(fromText) : null;
+  const toISO = toText ? dateDDMMYYToISO(toText) : null;
+
+  if (fromText && !fromISO) {
+    message.textContent = "Enter a valid From Date in DD-MM-YY format.";
+    return;
+  }
+
+  if (toText && !toISO) {
+    message.textContent = "Enter a valid To Date in DD-MM-YY format.";
+    return;
+  }
+
+  if (fromISO && toISO && fromISO > toISO) {
+    message.textContent = "From Date cannot be later than To Date.";
+    return;
+  }
+
+  message.textContent = "Loading expenses...";
+  rows.innerHTML = "";
+  totalElement.textContent = "0.00";
+
+  try {
+    let query = supabaseClient
+      .from("business_expenses")
+      .select("id, category, amount, expense_date, description, created_at")
+      .eq("stall_id", stallId)
+      .order("expense_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (fromISO) query = query.gte("expense_date", fromISO);
+    if (toISO) query = query.lte("expense_date", toISO);
+    if (category) query = query.eq("category", category);
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    const expenses = data || [];
+    let total = 0;
+
+    if (expenses.length === 0) {
+      rows.innerHTML =
+        '<tr><td colspan="4">No expenses found for these filters.</td></tr>';
+    } else {
+      expenses.forEach((expense) => {
+        const amount = Number(expense.amount) || 0;
+        total += amount;
+
+        const row = document.createElement("tr");
+
+        const dateCell = document.createElement("td");
+        dateCell.textContent = formatDateDDMMYY(expense.expense_date);
+
+        const categoryCell = document.createElement("td");
+        categoryCell.textContent = expense.category || "";
+
+        const descriptionCell = document.createElement("td");
+        descriptionCell.textContent = expense.description || "—";
+
+        const amountCell = document.createElement("td");
+        amountCell.textContent = "₹" + amount.toFixed(2);
+
+        row.append(dateCell, categoryCell, descriptionCell, amountCell);
+        rows.appendChild(row);
+      });
+    }
+
+    totalElement.textContent = total.toFixed(2);
+    message.textContent = expenses.length + " expense record(s) found.";
+  } catch (error) {
+    console.error("Expense history error:", error);
+    rows.innerHTML =
+      '<tr><td colspan="4">Could not load expense history.</td></tr>';
+    message.textContent = "Error loading expenses: " + error.message;
+  }
+}
+
+document
+  .getElementById("expenseHistoryFilterButton")
+  .addEventListener("click", loadExpenseHistory);
+
+document
+  .getElementById("expenseHistoryResetButton")
+  .addEventListener("click", () => {
+    document.getElementById("expenseHistoryFrom").value = "";
+    document.getElementById("expenseHistoryTo").value = "";
+    document.getElementById("expenseHistoryCategory").value = "";
+    loadExpenseHistory();
+  });
+
     async function loadInventory() {
       if (!stallId) return;
 
@@ -1216,9 +1391,8 @@ async function recordInventoryPurchase(event) {
     if (error) throw error;
 
     document.getElementById("purchaseForm").reset();
-    document.getElementById("purchaseDate").value =
-      new Date().toLocaleDateString("en-CA");
-
+   document.getElementById("purchaseDate").value =
+  displayDateDDMMYY(new Date());
     setPurchaseTotal();
     await loadInventory();
     await loadPurchaseItems();
@@ -1269,7 +1443,7 @@ const description =
     !amountText ||
     !Number.isFinite(amount) ||
     amount <= 0 ||
-    !expenseDate
+   !expenseDateISO
   ) {
     message.textContent =
       "Please enter a category, a valid amount, and an expense date.";
@@ -1294,7 +1468,7 @@ const description =
         stall_id: stallId,
         category: category,
         amount: amount,
-        expense_date: !expenseDateISO,
+        expense_date: expenseDateISO,
         description: description || null
       });
 
