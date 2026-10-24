@@ -304,7 +304,9 @@ function openMenu() {
 function openOrders() {
   window.location.href = "orders.html";
 }
-
+function openReports() {
+  window.location.href = "reports.html";
+}
 async function loadOrders() {
   const message = document.getElementById("ordersMessage");
   const list = document.getElementById("ordersList");
