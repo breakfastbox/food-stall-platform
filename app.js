@@ -916,3 +916,142 @@ async function loadMenuCategories() {
     categorySelect.appendChild(option);
   });
 }
+```javascript
+// Daily Profit & Loss Report — read-only
+async function loadDailyReport() {
+  const message = document.getElementById("reportMessage");
+  const dateInput = document.getElementById("reportDate");
+  const button = document.getElementById("loadReportButton");
+
+  if (!message || !dateInput) return;
+
+  const selectedDate = dateInput.value;
+
+  if (!selectedDate) {
+    message.textContent = "Please select a report date.";
+    return;
+  }
+
+  message.textContent = "Loading report...";
+  if (button) button.disabled = true;
+
+  try {
+    // Find the existing Breakfast Box stall.
+    const { data: stalls, error: stallError } = await supabaseClient
+      .from("stalls")
+      .select("id, name")
+      .eq("name", "Breakfast Box")
+      .limit(1);
+
+    if (stallError) throw stallError;
+
+    if (!stalls || stalls.length === 0) {
+      throw new Error("Breakfast Box stall could not be found.");
+    }
+
+    const stall = stalls[0];
+    document.getElementById("reportStallName").textContent = stall.name;
+
+    // Use local midnight boundaries for the selected report date.
+    const startDate = new Date(selectedDate + "T00:00:00");
+    if (Number.isNaN(startDate.getTime())) {
+      throw new Error("The selected report date is invalid.");
+    }
+
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+
+    // Read orders created during the selected date.
+    const { data: orders, error: ordersError } = await supabaseClient
+      .from("orders")
+      .select("total_amount, subtotal, payment_status, order_status, created_at")
+      .eq("stall_id", stall.id)
+      .gte("created_at", startDate.toISOString())
+      .lt("created_at", endDate.toISOString());
+
+    if (ordersError) throw ordersError;
+
+    // Exclude cancelled orders and refunded payments from these summaries.
+    const validOrders = (orders || []).filter(
+      order => order.order_status !== "cancelled"
+    );
+
+    const paidSales = validOrders
+      .filter(order => order.payment_status === "paid")
+      .reduce(
+        (total, order) =>
+          total + Number(order.total_amount ?? order.subtotal ?? 0),
+        0
+      );
+
+    const pendingPayments = validOrders
+      .filter(order => order.payment_status === "pending")
+      .reduce(
+        (total, order) =>
+          total + Number(order.total_amount ?? order.subtotal ?? 0),
+        0
+      );
+
+    // Read recorded business expenses for the selected date.
+    const { data: expenses, error: expensesError } = await supabaseClient
+      .from("business_expenses")
+      .select("amount, expense_date")
+      .eq("stall_id", stall.id)
+      .eq("expense_date", selectedDate);
+
+    if (expensesError) throw expensesError;
+
+    const businessExpenses = (expenses || []).reduce(
+      (total, expense) => total + Number(expense.amount || 0),
+      0
+    );
+
+    const estimatedProfit = paidSales - businessExpenses;
+
+    const formatRupees = amount =>
+      "₹" + amount.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+
+    document.getElementById("paidSales").textContent =
+      formatRupees(paidSales);
+
+    document.getElementById("pendingPayments").textContent =
+      formatRupees(pendingPayments);
+
+    document.getElementById("businessExpenses").textContent =
+      formatRupees(businessExpenses);
+
+    document.getElementById("estimatedProfit").textContent =
+      formatRupees(estimatedProfit);
+
+    message.textContent =
+      "Report loaded for " + selectedDate +
+      ". Ingredient costs are not included in the profit estimate.";
+
+  } catch (error) {
+    console.error("Unable to load daily report:", error);
+    message.textContent = "Unable to load report: " + error.message;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+// Initialize the report page only when reports.html is open.
+if (window.location.pathname.endsWith("reports.html")) {
+  const reportDateInput = document.getElementById("reportDate");
+
+  if (reportDateInput) {
+    const today = new Date();
+    const localToday = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0")
+    ].join("-");
+
+    reportDateInput.value = localToday;
+    loadDailyReport();
+  }
+}
+```
