@@ -69,7 +69,14 @@
       <div class="report-filters">
         <label>
           Report date
-          <input type="date" id="reportDate">
+         <input
+  type="text"
+  id="reportDate"
+  placeholder="DD-MM-YY"
+  pattern="\d{2}-\d{2}-\d{2}"
+  maxlength="8"
+  required
+>
         </label>
       </div>
       <button type="button" id="loadReportButton" onclick="loadDailyReport()">
