@@ -924,17 +924,14 @@ async function loadDailyReport() {
 
   if (!message || !dateInput) return;
 
-const enteredDate = dateInput.value.trim();
-const match = /^(\d{2})-(\d{2})-(\d{2})$/.exec(enteredDate);
+const selectedDate = dateInput.value;
 
-if (!match) {
-  message.textContent = "Choose a report date using the calendar, then click View Report.";
+if (!selectedDate) {
+  message.textContent = "Please select a report date.";
   return;
 }
 
-const day = Number(match[1]);
-const month = Number(match[2]);
-const year = 2000 + Number(match[3]);
+const [year, month, day] = selectedDate.split("-").map(Number);
 
 const checkDate = new Date(year, month - 1, day);
 
@@ -943,16 +940,9 @@ if (
   checkDate.getMonth() !== month - 1 ||
   checkDate.getDate() !== day
 ) {
-  message.textContent = "Please enter a valid calendar date.";
+  message.textContent = "Please select a valid calendar date.";
   return;
 }
-
-const selectedDate =
-  `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  if (!selectedDate) {
-    message.textContent = "Please select a report date.";
-    return;
-  }
 
   message.textContent = "Loading report...";
   if (button) button.disabled = true;
