@@ -1048,10 +1048,14 @@ const selectedDate =
     document.getElementById("estimatedProfit").textContent =
       formatRupees(estimatedProfit);
 
-    message.textContent =
-      "Report loaded for " + selectedDate +
-      ". Ingredient costs are not included in the profit estimate.";
+    const displayDate =
+  String(day).padStart(2, "0") + "-" +
+  String(month).padStart(2, "0") + "-" +
+  String(year).slice(-2);
 
+message.textContent =
+  "Report loaded for " + displayDate +
+  ". Ingredient costs are not included in the profit estimate.";
   } catch (error) {
     console.error("Unable to load daily report:", error);
     message.textContent = "Unable to load report: " + error.message;
