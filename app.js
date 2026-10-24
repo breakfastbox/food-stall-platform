@@ -928,7 +928,7 @@ const enteredDate = dateInput.value.trim();
 const match = /^(\d{2})-(\d{2})-(\d{2})$/.exec(enteredDate);
 
 if (!match) {
-  message.textContent = "Enter the date as DD-MM-YY, for example 24-10-26.";
+  message.textContent = "Choose a report date using the calendar, then click View Report.";
   return;
 }
 
