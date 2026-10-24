@@ -69,13 +69,20 @@
       <div class="report-filters">
         <label>
           Report date
-         <input
+       <input
   type="text"
   id="reportDate"
   placeholder="DD-MM-YY"
-  pattern="\d{2}-\d{2}-\d{2}"
   maxlength="8"
+  autocomplete="off"
+  readonly
   required
+>
+
+<input
+  type="date"
+  id="reportDatePicker"
+  aria-label="Choose report date"
 >
         </label>
       </div>
