@@ -916,7 +916,6 @@ async function loadMenuCategories() {
     categorySelect.appendChild(option);
   });
 }
-```javascript
 // Daily Profit & Loss Report — read-only
 async function loadDailyReport() {
   const message = document.getElementById("reportMessage");
@@ -1054,4 +1053,3 @@ if (window.location.pathname.endsWith("reports.html")) {
     loadDailyReport();
   }
 }
-```
