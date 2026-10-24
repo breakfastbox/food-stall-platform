@@ -924,8 +924,31 @@ async function loadDailyReport() {
 
   if (!message || !dateInput) return;
 
-  const selectedDate = dateInput.value;
+const enteredDate = dateInput.value.trim();
+const match = /^(\d{2})-(\d{2})-(\d{2})$/.exec(enteredDate);
 
+if (!match) {
+  message.textContent = "Enter the date as DD-MM-YY, for example 24-10-26.";
+  return;
+}
+
+const day = Number(match[1]);
+const month = Number(match[2]);
+const year = 2000 + Number(match[3]);
+
+const checkDate = new Date(year, month - 1, day);
+
+if (
+  checkDate.getFullYear() !== year ||
+  checkDate.getMonth() !== month - 1 ||
+  checkDate.getDate() !== day
+) {
+  message.textContent = "Please enter a valid calendar date.";
+  return;
+}
+
+const selectedDate =
+  `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   if (!selectedDate) {
     message.textContent = "Please select a report date.";
     return;
