@@ -1,0 +1,125 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Profit & Loss Report - Food Stall Platform</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .report-container {
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+
+    .report-filters,
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .report-card {
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .report-card h3 {
+      margin-top: 0;
+    }
+
+    .report-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .report-note {
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .report-message {
+      margin: 15px 0;
+      overflow-wrap: anywhere;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="report-container">
+    <header>
+      <h1>📊 Daily Profit &amp; Loss Report</h1>
+      <p id="reportStallName">Breakfast Box</p>
+      <button type="button" onclick="window.location.href='stall.html'">
+        ← Back to Dashboard
+      </button>
+    </header>
+
+    <section class="report-card">
+      <h2>Select Report Date</h2>
+      <div class="report-filters">
+        <label>
+          Report date
+          <input type="date" id="reportDate">
+        </label>
+      </div>
+      <button type="button" id="loadReportButton" onclick="loadDailyReport()">
+        View Report
+      </button>
+      <p id="reportMessage" class="report-message" role="status"></p>
+    </section>
+
+    <section class="report-grid">
+      <div class="report-card">
+        <h3>Paid Sales</h3>
+        <div class="report-value" id="paidSales">₹—</div>
+        <p class="report-note">Orders marked as paid on the selected date.</p>
+      </div>
+
+      <div class="report-card">
+        <h3>Pending Payments</h3>
+        <div class="report-value" id="pendingPayments">₹—</div>
+        <p class="report-note">Shown separately; not included in paid sales.</p>
+      </div>
+
+      <div class="report-card">
+        <h3>Other Business Expenses</h3>
+        <div class="report-value" id="businessExpenses">₹—</div>
+        <p class="report-note">Expenses recorded for the selected date.</p>
+      </div>
+
+      <div class="report-card">
+        <h3>Estimated Profit Before Ingredient Cost</h3>
+        <div class="report-value" id="estimatedProfit">₹—</div>
+        <p class="report-note">Paid sales minus recorded business expenses. Ingredient cost is not yet deducted.</p>
+      </div>
+    </section>
+
+    <section class="report-card">
+      <h2>Report Notes</h2>
+      <ul>
+        <li>Only paid orders count as collected sales.</li>
+        <li>Pending payments are displayed separately.</li>
+        <li>Inventory purchases are not treated as immediate expenses.</li>
+        <li>Ingredient cost and final profit will be added after their calculation can be verified against the recipe and stock data.</li>
+      </ul>
+      <p class="report-note">
+        This initial report is read-only. It does not add, edit, or delete database records.
+      </p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+```
