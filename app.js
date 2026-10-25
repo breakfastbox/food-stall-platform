@@ -1067,7 +1067,19 @@ const localToday =
   String(today.getFullYear()).slice(-2);
 
 reportDateInput.value = localToday;
+const reportDateDisplay = document.getElementById("reportDateDisplay");
 
+function updateReportDateDisplay() {
+  if (!reportDateDisplay || !reportDateInput.value) return;
+
+  const [year, month, day] = reportDateInput.value.split("-");
+  reportDateDisplay.textContent =
+    `${day}-${month}-${year.slice(-2)}`;
+}
+
+updateReportDateDisplay();
+
+reportDateInput.addEventListener("change", updateReportDateDisplay);
 
 
     loadDailyReport();
