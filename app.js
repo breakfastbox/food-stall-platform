@@ -1062,9 +1062,9 @@ if (window.location.pathname.endsWith("reports.html")) {
     const today = new Date();
 
 const localToday =
-  String(today.getDate()).padStart(2, "0") + "-" +
+  String(today.getFullYear()) + "-" +
   String(today.getMonth() + 1).padStart(2, "0") + "-" +
-  String(today.getFullYear()).slice(-2);
+  String(today.getDate()).padStart(2, "0");
 
 reportDateInput.value = localToday;
 const reportDateDisplay = document.getElementById("reportDateDisplay");
