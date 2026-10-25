@@ -1068,23 +1068,8 @@ const localToday =
 
 reportDateInput.value = localToday;
 
-const reportDatePicker = document.getElementById("reportDatePicker");
 
-if (reportDatePicker) {
-  reportDatePicker.value =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-  reportDatePicker.addEventListener("change", () => {
-    if (!reportDatePicker.value) return;
-
-    const [year, month, day] = reportDatePicker.value.split("-");
-
-    reportDateInput.value =
-      `${day}-${month}-${year.slice(-2)}`;
-
-    loadDailyReport();
-  });
-}
     loadDailyReport();
   }
 }
