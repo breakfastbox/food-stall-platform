@@ -917,6 +917,7 @@ async function loadMenuCategories() {
   });
 }
 // Daily Profit & Loss Report — read-only
+
 async function loadDailyReport() {
   const message = document.getElementById("reportMessage");
   const dateInput = document.getElementById("reportDate");
@@ -924,25 +925,24 @@ async function loadDailyReport() {
 
   if (!message || !dateInput) return;
 
-const selectedDate = dateInput.value;
+  const selectedDate = dateInput.value;
 
-if (!selectedDate) {
-  message.textContent = "Please select a report date.";
-  return;
-}
+  if (!selectedDate) {
+    message.textContent = "Please select a report date.";
+    return;
+  }
 
-const [year, month, day] = selectedDate.split("-").map(Number);
+  const [year, month, day] = selectedDate.split("-").map(Number);
+  const checkDate = new Date(year, month - 1, day);
 
-const checkDate = new Date(year, month - 1, day);
-
-if (
-  checkDate.getFullYear() !== year ||
-  checkDate.getMonth() !== month - 1 ||
-  checkDate.getDate() !== day
-) {
-  message.textContent = "Please select a valid calendar date.";
-  return;
-}
+  if (
+    checkDate.getFullYear() !== year ||
+    checkDate.getMonth() !== month - 1 ||
+    checkDate.getDate() !== day
+  ) {
+    message.textContent = "Please select a valid calendar date.";
+    return;
+  }
 
   message.textContent = "Loading report...";
   if (button) button.disabled = true;
@@ -964,8 +964,9 @@ if (
     const stall = stalls[0];
     document.getElementById("reportStallName").textContent = stall.name;
 
-    // Use local midnight boundaries for the selected report date.
+    // Set the selected day's local time boundaries.
     const startDate = new Date(selectedDate + "T00:00:00");
+
     if (Number.isNaN(startDate.getTime())) {
       throw new Error("The selected report date is invalid.");
     }
@@ -973,21 +974,24 @@ if (
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 1);
 
-    // Read orders created during the selected date.
+    // Read orders created on the selected date.
     const { data: orders, error: ordersError } = await supabaseClient
       .from("orders")
-      .select("total_amount, subtotal, payment_status, order_status, created_at")
+      .select(
+        "id, total_amount, subtotal, payment_status, order_status, created_at, stock_deducted_at"
+      )
       .eq("stall_id", stall.id)
       .gte("created_at", startDate.toISOString())
       .lt("created_at", endDate.toISOString());
 
     if (ordersError) throw ordersError;
 
-    // Exclude cancelled orders and refunded payments from these summaries.
+    // Exclude cancelled orders.
     const validOrders = (orders || []).filter(
       order => order.order_status !== "cancelled"
     );
 
+    // Only paid orders count as collected sales.
     const paidSales = validOrders
       .filter(order => order.payment_status === "paid")
       .reduce(
@@ -996,6 +1000,7 @@ if (
         0
       );
 
+    // Pending payments are shown separately, not counted as sales collected.
     const pendingPayments = validOrders
       .filter(order => order.payment_status === "pending")
       .reduce(
@@ -1004,10 +1009,10 @@ if (
         0
       );
 
-    // Read recorded business expenses for the selected date.
+    // Read business expenses recorded for the selected date.
     const { data: expenses, error: expensesError } = await supabaseClient
       .from("business_expenses")
-      .select("amount, expense_date")
+      .select("amount")
       .eq("stall_id", stall.id)
       .eq("expense_date", selectedDate);
 
@@ -1018,7 +1023,107 @@ if (
       0
     );
 
-    const estimatedProfit = paidSales - businessExpenses;
+    // Estimate ingredient cost only for completed orders
+    // whose stock deduction was recorded.
+    const eligibleOrders = validOrders.filter(
+      order =>
+        order.order_status === "completed" &&
+        order.stock_deducted_at
+    );
+
+    let ingredientCost = 0;
+
+    if (eligibleOrders.length > 0) {
+      const orderIds = eligibleOrders.map(order => order.id);
+
+      const { data: orderItems, error: itemsError } =
+        await supabaseClient
+          .from("order_items")
+          .select("order_id, menu_item_id, quantity")
+          .in("order_id", orderIds);
+
+      if (itemsError) throw itemsError;
+
+      const menuItemIds = [
+        ...new Set(
+          (orderItems || [])
+            .map(item => item.menu_item_id)
+            .filter(Boolean)
+        )
+      ];
+
+      if (menuItemIds.length > 0) {
+        const { data: recipes, error: recipesError } =
+          await supabaseClient
+            .from("menu_item_ingredients")
+            .select(
+              "menu_item_id, inventory_item_id, quantity_required"
+            )
+            .in("menu_item_id", menuItemIds);
+
+        if (recipesError) throw recipesError;
+
+        const inventoryItemIds = [
+          ...new Set(
+            (recipes || [])
+              .map(recipe => recipe.inventory_item_id)
+              .filter(Boolean)
+          )
+        ];
+
+        if (inventoryItemIds.length > 0) {
+          const { data: ingredients, error: ingredientsError } =
+            await supabaseClient
+              .from("inventory_items")
+              .select("id, cost_per_unit")
+              .eq("stall_id", stall.id)
+              .in("id", inventoryItemIds);
+
+          if (ingredientsError) throw ingredientsError;
+
+          const ingredientCosts = new Map(
+            (ingredients || []).map(item => [
+              item.id,
+              Number(item.cost_per_unit || 0)
+            ])
+          );
+
+          const recipesByMenuItem = new Map();
+
+          (recipes || []).forEach(recipe => {
+            if (!recipesByMenuItem.has(recipe.menu_item_id)) {
+              recipesByMenuItem.set(recipe.menu_item_id, []);
+            }
+
+            recipesByMenuItem.get(recipe.menu_item_id).push(recipe);
+          });
+
+          // Recipe quantity required is for one menu item.
+          // Multiply it by the number of items ordered.
+          (orderItems || []).forEach(item => {
+            const itemRecipes =
+              recipesByMenuItem.get(item.menu_item_id) || [];
+
+            itemRecipes.forEach(recipe => {
+              const costPerUnit =
+                ingredientCosts.get(recipe.inventory_item_id);
+
+              if (costPerUnit !== undefined) {
+                ingredientCost +=
+                  Number(item.quantity || 0) *
+                  Number(recipe.quantity_required || 0) *
+                  costPerUnit;
+              }
+            });
+          });
+        }
+      }
+    }
+
+    // Estimated profit deducts recorded expenses and estimated
+    // recipe costs from paid sales. Purchases are not deducted again.
+    const estimatedProfit =
+      paidSales - ingredientCost - businessExpenses;
 
     const formatRupees = amount =>
       "₹" + amount.toLocaleString("en-IN", {
@@ -1035,17 +1140,26 @@ if (
     document.getElementById("businessExpenses").textContent =
       formatRupees(businessExpenses);
 
+    const ingredientCostElement =
+      document.getElementById("ingredientCost");
+
+    if (ingredientCostElement) {
+      ingredientCostElement.textContent =
+        formatRupees(ingredientCost);
+    }
+
     document.getElementById("estimatedProfit").textContent =
       formatRupees(estimatedProfit);
 
     const displayDate =
-  String(day).padStart(2, "0") + "-" +
-  String(month).padStart(2, "0") + "-" +
-  String(year).slice(-2);
+      String(day).padStart(2, "0") + "-" +
+      String(month).padStart(2, "0") + "-" +
+      String(year).slice(-2);
 
-message.textContent =
-  "Report loaded for " + displayDate +
-  ". Ingredient costs are not included in the profit estimate.";
+    message.textContent =
+      "Report loaded for " + displayDate +
+      ". Ingredient cost is an estimate based on recorded recipes " +
+      "and current prices. Incomplete recipes may understate costs.";
   } catch (error) {
     console.error("Unable to load daily report:", error);
     message.textContent = "Unable to load report: " + error.message;
@@ -1053,6 +1167,7 @@ message.textContent =
     if (button) button.disabled = false;
   }
 }
+
 
 // Initialize the report page only when reports.html is open.
 if (window.location.pathname.endsWith("reports.html")) {
