@@ -428,7 +428,7 @@ async function loadOrders() {
 
   list.innerHTML = orders.map(order => `
     <div class="card">
-      <h3>Order Token: ${order.token_number ?? "Not assigned"}</h3>
+      <h3>Order Token: ${order.token_number == null ? "Not assigned" : String(order.token_number).padStart(4, "0")}</h3>
       <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
       <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
       <p><strong>Subtotal:</strong> ₹${order.subtotal ?? 0}</p>
