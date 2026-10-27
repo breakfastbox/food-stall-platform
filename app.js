@@ -7,6 +7,37 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_PUBLISHABLE_KEY
 );
 
+async function setOrderingEnabled(action) {
+  const {
+    data: { session },
+    error: sessionError
+  } = await supabaseClient.auth.getSession();
+
+  if (sessionError || !session) {
+    throw new Error("Please sign in again.");
+  }
+
+  const { data, error } = await supabaseClient.functions.invoke(
+    "manage-ordering",
+    {
+      body: { action },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    }
+  );
+
+  if (error) {
+    throw new Error("Could not update ordering. Please try again.");
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.error || "Could not update ordering.");
+  }
+
+  return data;
+}
+
 
 async function loginAdmin() {
 
@@ -29,22 +60,45 @@ async function loginAdmin() {
     return;
   }
 
+  try {
+    await setOrderingEnabled("resume");
+  } catch (error) {
+    await supabaseClient.auth.signOut();
+    loginMessage.textContent =
+      error.message || "Could not resume ordering. Please try again.";
+    return;
+  }
+
   document.getElementById("loginBox").style.display = "none";
   document.getElementById("dashboard").style.display = "block";
 
   loginMessage.textContent = "";
 
   loadStalls();
+
 }
 
 
-async function logoutAdmin() {
 
-  await supabaseClient.auth.signOut();
+async function logoutAdmin() {
+  try {
+    await setOrderingEnabled("pause");
+  } catch (error) {
+    alert(error.message || "Could not pause ordering. You are still logged in.");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    alert("Ordering is paused, but logout failed. Please try again.");
+    return;
+  }
 
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("loginBox").style.display = "block";
 }
+
 
 
 async function loadStalls() {
