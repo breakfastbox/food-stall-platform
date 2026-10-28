@@ -11,7 +11,32 @@
 
 <body>
 
-  <div class="dashboard">
+  
+<div class="login-box" id="loginBox" style="display: none;">
+
+  <h1>Food Stall Platform</h1>
+  <h2>Admin Login</h2>
+
+  <input
+    type="email"
+    id="email"
+    placeholder="Admin email"
+  >
+
+  <input
+    type="password"
+    id="password"
+    placeholder="Password"
+  >
+
+  <button onclick="loginAdmin()">Login</button>
+
+  <p id="loginMessage"></p>
+
+</div>
+
+<div class="dashboard" id="dashboard" style="display: none;">
+
 
     <header class="topbar">
       <div>
