@@ -80,6 +80,7 @@ async function loginAdmin() {
 
 
 
+
 async function logoutAdmin() {
   try {
     await setOrderingEnabled("pause");
@@ -91,12 +92,23 @@ async function logoutAdmin() {
   const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
-    alert("Ordering is paused, but logout failed. Please try again.");
+    try {
+      await setOrderingEnabled("resume");
+    } catch (resumeError) {
+      console.error("Could not resume ordering:", resumeError);
+    }
+
+    alert("Logout failed. Please try again.");
     return;
   }
 
   document.getElementById("dashboard").style.display = "none";
   document.getElementById("loginBox").style.display = "block";
+
+  const loginMessage = document.getElementById("loginMessage");
+  if (loginMessage) {
+    loginMessage.textContent = "";
+  }
 }
 
 
