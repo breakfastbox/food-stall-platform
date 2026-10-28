@@ -245,7 +245,7 @@ let stallOrderingPaused = false;
 
         stallId = stall.id;
 stallOrderingPaused = stall.ordering_enabled !== true;
-if (orderingPaused) {
+if (stallOrderingPaused) {
   showMessage(
     "Ordering is temporarily paused. Please check back later."
   );
