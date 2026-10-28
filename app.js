@@ -1266,3 +1266,28 @@ reportDateInput.addEventListener("change", updateReportDateDisplay);
     loadDailyReport();
   }
 }
+
+/* Initialize the stall dashboard according to login status. */
+if (window.location.pathname.endsWith("stall.html")) {
+  (async function initializeStallDashboard() {
+    const loginBox = document.getElementById("loginBox");
+    const dashboard = document.getElementById("dashboard");
+
+    if (!loginBox || !dashboard) return;
+
+    const {
+      data: { session },
+      error
+    } = await supabaseClient.auth.getSession();
+
+    if (error || !session) {
+      dashboard.style.display = "none";
+      loginBox.style.display = "block";
+      return;
+    }
+
+    loginBox.style.display = "none";
+    dashboard.style.display = "block";
+    await loadStalls();
+  })();
+}
