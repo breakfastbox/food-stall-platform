@@ -213,7 +213,7 @@
 
     let stallId = null;
     let menuItems = [];
-
+let stallOrderingPaused = false;
     const menuList = document.getElementById("menuList");
     const message = document.getElementById("message");
     const placeOrderButton = document.getElementById("placeOrderButton");
@@ -231,7 +231,7 @@
       try {
         const { data: stall, error: stallError } = await client
           .from("stalls")
-          .select("id, name")
+          .select("id, name, ordering_enabled")
           .eq("name", "Breakfast Box")
           .limit(1)
           .maybeSingle();
@@ -244,7 +244,22 @@
         }
 
         stallId = stall.id;
+stallOrderingPaused = stall.ordering_enabled !== true;
+if (orderingPaused) {
+  showMessage(
+    "Ordering is temporarily paused. Please check back later."
+  );
 
+  placeOrderButton.disabled = true;
+
+  document.querySelectorAll(
+    "#menuList input[type='number']"
+  ).forEach(input => {
+    input.disabled = true;
+  });
+} else {
+  placeOrderButton.disabled = false;
+}
         const { data, error } = await client
           .from("menu_items")
           .select("id, name, description, price, image_url, is_available")
@@ -293,6 +308,7 @@
           quantity.max = "50";
           quantity.step = "1";
           quantity.value = "0";
+         quantity.disabled = stallOrderingPaused;
           quantity.setAttribute("aria-label", "Quantity of " + item.name);
           quantity.dataset.itemId = item.id;
           quantity.addEventListener("input", updateTotal);
@@ -340,7 +356,13 @@
     document.getElementById("orderForm").addEventListener("submit", async event => {
       event.preventDefault();
       showMessage("");
-
+if (stallOrderingPaused) {
+  showMessage(
+    "Ordering is temporarily paused. Please check back later.",
+    "error"
+  );
+  return;
+}
       if (!stallId) {
         showMessage("The stall menu is not ready. Refresh and try again.", "error");
         return;
@@ -465,9 +487,9 @@ if (!validPhone) {
         console.error(error);
         showMessage(error.message || "Something went wrong.", "error");
       } finally {
-        placeOrderButton.disabled = false;
-        placeOrderButton.textContent = "Place Test Order";
-      }
+  placeOrderButton.disabled = stallOrderingPaused;
+  placeOrderButton.textContent = "Place Test Order";
+}
     });
 
     loadMenu();
