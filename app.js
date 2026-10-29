@@ -1102,7 +1102,7 @@ const completedOrdersWithoutDeduction = validOrders.filter(
     !order.stock_deducted_at
 ).length;
     let ingredientCost = 0;
-
+let ingredientCostDataIncomplete = false;
     if (eligibleOrders.length > 0) {
       const orderIds = eligibleOrders.map(order => order.id);
 
@@ -1151,40 +1151,67 @@ const completedOrdersWithoutDeduction = validOrders.filter(
 
           if (ingredientsError) throw ingredientsError;
 
-          const ingredientCosts = new Map(
-            (ingredients || []).map(item => [
-              item.id,
-              Number(item.cost_per_unit || 0)
-            ])
-          );
+       const inventoryItemsById = new Map(
+  (ingredients || []).map(item => [item.id, item])
+);
 
-          const recipesByMenuItem = new Map();
+const recipesByMenuItem = new Map();
 
-          (recipes || []).forEach(recipe => {
-            if (!recipesByMenuItem.has(recipe.menu_item_id)) {
-              recipesByMenuItem.set(recipe.menu_item_id, []);
-            }
+(recipes || []).forEach(recipe => {
+  if (!recipesByMenuItem.has(recipe.menu_item_id)) {
+    recipesByMenuItem.set(recipe.menu_item_id, []);
+  }
 
-            recipesByMenuItem.get(recipe.menu_item_id).push(recipe);
-          });
+  recipesByMenuItem.get(recipe.menu_item_id).push(recipe);
+});
 
-          // Recipe quantity required is for one menu item.
-          // Multiply it by the number of items ordered.
-          (orderItems || []).forEach(item => {
-            const itemRecipes =
-              recipesByMenuItem.get(item.menu_item_id) || [];
+// Estimate recipe cost for each ordered menu item.
+(orderItems || []).forEach(item => {
+  const itemRecipes =
+    recipesByMenuItem.get(item.menu_item_id) || [];
 
-            itemRecipes.forEach(recipe => {
-              const costPerUnit =
-                ingredientCosts.get(recipe.inventory_item_id);
+  if (!item.menu_item_id || itemRecipes.length === 0) {
+    ingredientCostDataIncomplete = true;
+    return;
+  }
 
-              if (costPerUnit !== undefined) {
-                ingredientCost +=
-                  Number(item.quantity || 0) *
-                  Number(recipe.quantity_required || 0) *
-                  costPerUnit;
-              }
-            });
+  const orderQuantity = Number(item.quantity);
+
+  if (!Number.isFinite(orderQuantity) || orderQuantity <= 0) {
+    ingredientCostDataIncomplete = true;
+    return;
+  }
+
+  itemRecipes.forEach(recipe => {
+    const ingredient =
+      inventoryItemsById.get(recipe.inventory_item_id);
+
+    const rawCost = ingredient
+      ? ingredient.cost_per_unit
+      : null;
+
+    const quantityRequired = Number(recipe.quantity_required);
+
+    const costPerUnit =
+      rawCost === null || rawCost === undefined || rawCost === ""
+        ? NaN
+        : Number(rawCost);
+
+    if (
+      !ingredient ||
+      !Number.isFinite(quantityRequired) ||
+      quantityRequired <= 0 ||
+      !Number.isFinite(costPerUnit) ||
+      costPerUnit <= 0
+    ) {
+      ingredientCostDataIncomplete = true;
+      return;
+    }
+
+    ingredientCost +=
+      orderQuantity * quantityRequired * costPerUnit;
+  });
+});
           });
         }
       }
