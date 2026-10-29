@@ -1259,9 +1259,11 @@ const costCoverageMessage =
     : "Ingredient cost is a provisional estimate based on recorded recipes for completed or stock-deducted orders. " +
       (completedOrdersWithoutDeduction > 0
         ? completedOrdersWithoutDeduction +
-          " completed order(s) have no recorded stock-deduction timestamp; recipe-based costs are still estimated for them. "
+          " completed order(s) have no recorded stock-deduction timestamp; recipe-based costs are included provisionally. "
+        : "") +
+      (ingredientCostDataIncomplete
+        ? "Missing recipe or ingredient records, or missing or invalid ingredient prices, were detected. Ingredient cost may be understated. "
         : "");
-
     message.textContent =
       "Provisional report loaded for " +
       displayDate +
