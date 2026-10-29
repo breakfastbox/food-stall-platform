@@ -1091,11 +1091,11 @@ async function loadDailyReport() {
 
     // Estimate ingredient cost only for completed orders
     // whose stock deduction was recorded.
-    const eligibleOrders = validOrders.filter(
-      order =>
-        order.order_status === "completed" &&
-        order.stock_deducted_at
-    );
+   const eligibleOrders = validOrders.filter(
+  order =>
+    order.order_status === "completed" ||
+    Boolean(order.stock_deducted_at)
+);
 const completedOrdersWithoutDeduction = validOrders.filter(
   order =>
     order.order_status === "completed" &&
