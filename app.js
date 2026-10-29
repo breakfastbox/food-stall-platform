@@ -1243,6 +1243,8 @@ message.textContent =
   "Profit is an estimate, not verified final profit. " +
     } catch (error) {
     console.error("Unable to load daily report:", error);
+    } catch (error) {
+    console.error("Unable to load daily report:", error);
     message.textContent = "Unable to load report: " + error.message;
   } finally {
     if (button) button.disabled = false;
