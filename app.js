@@ -1089,8 +1089,8 @@ async function loadDailyReport() {
       0
     );
 
-    // Estimate ingredient cost only for completed orders
-    // whose stock deduction was recorded.
+    // Estimate recipe cost for completed orders or orders with a recorded stock deduction.
+// Costs remain provisional when recipes, ingredient prices, or stock records are incomplete.
    const eligibleOrders = validOrders.filter(
   order =>
     order.order_status === "completed" ||
