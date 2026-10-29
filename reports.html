@@ -115,18 +115,22 @@
     </section>
 
 
-    <section class="report-card">
-      <h2>Report Notes</h2>
-      <ul>
-        <li>Only paid orders count as collected sales.</li>
-        <li>Pending payments are displayed separately.</li>
-        <li>Inventory purchases are not treated as immediate expenses.</li>
-        <li>Ingredient cost and final profit will be added after their calculation can be verified against the recipe and stock data.</li>
-      </ul>
-      <p class="report-note">
-        This initial report is read-only. It does not add, edit, or delete database records.
-      </p>
-    </section>
+```html
+<section class="report-card">
+  <h2>Report Notes</h2>
+  <ul>
+    <li>Only paid orders count as collected sales.</li>
+    <li>Pending payments are displayed separately and are not included in paid sales.</li>
+    <li>Inventory purchases are not treated as immediate expenses.</li>
+    <li>Ingredient cost is estimated from recorded recipes and current ingredient prices.</li>
+    <li>Missing recipes or ingredients can cause ingredient costs to be understated.</li>
+    <li>Estimated profit is not a verified final profit until recipe completeness and stock-cost calculations have been checked.</li>
+  </ul>
+  <p class="report-note">
+    This report is read-only. It does not add, edit, or delete database records.
+  </p>
+</section>
+```
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
