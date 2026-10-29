@@ -1222,10 +1222,11 @@ async function loadDailyReport() {
       String(month).padStart(2, "0") + "-" +
       String(year).slice(-2);
 
-    message.textContent =
-      "Report loaded for " + displayDate +
-      ". Ingredient cost is an estimate based on recorded recipes " +
-      "and current prices. Incomplete recipes may understate costs.";
+   message.textContent =
+  "Provisional report loaded for " + displayDate +
+  ". Profit is an estimate, not verified final profit. " +
+  "Incomplete recipes, missing ingredient prices, or " +
+  "unrecorded stock deductions may make the estimate inaccurate.";
   } catch (error) {
     console.error("Unable to load daily report:", error);
     message.textContent = "Unable to load report: " + error.message;
