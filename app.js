@@ -1228,11 +1228,11 @@ const completedOrdersWithoutDeduction = validOrders.filter(
 
 const costCoverageMessage =
   eligibleOrders.length === 0
-    ? "No completed orders with recorded stock deductions were found. ₹0.00 ingredient cost means the cost was not calculated, not that ingredients cost nothing. "
-    : "Ingredient cost is calculated only for completed orders with recorded stock deductions. " +
+    ? "No completed or stock-deducted orders were found, so ingredient cost was not calculated. ₹0.00 does not mean ingredients cost nothing. "
+    : "Ingredient cost is a provisional estimate based on recorded recipes for completed or stock-deducted orders. " +
       (completedOrdersWithoutDeduction > 0
         ? completedOrdersWithoutDeduction +
-          " completed order(s) without recorded stock deductions are excluded. "
+          " completed order(s) have no recorded stock-deduction timestamp; recipe-based costs are still estimated for them. "
         : "");
 
     message.textContent =
