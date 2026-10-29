@@ -1096,7 +1096,11 @@ async function loadDailyReport() {
         order.order_status === "completed" &&
         order.stock_deducted_at
     );
-
+const completedOrdersWithoutDeduction = validOrders.filter(
+  order =>
+    order.order_status === "completed" &&
+    !order.stock_deducted_at
+).length;
     let ingredientCost = 0;
 
     if (eligibleOrders.length > 0) {
@@ -1222,13 +1226,22 @@ async function loadDailyReport() {
       String(month).padStart(2, "0") + "-" +
       String(year).slice(-2);
 
-   message.textContent =
-  "Provisional report loaded for " + displayDate +
-  ". Profit is an estimate, not verified final profit. " +
-  "Incomplete recipes, missing ingredient prices, or " +
-  "unrecorded stock deductions may make the estimate inaccurate.";
-  } catch (error) {
-    console.error("Unable to load daily report:", error);
+const costCoverageMessage =
+  eligibleOrders.length === 0
+    ? "No completed orders with recorded stock deductions were found. ₹0.00 ingredient cost means the cost was not calculated, not that ingredients cost nothing. "
+    : "Ingredient cost is calculated only for completed orders with recorded stock deductions. " +
+      (completedOrdersWithoutDeduction > 0
+        ? completedOrdersWithoutDeduction +
+          " completed order(s) without recorded stock deductions are excluded. "
+        : "");
+
+message.textContent =
+  "Provisional report loaded for " +
+  displayDate +
+  ". " +
+  costCoverageMessage +
+  "Profit is an estimate, not verified final profit. " +
+  "Incomplete recipes or missing ingredient prices may understate costs.";
     message.textContent = "Unable to load report: " + error.message;
   } finally {
     if (button) button.disabled = false;
