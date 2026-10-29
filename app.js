@@ -1235,22 +1235,21 @@ const costCoverageMessage =
           " completed order(s) without recorded stock deductions are excluded. "
         : "");
 
-message.textContent =
-  "Provisional report loaded for " +
-  displayDate +
-  ". " +
-  costCoverageMessage +
-  "Profit is an estimate, not verified final profit. " +
-    } catch (error) {
-    console.error("Unable to load daily report:", error);
-    } catch (error) {
+    message.textContent =
+      "Provisional report loaded for " +
+      displayDate +
+      ". " +
+      costCoverageMessage +
+      "Profit is an estimate, not verified final profit. " +
+      "Incomplete recipes or missing ingredient prices may understate costs.";
+
+  } catch (error) {
     console.error("Unable to load daily report:", error);
     message.textContent = "Unable to load report: " + error.message;
   } finally {
     if (button) button.disabled = false;
   }
 }
-
 // Initialize the report page only when reports.html is open.
 if (window.location.pathname.endsWith("reports.html")) {
   const reportDateInput = document.getElementById("reportDate");
