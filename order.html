@@ -483,6 +483,32 @@ if (!validPhone) {
 
         // Create the customer's private tracking link.
         if (order.tracking_code) {
+          // Save this order in the customer's browser history.
+try {
+  const historyKey = "breakfastBoxOrderHistory";
+
+  const savedOrders = JSON.parse(
+    localStorage.getItem(historyKey) || "[]"
+  );
+
+  const alreadySaved = savedOrders.some(
+    saved => saved.tracking_code === order.tracking_code
+  );
+
+  if (!alreadySaved) {
+    savedOrders.unshift({
+      tracking_code: order.tracking_code,
+      saved_at: new Date().toISOString()
+    });
+
+    localStorage.setItem(
+      historyKey,
+      JSON.stringify(savedOrders.slice(0, 20))
+    );
+  }
+} catch (error) {
+  console.error("Could not save order history:", error);
+}
           const trackingLink = document.createElement("a");
 
           trackingLink.href =
