@@ -609,20 +609,27 @@ async function updateOrderStatus(orderId) {
   message.textContent = "Updating order status...";
 console.log("Saving order:", orderId, "New status:", newStatus);
 console.log("Current user:", (await supabaseClient.auth.getUser()).data.user?.id);
-  let result;
+let result;
 
-  if (newStatus === "accepted") {
-    result = await supabaseClient.rpc(
-      "accept_order_and_deduct_stock",
-      { p_order_id: orderId }
-    );
-  } else {
-    result = await supabaseClient
-      .from("orders")
-      .update({ order_status: newStatus })
-      .eq("id", orderId)
-      .select("id");
-  }
+if (newStatus === "accepted") {
+  result = await supabaseClient.rpc(
+    "accept_order_and_deduct_stock",
+    { p_order_id: orderId }
+  );
+
+} else if (newStatus === "cancelled") {
+  result = await supabaseClient.rpc(
+    "cancel_order_and_restore_stock",
+    { p_order_id: orderId }
+  );
+
+} else {
+  result = await supabaseClient
+    .from("orders")
+    .update({ order_status: newStatus })
+    .eq("id", orderId)
+    .select("id");
+}
 
   if (result.error) {
     console.error("Could not update order:", result.error);
@@ -639,8 +646,10 @@ console.log("Current user:", (await supabaseClient.auth.getUser()).data.user?.id
   }
 
   message.textContent =
-    newStatus === "accepted"
-      ? "Order accepted and stock deduction completed!"
+  newStatus === "accepted"
+    ? "Order accepted and stock deduction completed!"
+    : newStatus === "cancelled"
+      ? result.data
       : "Order status updated successfully!";
 
   await loadOrders();
