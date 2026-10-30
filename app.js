@@ -452,6 +452,7 @@ async function loadOrders() {
 
 
 
+
 async function loadOrders() {
   const message = document.getElementById("ordersMessage");
   const list = document.getElementById("ordersList");
@@ -461,58 +462,140 @@ async function loadOrders() {
   message.textContent = "Loading orders...";
   list.innerHTML = "";
 
-  const { data: stalls, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .limit(1);
+  const escapeHtml = value =>
+    String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    })[char]);
 
-  if (stallError || !stalls || stalls.length === 0) {
-    console.error("Could not find stall:", stallError);
-    message.textContent = "Could not load the Breakfast Box stall.";
-    return;
-  }
+  const formatRupees = amount =>
+    Number(amount ?? 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
 
-  const { data: orders, error } = await supabaseClient
-    .from("orders")
-    .select("id, token_number, order_status, payment_status, subtotal, total_amount, created_at")
-    .eq("stall_id", stalls[0].id)
-    .order("created_at", { ascending: false });
+  try {
+    const { data: stalls, error: stallError } = await supabaseClient
+      .from("stalls")
+      .select("id")
+      .eq("name", "Breakfast Box")
+      .limit(1);
 
-  if (error) {
+    if (stallError) throw stallError;
+
+    if (!stalls || stalls.length === 0) {
+      throw new Error("Breakfast Box stall could not be found.");
+    }
+
+    const { data: orders, error } = await supabaseClient
+      .from("orders")
+      .select("id, token_number, order_status, payment_status, subtotal, total_amount, created_at")
+      .eq("stall_id", stalls[0].id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    if (!orders || orders.length === 0) {
+      message.textContent = "No orders yet.";
+      return;
+    }
+
+    // Fetch the food items belonging to these orders.
+    const orderIds = orders.map(order => order.id);
+
+    const { data: orderItems, error: itemsError } = await supabaseClient
+      .from("order_items")
+      .select("order_id, item_name, quantity, unit_price, total_price")
+      .in("order_id", orderIds);
+
+    if (itemsError) {
+      console.error("Could not load order items:", itemsError);
+      message.textContent =
+        "Orders loaded, but item details could not be loaded: " +
+        itemsError.message;
+    } else {
+      message.textContent = orders.length + " order(s) found.";
+    }
+
+    // Group food items by their order ID.
+    const itemsByOrder = new Map();
+
+    (orderItems || []).forEach(item => {
+      if (!itemsByOrder.has(item.order_id)) {
+        itemsByOrder.set(item.order_id, []);
+      }
+
+      itemsByOrder.get(item.order_id).push(item);
+    });
+
+    list.innerHTML = orders.map(order => {
+      const items = itemsByOrder.get(order.id) || [];
+
+      const itemList = items.length > 0
+        ? `
+          <ul class="order-items">
+            ${items.map(item => `
+              <li>
+                <strong>${escapeHtml(item.item_name)}</strong>
+                — Qty: ${escapeHtml(item.quantity)}
+                — ₹${formatRupees(item.unit_price)} each
+                — Total: ₹${formatRupees(item.total_price)}
+              </li>
+            `).join("")}
+          </ul>
+        `
+        : "<p>No item details recorded.</p>";
+
+      const token = order.token_number == null
+        ? "Not assigned"
+        : String(order.token_number).padStart(4, "0");
+
+      return `
+        <div class="card">
+          <h3>Order Token: ${escapeHtml(token)}</h3>
+
+          <p><strong>Food Items:</strong></p>
+          ${itemList}
+
+          <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
+          <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
+          <p><strong>Subtotal:</strong> ₹${formatRupees(order.subtotal)}</p>
+          <p><strong>Total:</strong> ₹${formatRupees(order.total_amount)}</p>
+          <p><strong>Placed:</strong> ${escapeHtml(
+            order.created_at
+              ? new Date(order.created_at).toLocaleString()
+              : "Unknown"
+          )}</p>
+
+          <label for="status-${escapeHtml(order.id)}">
+            Update order status:
+          </label>
+
+          <select id="status-${escapeHtml(order.id)}">
+            <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
+            <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>Accepted</option>
+            <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
+            <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
+            <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
+            <option value="cancelled" ${order.order_status === "cancelled" ? "selected" : ""}>Cancelled</option>
+          </select>
+
+          <button onclick="updateOrderStatus('${escapeHtml(order.id)}')">
+            Save Status
+          </button>
+        </div>
+      `;
+    }).join("");
+
+  } catch (error) {
     console.error("Could not load orders:", error);
     message.textContent = "Unable to load orders: " + error.message;
-    return;
   }
-
-  if (!orders || orders.length === 0) {
-    message.textContent = "No orders yet.";
-    return;
-  }
-
-  message.textContent = orders.length + " order(s) found.";
-
-  list.innerHTML = orders.map(order => `
-    <div class="card">
-      <h3>Order Token: ${order.token_number == null ? "Not assigned" : String(order.token_number).padStart(4, "0")}</h3>
-      <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
-      <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
-      <p><strong>Subtotal:</strong> ₹${order.subtotal ?? 0}</p>
-      <p><strong>Total:</strong> ₹${order.total_amount ?? 0}</p>
-      <p><strong>Placed:</strong> ${order.created_at ? new Date(order.created_at).toLocaleString() : "Unknown"}</p>
-      <label for="status-${order.id}">Update order status:</label>
-      <select id="status-${order.id}">
-        <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
-        <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>accepted</option>
-        <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
-        <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
-        <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
-        <option value="cancelled" ${order.order_status === "cancelled" ? "selected" : ""}>Cancelled</option>
-      </select>
-      <button onclick="updateOrderStatus('${order.id}')">Save Status</button>
-    </div>
-  `).join("");
 }
+
 
 
 
