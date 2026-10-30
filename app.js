@@ -1212,7 +1212,7 @@ const recipesByMenuItem = new Map();
       orderQuantity * quantityRequired * costPerUnit;
   });
 });
-          });
+       
         }
       }
     }
