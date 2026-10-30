@@ -1121,7 +1121,33 @@ let ingredientCostDataIncomplete = false;
             .filter(Boolean)
         )
       ];
+if (menuItemIds.length === 0) {
+  ingredientCostDataIncomplete = true;
+} else {
+  const { data: recipeStatuses, error: recipeStatusError } =
+    await supabaseClient
+      .from("menu_items")
+      .select("id, recipe_complete")
+      .eq("stall_id", stall.id)
+      .in("id", menuItemIds);
 
+  if (recipeStatusError) throw recipeStatusError;
+
+  const recipeStatusMap = new Map(
+    (recipeStatuses || []).map(item => [
+      item.id,
+      item.recipe_complete === true
+    ])
+  );
+
+  if (
+    menuItemIds.some(
+      id => recipeStatusMap.get(id) !== true
+    )
+  ) {
+    ingredientCostDataIncomplete = true;
+  }
+}
       if (menuItemIds.length > 0) {
         const { data: recipes, error: recipesError } =
           await supabaseClient
@@ -1262,7 +1288,7 @@ const costCoverageMessage =
           " completed order(s) have no recorded stock-deduction timestamp; recipe-based costs are included provisionally. "
         : "") +
       (ingredientCostDataIncomplete
-        ? "Missing recipe or ingredient records, or missing or invalid ingredient prices, were detected. Ingredient cost may be understated. "
+        ? "One or more menu items are not marked recipe-complete, or recipe records or ingredient prices are missing or invalid. Ingredient cost may be understated. "
         : "");
     message.textContent =
       "Provisional report loaded for " +
