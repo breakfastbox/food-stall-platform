@@ -606,6 +606,16 @@ async function updateOrderStatus(orderId) {
   if (!select || !message) return;
 
   const newStatus = select.value;
+  if (newStatus === "cancelled") {
+  const confirmed = window.confirm(
+    "Are you sure you want to cancel this order? Any recorded stock deductions will be restored."
+  );
+
+  if (!confirmed) {
+    await loadOrders();
+    return;
+  }
+}
   message.textContent = "Updating order status...";
 console.log("Saving order:", orderId, "New status:", newStatus);
 console.log("Current user:", (await supabaseClient.auth.getUser()).data.user?.id);
