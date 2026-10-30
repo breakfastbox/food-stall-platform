@@ -481,6 +481,39 @@ if (!validPhone) {
         messageElement.appendChild(document.createElement("br"));
         messageElement.appendChild(whatsappLink);
 
+        // Create the customer's private tracking link.
+        if (order.tracking_code) {
+          const trackingLink = document.createElement("a");
+
+          trackingLink.href =
+            "https://breakfastbox.github.io/food-stall-platform/track-order.html?code=" +
+            encodeURIComponent(order.tracking_code);
+
+          trackingLink.textContent = "Track My Order";
+          trackingLink.target = "_blank";
+          trackingLink.rel = "noopener noreferrer";
+
+          trackingLink.style.display = "inline-block";
+          trackingLink.style.marginTop = "12px";
+          trackingLink.style.marginLeft = "10px";
+          trackingLink.style.padding = "12px 18px";
+          trackingLink.style.background = "#176b45";
+          trackingLink.style.color = "#ffffff";
+          trackingLink.style.borderRadius = "8px";
+          trackingLink.style.textDecoration = "none";
+          trackingLink.style.fontWeight = "bold";
+
+          messageElement.appendChild(document.createElement("br"));
+          messageElement.appendChild(trackingLink);
+
+        } else {
+          const trackingNote = document.createElement("p");
+          trackingNote.textContent =
+            "Tracking link is unavailable. Please save your order token.";
+
+          messageElement.appendChild(trackingNote);
+        }
+
         document.getElementById("orderForm").reset();
         updateTotal();
       } catch (error) {
