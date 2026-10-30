@@ -9,7 +9,71 @@ const supabaseClient = window.supabase.createClient(
 let knownOrderIdsForAlerts = null;
 let orderSoundAlertsEnabled = false;
 let orderAlertAudioContext = null;
+let orderBrowserNotificationsEnabled =
+  "Notification" in window &&
+  Notification.permission === "granted";
 
+async function enableBrowserOrderNotifications() {
+  const button = document.getElementById(
+    "enableBrowserNotificationsButton"
+  );
+  const status = document.getElementById(
+    "browserNotificationStatus"
+  );
+
+  try {
+    if (!("Notification" in window)) {
+      throw new Error("Browser notifications are not supported.");
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      throw new Error("Notification permission was not granted.");
+    }
+
+    orderBrowserNotificationsEnabled = true;
+
+    if (button) {
+      button.textContent = "Browser Notifications Enabled";
+      button.disabled = true;
+    }
+
+    if (status) {
+      status.textContent = "New order notifications are enabled.";
+    }
+
+    new Notification("Breakfast Box", {
+      body: "New order notifications are ready!"
+    });
+
+  } catch (error) {
+    console.error("Notification setup failed:", error);
+
+    if (status) {
+      status.textContent = error.message;
+    }
+  }
+}
+
+function showNewOrderNotification(order) {
+  if (
+    !orderBrowserNotificationsEnabled ||
+    !("Notification" in window) ||
+    Notification.permission !== "granted"
+  ) return;
+
+  const token = order.token_number == null
+    ? "Not assigned"
+    : String(order.token_number).padStart(4, "0");
+
+  new Notification("New Breakfast Box Order!", {
+    body:
+      "Token: " + token +
+      " | Total: ₹" + Number(order.total_amount || 0).toFixed(2),
+    tag: "breakfast-order-" + order.id
+  });
+}
 function playNewOrderSound() {
   if (!orderSoundAlertsEnabled || !orderAlertAudioContext) return;
 
