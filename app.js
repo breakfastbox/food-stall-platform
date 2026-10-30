@@ -6,7 +6,74 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
+let knownOrderIdsForAlerts = null;
+let orderSoundAlertsEnabled = false;
+let orderAlertAudioContext = null;
 
+function playNewOrderSound() {
+  if (!orderSoundAlertsEnabled || !orderAlertAudioContext) return;
+
+  const frequencies = [880, 660];
+  const now = orderAlertAudioContext.currentTime;
+
+  frequencies.forEach((frequency, index) => {
+    const start = now + index * 0.22;
+    const oscillator = orderAlertAudioContext.createOscillator();
+    const gain = orderAlertAudioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, start);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+
+    oscillator.connect(gain);
+    gain.connect(orderAlertAudioContext.destination);
+
+    oscillator.start(start);
+    oscillator.stop(start + 0.19);
+  });
+}
+
+async function enableOrderSoundAlerts() {
+  const button = document.getElementById("enableOrderSoundButton");
+  const status = document.getElementById("orderSoundStatus");
+
+  try {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      throw new Error("Sound alerts are not supported by this browser.");
+    }
+
+    if (!orderAlertAudioContext) {
+      orderAlertAudioContext = new AudioContextClass();
+    }
+
+    await orderAlertAudioContext.resume();
+
+    orderSoundAlertsEnabled = true;
+    playNewOrderSound();
+
+    if (button) {
+      button.textContent = "Sound Alerts Enabled";
+      button.disabled = true;
+    }
+
+    if (status) {
+      status.textContent = "Sound alerts are enabled.";
+    }
+
+  } catch (error) {
+    console.error("Could not enable sound alerts:", error);
+
+    if (status) {
+      status.textContent = error.message;
+    }
+  }
+}
 async function setOrderingEnabled(action) {
   const {
     data: { session },
@@ -497,7 +564,26 @@ async function loadOrders() {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
+let newOrderCount = 0;
 
+const currentOrderIds = new Set(
+  (orders || []).map(order => order.id)
+);
+
+if (knownOrderIdsForAlerts === null) {
+  knownOrderIdsForAlerts = currentOrderIds;
+} else {
+  currentOrderIds.forEach(id => {
+    if (!knownOrderIdsForAlerts.has(id)) {
+      newOrderCount++;
+      knownOrderIdsForAlerts.add(id);
+    }
+  });
+
+  if (newOrderCount > 0) {
+    playNewOrderSound();
+  }
+}
     if (!orders || orders.length === 0) {
       message.textContent = "No orders yet.";
       return;
