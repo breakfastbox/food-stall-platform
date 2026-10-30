@@ -48,7 +48,21 @@
     <p class="muted">Breakfast Box — manage customer orders</p>
 
     <button onclick="loadOrders()">Refresh Orders</button>
-    <button onclick="window.location.href='stall.html'">Back to Dashboard</button>
+
+<button
+  id="enableOrderSoundButton"
+  onclick="enableOrderSoundAlerts()"
+>
+  Enable Sound Alerts
+</button>
+
+<p id="orderSoundStatus" class="muted">
+  Sound alerts are off. Click to enable.
+</p>
+
+<button onclick="window.location.href='stall.html'">
+  Back to Dashboard
+</button>
 
     <p id="ordersMessage" class="muted">Loading orders...</p>
     <div id="ordersList"></div>
