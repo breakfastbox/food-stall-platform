@@ -1,0 +1,288 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Order History - Breakfast Box</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7f5;
+      margin: 0;
+      padding: 20px;
+      color: #26352c;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #176b45;
+    }
+
+    .card {
+      background: white;
+      padding: 18px;
+      margin: 16px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+
+    .items {
+      padding-left: 20px;
+      line-height: 1.8;
+    }
+
+    .status {
+      font-weight: bold;
+      color: #176b45;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 11px 17px;
+      margin-top: 10px;
+      background: #176b45;
+      color: white;
+      border-radius: 7px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .secondary {
+      background: #52645a;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 35px 15px;
+      background: white;
+      border-radius: 12px;
+    }
+
+    #historyMessage {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <h1>📦 My Order History</h1>
+    <p style="text-align:center">
+      Breakfast Box — Your previous orders
+    </p>
+
+    <p id="historyMessage">Loading your orders...</p>
+
+    <div id="historyList"></div>
+
+    <div style="text-align:center">
+      <a class="button secondary" href="order.html">
+        Order Breakfast
+      </a>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL =
+      "https://anlgfcltudysjnsipsmd.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+
+    const client = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const HISTORY_KEY = "breakfastBoxOrderHistory";
+
+    const historyList = document.getElementById("historyList");
+    const historyMessage = document.getElementById("historyMessage");
+
+    let historyLoading = false;
+
+    function createTextElement(tag, text, className) {
+      const element = document.createElement(tag);
+      element.textContent = text;
+
+      if (className) element.className = className;
+
+      return element;
+    }
+
+    async function loadOrderHistory() {
+      if (historyLoading) return;
+
+      historyLoading = true;
+
+      try {
+        let savedOrders;
+
+        try {
+          savedOrders = JSON.parse(
+            localStorage.getItem(HISTORY_KEY) || "[]"
+          );
+        } catch {
+          savedOrders = [];
+        }
+
+        if (!Array.isArray(savedOrders) || savedOrders.length === 0) {
+          historyMessage.textContent =
+            "No previous orders found on this device.";
+
+          historyList.replaceChildren(
+            createTextElement(
+              "div",
+              "Your orders will appear here after checkout.",
+              "empty"
+            )
+          );
+
+          return;
+        }
+
+        historyMessage.textContent = "Loading previous orders...";
+
+        const results = await Promise.all(
+          savedOrders.slice(0, 20).map(async saved => {
+            try {
+              const { data, error } = await client.rpc(
+                "get_order_tracking",
+                {
+                  p_tracking_code: saved.tracking_code
+                }
+              );
+
+              if (error) throw error;
+
+              return {
+                saved,
+                order: data?.found ? data : null
+              };
+
+            } catch (error) {
+              console.error("History lookup failed:", error);
+              return { saved, order: null, failed: true };
+            }
+          })
+        );
+
+        const cards = [];
+
+        results.forEach(({ saved, order, failed }) => {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          if (!order) {
+            card.appendChild(
+              createTextElement(
+                "p",
+                failed
+                  ? "Unable to load this order. Please try again."
+                  : "This order could not be found."
+              )
+            );
+          } else {
+            const token = order.token_number == null
+              ? "Not assigned"
+              : String(order.token_number).padStart(4, "0");
+
+            card.appendChild(
+              createTextElement("h2", "Order #" + token)
+            );
+
+            const date = order.created_at
+              ? new Date(order.created_at).toLocaleString("en-IN")
+              : "Date unavailable";
+
+            card.appendChild(
+              createTextElement("p", "Placed: " + date)
+            );
+
+            card.appendChild(
+              createTextElement(
+                "p",
+                "Order Status: " + order.order_status,
+                "status"
+              )
+            );
+
+            card.appendChild(
+              createTextElement(
+                "p",
+                "Payment Status: " + order.payment_status
+              )
+            );
+
+            card.appendChild(
+              createTextElement(
+                "p",
+                "Total: ₹" + Number(order.total_amount || 0).toFixed(2)
+              )
+            );
+
+            card.appendChild(
+              createTextElement("h3", "Food Items")
+            );
+
+            const itemList = document.createElement("ul");
+            itemList.className = "items";
+
+            (order.items || []).forEach(item => {
+              itemList.appendChild(
+                createTextElement(
+                  "li",
+                  item.item_name + " × " + item.quantity
+                )
+              );
+            });
+
+            card.appendChild(itemList);
+          }
+
+          const trackLink = document.createElement("a");
+
+          trackLink.className = "button";
+          trackLink.textContent = "Track This Order";
+          trackLink.href =
+            "track-order.html?code=" +
+            encodeURIComponent(saved.tracking_code);
+
+          card.appendChild(trackLink);
+
+          cards.push(card);
+        });
+
+        historyList.replaceChildren(...cards);
+
+        historyMessage.textContent =
+          results.length + " saved order(s) found.";
+
+      } finally {
+        historyLoading = false;
+      }
+    }
+
+    loadOrderHistory();
+
+    setInterval(() => {
+      if (!document.hidden) {
+        loadOrderHistory();
+      }
+    }, 30000);
+  </script>
+
+</body>
+</html>
