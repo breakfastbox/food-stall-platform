@@ -627,26 +627,30 @@ async function loadOrders() {
       .eq("stall_id", stalls[0].id)
       .order("created_at", { ascending: false });
 
-       let newOrderCount = 0;
+       const currentOrderIds = new Set(
+  (orders || []).map(order => order.id)
+);
 
-    const currentOrderIds = new Set(
-      (orders || []).map(order => order.id)
-    );
+if (knownOrderIdsForAlerts === null) {
+  knownOrderIdsForAlerts = currentOrderIds;
+} else {
+  const newOrders = [];
 
-    if (knownOrderIdsForAlerts === null) {
-      knownOrderIdsForAlerts = currentOrderIds;
-    } else {
-      currentOrderIds.forEach(id => {
-        if (!knownOrderIdsForAlerts.has(id)) {
-          newOrderCount++;
-          knownOrderIdsForAlerts.add(id);
-        }
-      });
-
-      if (newOrderCount > 0) {
-        playNewOrderSound();
-      }
+  (orders || []).forEach(order => {
+    if (!knownOrderIdsForAlerts.has(order.id)) {
+      newOrders.push(order);
+      knownOrderIdsForAlerts.add(order.id);
     }
+  });
+
+  if (newOrders.length > 0) {
+    playNewOrderSound();
+
+    newOrders.forEach(order => {
+      showNewOrderNotification(order);
+    });
+  }
+}
     if (!orders || orders.length === 0) {
       message.textContent = "No orders yet.";
       return;
