@@ -505,14 +505,42 @@ function openReports() {
   window.location.href = "reports.html";
 }
 
+
+window.foodStallKnownOrderIds =
+  window.foodStallKnownOrderIds || new Set();
+
+window.foodStallNewOrderIds =
+  window.foodStallNewOrderIds || new Set();
+
+window.foodStallOrdersInitialized =
+  window.foodStallOrdersInitialized || false;
+
+window.foodStallOrdersLoadInProgress = false;
+
+
+// Prevent overlapping refreshes
 async function loadOrders() {
+  if (window.foodStallOrdersLoadInProgress) return;
+
+  window.foodStallOrdersLoadInProgress = true;
+
+  try {
+    await loadOrdersInternal();
+  } catch (error) {
+    console.error("Order loading failed:", error);
+  } finally {
+    window.foodStallOrdersLoadInProgress = false;
+  }
+}
+
+
+async function loadOrdersInternal() {
   const message = document.getElementById("ordersMessage");
   const list = document.getElementById("ordersList");
 
   if (!message || !list) return;
 
   message.textContent = "Loading orders...";
-  list.innerHTML = "";
 
   // Find Breakfast Box stall
   const { data: stalls, error: stallError } = await supabaseClient
@@ -545,11 +573,17 @@ async function loadOrders() {
   }
 
   if (!orders || orders.length === 0) {
+    if (!window.foodStallOrdersInitialized) {
+      window.foodStallKnownOrderIds = new Set();
+      window.foodStallOrdersInitialized = true;
+    }
+
     message.textContent = "No orders yet.";
+    list.innerHTML = "";
     return;
   }
 
-  // Load all food items for these orders
+  // Load food items
   const orderIds = orders.map(order => order.id);
 
   const { data: orderItems, error: itemsError } = await supabaseClient
@@ -564,6 +598,70 @@ async function loadOrders() {
     return;
   }
 
+  // Detect genuinely new orders
+  let newOrders = [];
+
+  if (!window.foodStallOrdersInitialized) {
+    // First load: register old orders without alerts
+    window.foodStallKnownOrderIds = new Set(
+      orders.map(order => order.id)
+    );
+
+    window.foodStallOrdersInitialized = true;
+
+  } else {
+    newOrders = orders.filter(
+      order => !window.foodStallKnownOrderIds.has(order.id)
+    );
+
+    newOrders.forEach(order => {
+      window.foodStallKnownOrderIds.add(order.id);
+      window.foodStallNewOrderIds.add(order.id);
+    });
+  }
+
+  // Alert for genuinely new orders
+  if (newOrders.length > 0) {
+
+    // Sound alert
+    if (
+      typeof orderSoundAlertsEnabled !== "undefined" &&
+      orderSoundAlertsEnabled &&
+      typeof playNewOrderSound === "function"
+    ) {
+      try {
+        playNewOrderSound();
+      } catch (soundError) {
+        console.error("Order sound failed:", soundError);
+      }
+    }
+
+    // Browser notifications
+    if (
+      typeof orderBrowserNotificationsEnabled !== "undefined" &&
+      orderBrowserNotificationsEnabled &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      newOrders.forEach(order => {
+        try {
+          new Notification("New Breakfast Box Order!", {
+            body: "New order received. Token: " +
+              (order.token_number ?? "Not assigned"),
+            tag: "breakfast-order-" + order.id
+          });
+        } catch (notificationError) {
+          console.error("Notification failed:", notificationError);
+        }
+      });
+    }
+  }
+
+  // Remember all existing orders
+  orders.forEach(order => {
+    window.foodStallKnownOrderIds.add(order.id);
+  });
+
   // Group food items by order
   const itemsByOrder = {};
 
@@ -575,7 +673,7 @@ async function loadOrders() {
     itemsByOrder[item.order_id].push(item);
   });
 
-  // Protect displayed text
+  // Escape displayed text
   const escapeHTML = value =>
     String(value ?? "").replace(/[&<>"']/g, char => ({
       "&": "&amp;",
@@ -585,11 +683,14 @@ async function loadOrders() {
       "'": "&#39;"
     })[char]);
 
-  // Display orders
   message.textContent = orders.length + " order(s) found.";
 
+  // Display orders
   list.innerHTML = orders.map(order => {
     const items = itemsByOrder[order.id] || [];
+
+    const isNewOrder =
+      window.foodStallNewOrderIds.has(order.id);
 
     const foodItemsHTML = items.length
       ? items.map(item => `
@@ -610,7 +711,18 @@ async function loadOrders() {
       : "<p>No food items found for this order.</p>";
 
     return `
-      <div class="card">
+      <div class="card"
+        style="${
+          isNewOrder
+            ? "border:2px solid #16a34a; background:#f0fdf4;"
+            : ""
+        }">
+
+        ${
+          isNewOrder
+            ? '<span style="display:inline-block;background:#16a34a;color:white;padding:5px 10px;border-radius:5px;font-weight:bold;">NEW ORDER</span>'
+            : ""
+        }
 
         <h3>Order Token: ${escapeHTML(order.token_number ?? "Not assigned")}</h3>
 
@@ -666,7 +778,7 @@ async function loadOrders() {
     `;
   }).join("");
 
-  // Set each order's current status
+  // Restore current order statuses
   orders.forEach(order => {
     const select = document.getElementById("status-" + order.id);
 
