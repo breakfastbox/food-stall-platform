@@ -504,6 +504,7 @@ function openOrders() {
 function openReports() {
   window.location.href = "reports.html";
 }
+
 async function loadOrders() {
   const message = document.getElementById("ordersMessage");
   const list = document.getElementById("ordersList");
@@ -513,6 +514,7 @@ async function loadOrders() {
   message.textContent = "Loading orders...";
   list.innerHTML = "";
 
+  // Find Breakfast Box stall
   const { data: stalls, error: stallError } = await supabaseClient
     .from("stalls")
     .select("id")
@@ -525,12 +527,15 @@ async function loadOrders() {
     return;
   }
 
+  const stallId = stalls[0].id;
+
+  // Load orders
   const { data: orders, error } = await supabaseClient
     .from("orders")
     .select(
       "id, token_number, order_status, payment_status, subtotal, total_amount, created_at"
     )
-    .eq("stall_id", stalls[0].id)
+    .eq("stall_id", stallId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -544,42 +549,133 @@ async function loadOrders() {
     return;
   }
 
+  // Load all food items for these orders
+  const orderIds = orders.map(order => order.id);
+
+  const { data: orderItems, error: itemsError } = await supabaseClient
+    .from("order_items")
+    .select("id, order_id, menu_item_id, item_name, quantity, unit_price")
+    .in("order_id", orderIds);
+
+  if (itemsError) {
+    console.error("Could not load order items:", itemsError);
+    message.textContent =
+      "Orders found, but food items could not load: " + itemsError.message;
+    return;
+  }
+
+  // Group food items by order
+  const itemsByOrder = {};
+
+  (orderItems || []).forEach(item => {
+    if (!itemsByOrder[item.order_id]) {
+      itemsByOrder[item.order_id] = [];
+    }
+
+    itemsByOrder[item.order_id].push(item);
+  });
+
+  // Protect displayed text
+  const escapeHTML = value =>
+    String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+
+  // Display orders
   message.textContent = orders.length + " order(s) found.";
 
-  list.innerHTML = orders.map(order => `
-    <div class="card">
-      <h3>Order Token: ${order.token_number ?? "Not assigned"}</h3>
-      <p><strong>Order status:</strong> ${order.order_status ?? "Pending"}</p>
-      <p><strong>Payment status:</strong> ${order.payment_status ?? "Unknown"}</p>
-      <p><strong>Subtotal:</strong> ₹${order.subtotal ?? 0}</p>
-      <p><strong>Total:</strong> ₹${order.total_amount ?? 0}</p>
-      <p><strong>Placed:</strong> ${
-        order.created_at
-          ? new Date(order.created_at).toLocaleString()
-          : "Unknown"
-      }</p>
+  list.innerHTML = orders.map(order => {
+    const items = itemsByOrder[order.id] || [];
 
-      <label for="status-${order.id}">Update order status:</label>
-      <select id="status-${order.id}">
-        <option value="pending">Pending</option>
-        <option value="accepted">accepted</option>
-        <option value="preparing">Preparing</option>
-        <option value="ready">Ready</option>
-        <option value="completed">Completed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
+    const foodItemsHTML = items.length
+      ? items.map(item => `
+          <div style="padding:8px 0; border-bottom:1px solid #ddd;">
+            <strong>${escapeHTML(item.item_name)}</strong>
+            <p>
+              Quantity: ${Number(item.quantity) || 0}
+              × ₹${Number(item.unit_price) || 0}
+            </p>
+            <p>
+              Item Total: ₹${
+                (Number(item.quantity) || 0) *
+                (Number(item.unit_price) || 0)
+              }
+            </p>
+          </div>
+        `).join("")
+      : "<p>No food items found for this order.</p>";
 
-      <button onclick="updateOrderStatus('${order.id}')">
-        Save Status
-      </button>
-    </div>
-  `).join("");
+    return `
+      <div class="card">
 
+        <h3>Order Token: ${escapeHTML(order.token_number ?? "Not assigned")}</h3>
+
+        <h4>Food Items</h4>
+        ${foodItemsHTML}
+
+        <hr>
+
+        <p><strong>Order Status:</strong>
+          ${escapeHTML(order.order_status || "Pending")}
+        </p>
+
+        <p><strong>Payment Status:</strong>
+          ${escapeHTML(order.payment_status || "Unknown")}
+        </p>
+
+        <p><strong>Subtotal:</strong>
+          ₹${Number(order.subtotal) || 0}
+        </p>
+
+        <p><strong>Total:</strong>
+          ₹${Number(order.total_amount) || 0}
+        </p>
+
+        <p><strong>Placed:</strong>
+          ${
+            order.created_at
+              ? new Date(order.created_at).toLocaleString()
+              : "Unknown"
+          }
+        </p>
+
+        <hr>
+
+        <label for="status-${escapeHTML(order.id)}">
+          Update Order Status:
+        </label>
+
+        <select id="status-${escapeHTML(order.id)}">
+          <option value="pending">Pending</option>
+          <option value="accepted">Accepted</option>
+          <option value="preparing">Preparing</option>
+          <option value="ready">Ready</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+
+        <button onclick="updateOrderStatus('${escapeHTML(order.id)}')">
+          Save Status
+        </button>
+
+      </div>
+    `;
+  }).join("");
+
+  // Set each order's current status
   orders.forEach(order => {
     const select = document.getElementById("status-" + order.id);
-    if (select) select.value = order.order_status || "pending";
+
+    if (select) {
+      select.value = order.order_status || "pending";
+    }
   });
 }
+
 
 
 
