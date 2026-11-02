@@ -309,6 +309,56 @@
   </div>
 </div>
 
+    <section class="card" id="purchaseHistoryCard">
+      <h2>📚 Inventory Purchase History</h2>
+      <p>Review previously recorded stock purchases. This history does not change current stock.</p>
+
+      <div class="form-grid">
+        <label>
+          From Date (DD-MM-YY)
+          <input type="text" id="purchaseHistoryFrom"
+                 placeholder="DD-MM-YY"
+                 pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}">
+        </label>
+        <label>
+          To Date (DD-MM-YY)
+          <input type="text" id="purchaseHistoryTo"
+                 placeholder="DD-MM-YY"
+                 pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}">
+        </label>
+        <label>
+          Inventory Item
+          <select id="purchaseHistoryItem">
+            <option value="">All inventory items</option>
+          </select>
+        </label>
+      </div>
+
+      <button type="button" id="purchaseHistoryFilterButton">Filter Purchases</button>
+      <button type="button" id="purchaseHistoryResetButton" class="secondary">Clear Filters</button>
+
+      <p id="purchaseHistoryMessage" role="status" aria-live="polite"></p>
+      <h3>Total Purchase Cost: ₹<span id="purchaseHistoryTotal">0.00</span></h3>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Inventory Item</th>
+              <th>Quantity</th>
+              <th>Unit Cost</th>
+              <th>Total Cost</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="purchaseHistoryRows">
+            <tr><td colspan="6">Loading purchase history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card" id="purchaseCard">
       <h2>🧾 Record Inventory Purchase</h2>
       <p>
@@ -707,6 +757,7 @@ if (recipeCard) {
         await loadInventory();
         await loadPurchaseItems();
         await loadExpenseHistory();
+        await loadPurchaseHistory();
       } catch (error) {
         document.getElementById("connectionStatus").textContent =
           "Connection or loading problem.";
@@ -1278,7 +1329,118 @@ const unit = units[selectedUnitIndex][0];
           new Option(item.name + " (" + item.unit + ")", item.id)
         );
       });
+
+      const historySelect = document.getElementById("purchaseHistoryItem");
+      if (historySelect) {
+        historySelect.replaceChildren(new Option("All inventory items", ""));
+        (data || []).forEach(item => {
+          historySelect.add(new Option(item.name + " (" + item.unit + ")", item.id));
+        });
+      }
     }
+
+async function loadPurchaseHistory() {
+  const message = document.getElementById("purchaseHistoryMessage");
+  const rows = document.getElementById("purchaseHistoryRows");
+  const totalElement = document.getElementById("purchaseHistoryTotal");
+
+  if (!stallId || !message || !rows || !totalElement) return;
+
+  const fromText = document.getElementById("purchaseHistoryFrom").value.trim();
+  const toText = document.getElementById("purchaseHistoryTo").value.trim();
+  const itemId = document.getElementById("purchaseHistoryItem").value;
+
+  const fromISO = fromText ? dateDDMMYYToISO(fromText) : null;
+  const toISO = toText ? dateDDMMYYToISO(toText) : null;
+
+  if (fromText && !fromISO) {
+    message.textContent = "Enter a valid From Date in DD-MM-YY format.";
+    return;
+  }
+
+  if (toText && !toISO) {
+    message.textContent = "Enter a valid To Date in DD-MM-YY format.";
+    return;
+  }
+
+  if (fromISO && toISO && fromISO > toISO) {
+    message.textContent = "From Date cannot be later than To Date.";
+    return;
+  }
+
+  message.textContent = "Loading purchase history...";
+  rows.replaceChildren();
+  totalElement.textContent = "0.00";
+
+  try {
+    let query = supabaseClient
+      .from("inventory_purchases")
+      .select("id, inventory_item_id, quantity, unit_cost, total_cost, purchased_at, notes, inventory_items(name, unit)")
+      .eq("stall_id", stallId)
+      .order("purchased_at", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (fromISO) query = query.gte("purchased_at", fromISO);
+    if (toISO) query = query.lte("purchased_at", toISO);
+    if (itemId) query = query.eq("inventory_item_id", itemId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const purchases = data || [];
+    let total = 0;
+
+    if (purchases.length === 0) {
+      rows.innerHTML = '<tr><td colspan="6">No purchases found for these filters.</td></tr>';
+    } else {
+      purchases.forEach(purchase => {
+        const quantity = Number(purchase.quantity) || 0;
+        const unitCost = Number(purchase.unit_cost) || 0;
+        const totalCost = purchase.total_cost === null || purchase.total_cost === undefined
+          ? quantity * unitCost
+          : Number(purchase.total_cost);
+        total += Number.isFinite(totalCost) ? totalCost : 0;
+
+        const row = document.createElement("tr");
+        const values = [
+          displayDateDDMMYY(purchase.purchased_at),
+          (purchase.inventory_items?.name || "Inventory item") +
+            (purchase.inventory_items?.unit ? " (" + purchase.inventory_items.unit + ")" : ""),
+          String(quantity),
+          "₹" + unitCost.toFixed(2),
+          "₹" + (Number.isFinite(totalCost) ? totalCost : 0).toFixed(2),
+          purchase.notes || "—"
+        ];
+
+        values.forEach(value => {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        });
+
+        rows.appendChild(row);
+      });
+    }
+
+    totalElement.textContent = total.toFixed(2);
+    message.textContent = purchases.length + " purchase record(s) found.";
+  } catch (error) {
+    console.error("Purchase history error:", error);
+    rows.innerHTML = '<tr><td colspan="6">Could not load purchase history.</td></tr>';
+    message.textContent = "Error loading purchases: " + error.message;
+  }
+}
+
+document.getElementById("purchaseHistoryFilterButton")
+  .addEventListener("click", loadPurchaseHistory);
+
+document.getElementById("purchaseHistoryResetButton")
+  .addEventListener("click", () => {
+    document.getElementById("purchaseHistoryFrom").value = "";
+    document.getElementById("purchaseHistoryTo").value = "";
+    document.getElementById("purchaseHistoryItem").value = "";
+    loadPurchaseHistory();
+  });
 
 function formatDateDDMMYY(dateValue) {
   if (!dateValue) return "";
