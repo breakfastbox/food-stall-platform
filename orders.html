@@ -40,6 +40,37 @@
     .muted {
       color: #666;
     }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .summary-card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .summary-label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .summary-card strong {
+      font-size: 25px;
+    }
+
+    .summary-card small {
+      color: #777;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -74,6 +105,14 @@
 <button onclick="window.location.href='stall.html'">
   Back to Dashboard
 </button>
+
+    <h2>Today's Overview</h2>
+    <div id="dailyOrderSummary" class="summary-grid" aria-live="polite">
+      <div class="summary-card"><span class="summary-label">Total Orders Today</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Pending Orders</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Completed Orders</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Today's Sales</span><strong>—</strong><small>Completed orders only</small></div>
+    </div>
 
     <div class="card">
       <label for="orderStatusFilter"><strong>Filter orders by status:</strong></label>
