@@ -281,7 +281,7 @@ function getSubscriptionStatusInfo(stall) {
   const todayUtc = Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]);
   const daysRemaining = Math.round((endUtc - todayUtc) / 86400000);
 
-  if (daysRemaining < 0 && ["active", "trial", "expired"].includes(status)) {
+  if (daysRemaining < 0 && ["active", "trial", "suspended", "expired"].includes(status)) {
     return { key: "expired", label: "Expired", daysRemaining };
   }
   if (status === "expired") {
@@ -580,6 +580,25 @@ async function loadStalls() {
 
 
 async function changeStallStatus(stallId, newStatus) {
+
+  if (newStatus === "active") {
+    const { data: selectedStall, error: lookupError } = await supabaseClient
+      .from("stalls")
+      .select("subscription_end")
+      .eq("id", stallId)
+      .maybeSingle();
+
+    if (lookupError || !selectedStall) {
+      alert("Could not verify this stall's subscription. Please refresh and try again.");
+      return;
+    }
+
+    if (selectedStall.subscription_end &&
+        selectedStall.subscription_end < getIndiaDateInputValue()) {
+      alert("This subscription has expired. Record a renewal payment to reactivate the stall.");
+      return;
+    }
+  }
 
   const { error } = await supabaseClient
     .from("stalls")
