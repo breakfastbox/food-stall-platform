@@ -280,6 +280,163 @@ function getSubscriptionRemainingText(endDate) {
   return difference + " day(s) remaining";
 }
 
+function getLocalDateInputValue() {
+  const today = new Date();
+  return String(today.getFullYear()) + "-" +
+    String(today.getMonth() + 1).padStart(2, "0") + "-" +
+    String(today.getDate()).padStart(2, "0");
+}
+
+async function loadSubscriptionPaymentStalls(stalls) {
+  const select = document.getElementById("subscriptionPaymentStall");
+  if (!select) return;
+
+  const previousValue = select.value;
+  select.replaceChildren(new Option("Select a stall", ""));
+
+  (stalls || []).forEach(stall => {
+    select.add(new Option(stall.name, stall.id));
+  });
+
+  if (previousValue && (stalls || []).some(stall => stall.id === previousValue)) {
+    select.value = previousValue;
+  } else if (stalls && stalls.length) {
+    select.value = stalls[0].id;
+  }
+
+  const today = getLocalDateInputValue();
+  ["subscriptionPaymentDate", "subscriptionPeriodStart", "subscriptionPeriodEnd"].forEach(id => {
+    const input = document.getElementById(id);
+    if (input && !input.value) input.value = today;
+  });
+
+  await loadSubscriptionPayments();
+}
+
+async function loadSubscriptionPayments() {
+  const select = document.getElementById("subscriptionPaymentStall");
+  const history = document.getElementById("subscriptionPaymentHistory");
+  if (!select || !history) return;
+
+  const stallId = select.value;
+  if (!stallId) {
+    history.textContent = "Select a stall to view payment history.";
+    return;
+  }
+
+  history.textContent = "Loading payment history...";
+  const { data, error } = await supabaseClient
+    .from("subscription_payments")
+    .select("id, amount, payment_method, transaction_reference, paid_at, period_start, period_end, notes, created_at")
+    .eq("stall_id", stallId)
+    .order("paid_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Could not load subscription payments:", error);
+    history.textContent = "Unable to load payment history: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    history.textContent = "No payments recorded for this stall yet.";
+    return;
+  }
+
+  const methodLabels = {
+    upi: "UPI",
+    cash: "Cash",
+    bank_transfer: "Bank Transfer"
+  };
+
+  history.innerHTML = `
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Paid On</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Reference</th>
+            <th>Subscription Period</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(payment => `
+            <tr>
+              <td>${formatSubscriptionDate(payment.paid_at)}</td>
+              <td>₹${Number(payment.amount).toFixed(2)}</td>
+              <td>${methodLabels[payment.payment_method] || escapeHtml(payment.payment_method)}</td>
+              <td>${escapeHtml(payment.transaction_reference || "—")}</td>
+              <td>${formatSubscriptionDate(payment.period_start)} to ${formatSubscriptionDate(payment.period_end)}</td>
+              <td>${escapeHtml(payment.notes || "—")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function recordSubscriptionPayment() {
+  const message = document.getElementById("subscriptionPaymentMessage");
+  const stallId = document.getElementById("subscriptionPaymentStall")?.value;
+  const amount = Number(document.getElementById("subscriptionPaymentAmount")?.value);
+  const method = document.getElementById("subscriptionPaymentMethod")?.value;
+  const paidAt = document.getElementById("subscriptionPaymentDate")?.value;
+  const periodStart = document.getElementById("subscriptionPeriodStart")?.value;
+  const periodEnd = document.getElementById("subscriptionPeriodEnd")?.value;
+  const reference = document.getElementById("subscriptionPaymentReference")?.value || "";
+  const notes = document.getElementById("subscriptionPaymentNotes")?.value || "";
+
+  if (!stallId || !Number.isFinite(amount) || amount <= 0 || !method ||
+      !paidAt || !periodStart || !periodEnd || periodEnd < periodStart) {
+    message.textContent = "Please complete the required fields and check the dates and amount.";
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "Record ₹" + amount.toFixed(2) + " by " +
+    ({upi:"UPI",cash:"Cash",bank_transfer:"Bank Transfer"}[method] || method) +
+    " and activate this stall from " + periodStart + " to " + periodEnd + "?"
+  );
+  if (!confirmed) return;
+
+  const button = document.querySelector('button[onclick="recordSubscriptionPayment()"]');
+  if (button) button.disabled = true;
+  message.textContent = "Saving payment...";
+
+  try {
+    const { data, error } = await supabaseClient.rpc("record_subscription_payment", {
+      p_stall_id: stallId,
+      p_amount: amount,
+      p_payment_method: method,
+      p_transaction_reference: reference,
+      p_paid_at: paidAt,
+      p_period_start: periodStart,
+      p_period_end: periodEnd,
+      p_notes: notes
+    });
+
+    if (error) throw error;
+    if (!data) throw new Error("The payment was not saved. Please refresh and check the history.");
+
+    document.getElementById("subscriptionPaymentAmount").value = "";
+    document.getElementById("subscriptionPaymentReference").value = "";
+    document.getElementById("subscriptionPaymentNotes").value = "";
+    message.textContent = "Payment recorded successfully. The stall subscription is now Active.";
+
+    await loadStalls();
+    await loadSubscriptionPayments();
+  } catch (error) {
+    console.error("Could not record subscription payment:", error);
+    message.textContent = "Unable to record payment: " + error.message;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function loadStalls() {
 
   const { data, error } = await supabaseClient
@@ -409,6 +566,8 @@ async function loadStalls() {
     `;
 
   }).join("");
+
+  await loadSubscriptionPaymentStalls(data);
 }
 
 
