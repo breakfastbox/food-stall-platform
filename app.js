@@ -253,30 +253,61 @@ function formatSubscriptionDate(dateString) {
   return parts[2] + "-" + parts[1] + "-" + parts[0];
 }
 
+function getIndiaDateInputValue() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const part = type => parts.find(item => item.type === type)?.value || "";
+  return part("year") + "-" + part("month") + "-" + part("day");
+}
+
+function getSubscriptionStatusInfo(stall) {
+  const status = String(stall.status || "unknown").toLowerCase();
+  if (!stall.subscription_end) {
+    return { key: status, label: status.replace(/^./, c => c.toUpperCase()), daysRemaining: null };
+  }
+
+  const endParts = stall.subscription_end.split("-").map(Number);
+  const todayParts = getIndiaDateInputValue().split("-").map(Number);
+  if (endParts.length !== 3 || todayParts.length !== 3 ||
+      endParts.some(Number.isNaN) || todayParts.some(Number.isNaN)) {
+    return { key: status, label: status.replace(/^./, c => c.toUpperCase()), daysRemaining: null };
+  }
+
+  const endUtc = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+  const todayUtc = Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  const daysRemaining = Math.round((endUtc - todayUtc) / 86400000);
+
+  if (daysRemaining < 0 && ["active", "trial", "expired"].includes(status)) {
+    return { key: "expired", label: "Expired", daysRemaining };
+  }
+  if (status === "expired") {
+    return { key: "expired", label: "Expired", daysRemaining };
+  }
+  if (daysRemaining >= 0 && daysRemaining <= 7 && ["active", "trial"].includes(status)) {
+    return { key: "expiring_soon", label: "Expiring Soon", daysRemaining };
+  }
+
+  return {
+    key: status,
+    label: status.replace(/_/g, " ").replace(/^./, c => c.toUpperCase()),
+    daysRemaining
+  };
+}
+
 function getSubscriptionRemainingText(endDate) {
-  if (!endDate) {
-    return "No end date set";
-  }
-
+  if (!endDate) return "No end date set";
   const parts = endDate.split("-").map(Number);
-  if (parts.length !== 3 || parts.some(Number.isNaN)) {
-    return "Date unavailable";
-  }
-
-  const end = new Date(parts[0], parts[1] - 1, parts[2]);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const difference = Math.round((end.getTime() - today.getTime()) / 86400000);
-
-  if (difference < 0) {
-    return "End date passed " + Math.abs(difference) + " day(s) ago";
-  }
-
-  if (difference === 0) {
-    return "Ends today";
-  }
-
+  const todayParts = getIndiaDateInputValue().split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return "Date unavailable";
+  const endUtc = Date.UTC(parts[0], parts[1] - 1, parts[2]);
+  const todayUtc = Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  const difference = Math.round((endUtc - todayUtc) / 86400000);
+  if (difference < 0) return "Expired " + Math.abs(difference) + " day(s) ago";
+  if (difference === 0) return "Ends today";
   return difference + " day(s) remaining";
 }
 
@@ -309,7 +340,7 @@ async function loadSubscriptionPaymentStalls(stalls) {
     amountInput.value = "499";
   }
 
-  const today = getLocalDateInputValue();
+  const today = getIndiaDateInputValue();
   ["subscriptionPaymentDate", "subscriptionPeriodStart", "subscriptionPeriodEnd"].forEach(id => {
     const input = document.getElementById(id);
     if (input && !input.value) input.value = today;
@@ -470,14 +501,21 @@ async function loadStalls() {
   document.getElementById("totalStalls").textContent =
     data.length;
 
+  const subscriptionStates = data.map(stall => getSubscriptionStatusInfo(stall));
   document.getElementById("activeStalls").textContent =
-    data.filter(stall => stall.status === "active").length;
+    subscriptionStates.filter(state => state.key === "active").length;
 
   document.getElementById("trialStalls").textContent =
-    data.filter(stall => stall.status === "trial").length;
+    subscriptionStates.filter(state => state.key === "trial").length;
+
+  document.getElementById("expiringSoonStalls").textContent =
+    subscriptionStates.filter(state => state.key === "expiring_soon").length;
+
+  document.getElementById("expiredStalls").textContent =
+    subscriptionStates.filter(state => state.key === "expired").length;
 
   document.getElementById("suspendedStalls").textContent =
-    data.filter(stall => stall.status === "suspended").length;
+    subscriptionStates.filter(state => state.key === "suspended").length;
 
 
   const subscriptionList = document.getElementById("subscriptionList");
@@ -487,14 +525,12 @@ async function loadStalls() {
       subscriptionList.textContent = "No subscription records yet.";
     } else {
       subscriptionList.innerHTML = data.map(stall => {
-        const statusLabel = String(stall.status || "unknown")
-          .replace(/_/g, " ")
-          .replace(/^./, character => character.toUpperCase());
+        const subscriptionState = getSubscriptionStatusInfo(stall);
 
         return `
           <div class="stall subscription-card">
-            <h3>${stall.name}</h3>
-            <p><strong>Subscription status:</strong> ${statusLabel}</p>
+            <h3>${escapeHtml(stall.name)}</h3>
+            <p><strong>Subscription status:</strong> <span class="status">${subscriptionState.label}</span></p>
             <p><strong>Start date:</strong> ${formatSubscriptionDate(stall.subscription_start)}</p>
             <p><strong>End date:</strong> ${formatSubscriptionDate(stall.subscription_end)}</p>
             <p><strong>Time remaining:</strong> ${getSubscriptionRemainingText(stall.subscription_end)}</p>
@@ -519,56 +555,24 @@ async function loadStalls() {
 
 
   stallList.innerHTML = data.map(stall => {
-
-    const action =
-      stall.status === "suspended"
-        ? "Activate"
-        : "Suspend";
-
-
-    const newStatus =
-      stall.status === "suspended"
-        ? "active"
-        : "suspended";
-
+    const subscriptionState = getSubscriptionStatusInfo(stall);
+    const isExpired = subscriptionState.key === "expired";
+    const action = stall.status === "suspended" ? "Activate" : "Suspend";
+    const newStatus = stall.status === "suspended" ? "active" : "suspended";
 
     return `
-
       <div class="stall">
-
-        <h3>${stall.name}</h3>
-
-        <p>
-          <strong>Owner:</strong>
-          ${stall.owner_name || "Not added"}
-        </p>
-
-        <p>
-          <strong>Phone:</strong>
-          ${stall.phone || "Not added"}
-        </p>
-
-        <p>
-          <strong>Address:</strong>
-          ${stall.address || "Not added"}
-        </p>
-
-        <span class="status">
-          ${stall.status}
-        </span>
-
+        <h3>${escapeHtml(stall.name)}</h3>
+        <p><strong>Owner:</strong> ${escapeHtml(stall.owner_name || "Not added")}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(stall.phone || "Not added")}</p>
+        <p><strong>Address:</strong> ${escapeHtml(stall.address || "Not added")}</p>
+        <span class="status">${subscriptionState.label}</span>
         <br><br>
-
-        <button
-          onclick="changeStallStatus('${stall.id}', '${newStatus}')"
-        >
-          ${action}
-        </button>
-
+        ${isExpired
+          ? '<p><strong>Renewal required:</strong> Record a subscription payment to reactivate this stall.</p>'
+          : `<button onclick="changeStallStatus('${stall.id}', '${newStatus}')">${action}</button>`}
       </div>
-
     `;
-
   }).join("");
 
   await loadSubscriptionPaymentStalls(data);
