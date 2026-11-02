@@ -881,17 +881,52 @@ if (knownOrderIdsForAlerts === null) {
       message.textContent = orders.length + " order(s) found.";
     }
 
-    // Apply the dashboard filter after loading all orders and processing new-order alerts.
+    // Apply status and local-calendar date filters after processing new-order alerts.
     const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
-    const visibleOrders = statusFilter === "all"
+    const dateMode = document.getElementById("orderDateFilter")?.value || "all";
+    const customDate = document.getElementById("customOrderDate")?.value || "";
+
+    const toLocalDateKey = date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    };
+
+    const today = new Date();
+    const selectedDate = new Date(today);
+    if (dateMode === "yesterday") selectedDate.setDate(selectedDate.getDate() - 1);
+
+    const targetDateKey = dateMode === "custom"
+      ? customDate
+      : dateMode === "today" || dateMode === "yesterday"
+        ? toLocalDateKey(selectedDate)
+        : null;
+
+    let visibleOrders = statusFilter === "all"
       ? orders
       : orders.filter(order => (order.order_status || "pending") === statusFilter);
 
+    if (targetDateKey) {
+      visibleOrders = visibleOrders.filter(order =>
+        order.created_at &&
+        toLocalDateKey(new Date(order.created_at)) === targetDateKey
+      );
+    }
+
+    const dateDescription = dateMode === "today"
+      ? " today"
+      : dateMode === "yesterday"
+        ? " yesterday"
+        : dateMode === "custom" && targetDateKey
+          ? " on " + targetDateKey
+          : "";
+
     message.textContent =
-      visibleOrders.length + " of " + orders.length + " order(s) shown.";
+      visibleOrders.length + " of " + orders.length + " order(s) shown" + dateDescription + ".";
 
     if (visibleOrders.length === 0) {
-      list.innerHTML = '<p class="muted">No orders with this status.</p>';
+      list.innerHTML = '<p class="muted">No orders match these filters.</p>';
       return;
     }
 
@@ -973,6 +1008,21 @@ if (knownOrderIdsForAlerts === null) {
 
 
 
+
+function toggleCustomOrderDate() {
+  const mode = document.getElementById("orderDateFilter")?.value;
+  const dateInput = document.getElementById("customOrderDate");
+  if (!dateInput) return;
+
+  dateInput.style.display = mode === "custom" ? "inline-block" : "none";
+  if (mode === "custom" && !dateInput.value) {
+    const today = new Date();
+    dateInput.value =
+      today.getFullYear() + "-" +
+      String(today.getMonth() + 1).padStart(2, "0") + "-" +
+      String(today.getDate()).padStart(2, "0");
+  }
+}
 
 async function updateOrderStatus(orderId) {
   const select = document.getElementById("status-" + orderId);
