@@ -86,52 +86,103 @@
         </div>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2>Subscription Payments</h2>
-          <button type="button" onclick="loadSubscriptionPayments()">Refresh History</button>
-        </div>
-        <p>Record payments received manually by the Platform Admin. Recording a payment activates the stall and updates its subscription dates. No online payment gateway is connected.</p>
-
-        <div class="card">
-          <h3>Record a Payment</h3>
-          <label for="subscriptionPaymentStall">Food Stall</label>
-          <select id="subscriptionPaymentStall" required onchange="loadSubscriptionPayments()">
-            <option value="">Select a stall</option>
-          </select>
-
-          <label for="subscriptionPaymentAmount">Amount Received (₹)</label>
-          <input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" value="499" placeholder="499" required>
-
-          <label for="subscriptionPaymentMethod">Payment Method</label>
-          <select id="subscriptionPaymentMethod" required>
-            <option value="upi">UPI</option>
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank Transfer</option>
-          </select>
-
-          <label for="subscriptionPaymentDate">Payment Date</label>
-          <input id="subscriptionPaymentDate" type="date" required>
-
-          <label for="subscriptionPeriodStart">Subscription Period Start</label>
-          <input id="subscriptionPeriodStart" type="date" required>
-
-          <label for="subscriptionPeriodEnd">Subscription Period End</label>
-          <input id="subscriptionPeriodEnd" type="date" required>
-
-          <label for="subscriptionPaymentReference">Transaction Reference (optional)</label>
-          <input id="subscriptionPaymentReference" type="text" maxlength="150" placeholder="UPI/reference number">
-
-          <label for="subscriptionPaymentNotes">Notes (optional)</label>
-          <textarea id="subscriptionPaymentNotes" rows="3" maxlength="1000" placeholder="Any additional payment details"></textarea>
-
-          <button type="button" onclick="recordSubscriptionPayment()">Save Payment &amp; Activate Subscription</button>
-          <p id="subscriptionPaymentMessage" role="status"></p>
+      <section class="panel subscription-panel">
+        <div class="panel-header subscription-heading">
+          <div>
+            <span class="section-eyebrow">BILLING &amp; COLLECTIONS</span>
+            <h2>Subscription Payments</h2>
+            <p>Record payments received from stalls and manage their subscription period.</p>
+          </div>
+          <button class="button-secondary" type="button" onclick="loadSubscriptionPayments()">↻ Refresh History</button>
         </div>
 
-        <div class="card">
-          <h3>Payment History</h3>
-          <div id="subscriptionPaymentHistory">Select a stall to view payment history.</div>
+        <div class="subscription-price-note">
+          <span class="price-note-icon">₹</span>
+          <div>
+            <strong>Standard plan · ₹499/month</strong>
+            <span>Default amount is filled in automatically. You can edit it before saving.</span>
+          </div>
+        </div>
+
+        <div class="subscription-layout">
+          <div class="payment-form-card">
+            <div class="payment-card-heading">
+              <div class="payment-heading-icon">＋</div>
+              <div>
+                <h3>Record a payment</h3>
+                <p>Enter the payment details below.</p>
+              </div>
+            </div>
+
+            <div class="payment-form-grid">
+              <div class="form-field field-full">
+                <label for="subscriptionPaymentStall">Food stall</label>
+                <select id="subscriptionPaymentStall" required onchange="loadSubscriptionPayments()">
+                  <option value="">Select a stall</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="subscriptionPaymentAmount">Amount received</label>
+                <div class="amount-input-wrap">
+                  <span>₹</span>
+                  <input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" value="499" placeholder="499" required>
+                </div>
+                <small>Monthly standard fee: ₹499</small>
+              </div>
+
+              <div class="form-field">
+                <label for="subscriptionPaymentMethod">Payment method</label>
+                <select id="subscriptionPaymentMethod" required>
+                  <option value="upi">UPI</option>
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="subscriptionPaymentDate">Payment date</label>
+                <input id="subscriptionPaymentDate" type="date" required>
+              </div>
+
+              <div class="form-field">
+                <label for="subscriptionPeriodStart">Subscription starts</label>
+                <input id="subscriptionPeriodStart" type="date" required>
+              </div>
+
+              <div class="form-field">
+                <label for="subscriptionPeriodEnd">Subscription ends</label>
+                <input id="subscriptionPeriodEnd" type="date" required>
+              </div>
+
+              <div class="form-field field-full">
+                <label for="subscriptionPaymentReference">Transaction reference <span>(optional)</span></label>
+                <input id="subscriptionPaymentReference" type="text" maxlength="150" placeholder="UPI transaction ID or bank reference">
+              </div>
+
+              <div class="form-field field-full">
+                <label for="subscriptionPaymentNotes">Notes <span>(optional)</span></label>
+                <textarea id="subscriptionPaymentNotes" rows="2" maxlength="1000" placeholder="Add any useful payment details"></textarea>
+              </div>
+            </div>
+
+            <div class="payment-form-footer">
+              <p>Saving this payment will activate the selected stall for the dates above.</p>
+              <button class="button-primary" type="button" onclick="recordSubscriptionPayment()">Save Payment &amp; Activate</button>
+            </div>
+            <p id="subscriptionPaymentMessage" class="payment-message" role="status" aria-live="polite"></p>
+          </div>
+
+          <aside class="payment-history-card">
+            <div class="payment-card-heading history-heading">
+              <div class="payment-heading-icon history-icon">↺</div>
+              <div>
+                <h3>Payment history</h3>
+                <p>Previous payments for the selected stall.</p>
+              </div>
+            </div>
+            <div id="subscriptionPaymentHistory" class="payment-history-content">Select a stall to view payment history.</div>
+          </aside>
         </div>
       </section>
 
