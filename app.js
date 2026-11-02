@@ -304,6 +304,9 @@ async function loadSubscriptionPaymentStalls(stalls) {
     select.value = stalls[0].id;
   }
 
+  const amountInput = document.getElementById("subscriptionPaymentAmount");
+  if (amountInput && !amountInput.value) amountInput.value = "499";
+
   const today = getLocalDateInputValue();
   ["subscriptionPaymentDate", "subscriptionPeriodStart", "subscriptionPeriodEnd"].forEach(id => {
     const input = document.getElementById(id);
@@ -422,7 +425,7 @@ async function recordSubscriptionPayment() {
     if (error) throw error;
     if (!data) throw new Error("The payment was not saved. Please refresh and check the history.");
 
-    document.getElementById("subscriptionPaymentAmount").value = "";
+    document.getElementById("subscriptionPaymentAmount").value = "499";
     document.getElementById("subscriptionPaymentReference").value = "";
     document.getElementById("subscriptionPaymentNotes").value = "";
     message.textContent = "Payment recorded successfully. The stall subscription is now Active.";
