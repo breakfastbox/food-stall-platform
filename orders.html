@@ -75,6 +75,19 @@
   Back to Dashboard
 </button>
 
+    <div class="card">
+      <label for="orderStatusFilter"><strong>Filter orders by status:</strong></label>
+      <select id="orderStatusFilter" onchange="loadOrders()">
+        <option value="all">All Orders</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="preparing">Preparing</option>
+        <option value="ready">Ready</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+
     <p id="ordersMessage" class="muted">Loading orders...</p>
     <h2>Customer Change Requests</h2>
     <p class="muted">Only pending orders within the 5-minute change window are eligible.</p>
