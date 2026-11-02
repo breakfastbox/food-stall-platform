@@ -816,6 +816,13 @@ async function loadOrders() {
       maximumFractionDigits: 2
     });
 
+  const toLocalDateKey = date => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return year + "-" + month + "-" + day;
+  };
+
   try {
     const { data: stalls, error: stallError } = await supabaseClient
       .from("stalls")
@@ -859,6 +866,44 @@ if (knownOrderIdsForAlerts === null) {
     });
   }
 }
+    // Daily summary always uses today's orders, regardless of the active list filters.
+    const todayKey = toLocalDateKey(new Date());
+    const todaysOrders = (orders || []).filter(order =>
+      order.created_at && toLocalDateKey(new Date(order.created_at)) === todayKey
+    );
+    const pendingToday = todaysOrders.filter(order =>
+      (order.order_status || "pending").toLowerCase() === "pending"
+    ).length;
+    const completedToday = todaysOrders.filter(order =>
+      (order.order_status || "").toLowerCase() === "completed"
+    );
+    const completedSalesToday = completedToday.reduce(
+      (sum, order) => sum + Number(order.total_amount ?? 0), 0
+    );
+
+    const summary = document.getElementById("dailyOrderSummary");
+    if (summary) {
+      summary.innerHTML = `
+        <div class="summary-card">
+          <span class="summary-label">Total Orders Today</span>
+          <strong>${todaysOrders.length}</strong>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Pending Orders</span>
+          <strong>${pendingToday}</strong>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Completed Orders</span>
+          <strong>${completedToday.length}</strong>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Today's Sales</span>
+          <strong>₹${formatRupees(completedSalesToday)}</strong>
+          <small>Completed orders only</small>
+        </div>
+      `;
+    }
+
     if (!orders || orders.length === 0) {
       message.textContent = "No orders yet.";
       return;
@@ -885,13 +930,6 @@ if (knownOrderIdsForAlerts === null) {
     const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
     const dateMode = document.getElementById("orderDateFilter")?.value || "all";
     const customDate = document.getElementById("customOrderDate")?.value || "";
-
-    const toLocalDateKey = date => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return year + "-" + month + "-" + day;
-    };
 
     const today = new Date();
     const selectedDate = new Date(today);
