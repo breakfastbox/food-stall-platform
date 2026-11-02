@@ -305,7 +305,9 @@ async function loadSubscriptionPaymentStalls(stalls) {
   }
 
   const amountInput = document.getElementById("subscriptionPaymentAmount");
-  if (amountInput && !amountInput.value) amountInput.value = "499";
+  if (amountInput && (!amountInput.value || Number(amountInput.value) <= 0)) {
+    amountInput.value = "499";
+  }
 
   const today = getLocalDateInputValue();
   ["subscriptionPaymentDate", "subscriptionPeriodStart", "subscriptionPeriodEnd"].forEach(id => {
@@ -323,11 +325,11 @@ async function loadSubscriptionPayments() {
 
   const stallId = select.value;
   if (!stallId) {
-    history.textContent = "Select a stall to view payment history.";
+    history.innerHTML = '<div class="payment-empty-state"><span>▤</span><strong>No stall selected</strong><p>Select a food stall to see its payment records.</p></div>';
     return;
   }
 
-  history.textContent = "Loading payment history...";
+  history.innerHTML = '<div class="payment-loading">Loading payment history…</div>';
   const { data, error } = await supabaseClient
     .from("subscription_payments")
     .select("id, amount, payment_method, transaction_reference, paid_at, period_start, period_end, notes, created_at")
@@ -342,7 +344,7 @@ async function loadSubscriptionPayments() {
   }
 
   if (!data || data.length === 0) {
-    history.textContent = "No payments recorded for this stall yet.";
+    history.innerHTML = '<div class="payment-empty-state"><span>₹</span><strong>No payments yet</strong><p>Payments recorded for this stall will appear here.</p></div>';
     return;
   }
 
