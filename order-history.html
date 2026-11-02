@@ -360,8 +360,6 @@
         // Update change-request messages in the background after orders are visible.
         Promise.all(results.map(async ({ saved, order }) => {
           if (!order || !saved.tracking_code) return;
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
           try {
             const response = await fetch(
               SUPABASE_URL + "/functions/v1/order-change-requests",
@@ -374,8 +372,7 @@
                 body: JSON.stringify({
                   action: "status",
                   tracking_code: saved.tracking_code
-                }),
-                signal: controller.signal
+                })
               }
             );
             if (!response.ok) return;
@@ -397,11 +394,7 @@
             statusBox.appendChild(createTextElement("p", "Requested total: ₹" + Number(request.proposed_total || 0).toFixed(2)));
             card.appendChild(statusBox);
           } catch (statusError) {
-            if (statusError.name !== "AbortError") {
-              console.warn("Change request status could not be loaded:", statusError);
-            }
-          } finally {
-            clearTimeout(timeoutId);
+            console.warn("Change request status could not be loaded:", statusError);
           }
         }));
 
