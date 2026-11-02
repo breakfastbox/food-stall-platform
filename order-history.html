@@ -179,6 +179,51 @@
           })
         );
 
+        // Fetch change-request statuses together instead of waiting for each order one by one.
+        const statusResults = await Promise.all(
+          results.map(async ({ saved, order }) => {
+            if (!order || !saved.tracking_code) return null;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+            try {
+              const response = await fetch(
+                SUPABASE_URL + "/functions/v1/order-change-requests",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "apikey": SUPABASE_PUBLISHABLE_KEY
+                  },
+                  body: JSON.stringify({
+                    action: "status",
+                    tracking_code: saved.tracking_code
+                  }),
+                  signal: controller.signal
+                }
+              );
+
+              if (!response.ok) return null;
+              const result = await response.json();
+              return result.request
+                ? { tracking_code: saved.tracking_code, request: result.request }
+                : null;
+            } catch (statusError) {
+              console.warn("Change request status could not be loaded:", statusError);
+              return null;
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          })
+        );
+
+        const statusByTrackingCode = new Map(
+          statusResults
+            .filter(Boolean)
+            .map(result => [result.tracking_code, result.request])
+        );
+
         const cards = [];
 
         for (const { saved, order, failed } of results) {
@@ -252,37 +297,21 @@
 
             card.appendChild(itemList);
 
-            // Show the latest change-request decision using the private order tracking code.
-            try {
-              const statusResponse = await fetch(SUPABASE_URL + "/functions/v1/order-change-requests", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "apikey": SUPABASE_PUBLISHABLE_KEY
-                },
-                body: JSON.stringify({
-                  action: "status",
-                  tracking_code: saved.tracking_code
-                })
-              });
-              const statusResult = await statusResponse.json();
-              if (statusResponse.ok && statusResult.request) {
-                const request = statusResult.request;
-                const statusLabels = {
-                  pending: "Your change request is waiting for the stall's approval.",
-                  approved: "Your change request was approved. Your order details are updated below.",
-                  rejected: "Your change request was declined. Your original order remains unchanged.",
-                  expired: "Your change request expired. Your original order remains unchanged."
-                };
-                const statusBox = document.createElement("div");
-                statusBox.style.cssText = "margin-top:14px;padding:12px;border:1px solid #d7e5dc;border-radius:9px;background:#f8fcf9;";
-                statusBox.appendChild(createTextElement("strong", "Change Request: " + request.request_status.toUpperCase()));
-                statusBox.appendChild(createTextElement("p", statusLabels[request.request_status] || "Your change request has been updated."));
-                statusBox.appendChild(createTextElement("p", "Requested total: ₹" + Number(request.proposed_total || 0).toFixed(2)));
-                card.appendChild(statusBox);
-              }
-            } catch (statusError) {
-              console.error("Change request status lookup failed:", statusError);
+            // Display the status already fetched in parallel above.
+            const request = statusByTrackingCode.get(saved.tracking_code);
+            if (request) {
+              const statusLabels = {
+                pending: "Your change request is waiting for the stall's approval.",
+                approved: "Your change request was approved. Your order details are updated below.",
+                rejected: "Your change request was declined. Your original order remains unchanged.",
+                expired: "Your change request expired. Your original order remains unchanged."
+              };
+              const statusBox = document.createElement("div");
+              statusBox.style.cssText = "margin-top:14px;padding:12px;border:1px solid #d7e5dc;border-radius:9px;background:#f8fcf9;";
+              statusBox.appendChild(createTextElement("strong", "Change Request: " + request.request_status.toUpperCase()));
+              statusBox.appendChild(createTextElement("p", statusLabels[request.request_status] || "Your change request has been updated."));
+              statusBox.appendChild(createTextElement("p", "Requested total: ₹" + Number(request.proposed_total || 0).toFixed(2)));
+              card.appendChild(statusBox);
             }
 
             const changeDeadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
@@ -398,7 +427,7 @@
       if (!document.hidden) {
         loadOrderHistory();
       }
-    }, 30000);
+    }, 60000);
   </script>
 
 </body>
