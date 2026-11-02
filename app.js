@@ -881,6 +881,20 @@ if (knownOrderIdsForAlerts === null) {
       message.textContent = orders.length + " order(s) found.";
     }
 
+    // Apply the dashboard filter after loading all orders and processing new-order alerts.
+    const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
+    const visibleOrders = statusFilter === "all"
+      ? orders
+      : orders.filter(order => (order.order_status || "pending") === statusFilter);
+
+    message.textContent =
+      visibleOrders.length + " of " + orders.length + " order(s) shown.";
+
+    if (visibleOrders.length === 0) {
+      list.innerHTML = '<p class="muted">No orders with this status.</p>';
+      return;
+    }
+
     // Group food items by their order ID.
     const itemsByOrder = new Map();
 
@@ -892,7 +906,7 @@ if (knownOrderIdsForAlerts === null) {
       itemsByOrder.get(item.order_id).push(item);
     });
 
-    list.innerHTML = orders.map(order => {
+    list.innerHTML = visibleOrders.map(order => {
       const items = itemsByOrder.get(order.id) || [];
 
       const itemList = items.length > 0
