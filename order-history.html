@@ -249,7 +249,88 @@
               );
             });
 
+
             card.appendChild(itemList);
+
+            const changeDeadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
+            if (order.order_status === "pending" && Date.now() < changeDeadline) {
+              const changeBox = document.createElement("div");
+              changeBox.style.cssText = "margin-top:16px;padding:14px;border:1px solid #d7e5dc;border-radius:9px;background:#f8fcf9;";
+              changeBox.appendChild(createTextElement("h3", "Request an Order Change"));
+              changeBox.appendChild(createTextElement("p", "Adjust quantities below. The stall must approve your request."));
+              const quantityInputs = [];
+
+              (order.items || []).forEach(item => {
+                if (!item.menu_item_id) return;
+                const line = document.createElement("label");
+                line.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:12px;margin:9px 0;";
+                line.appendChild(createTextElement("span", item.item_name));
+                const quantity = document.createElement("input");
+                quantity.type = "number";
+                quantity.min = "0";
+                quantity.max = "20";
+                quantity.step = "1";
+                quantity.value = String(item.quantity);
+                quantity.style.width = "72px";
+                quantity.setAttribute("aria-label", "New quantity for " + item.item_name);
+                line.appendChild(quantity);
+                changeBox.appendChild(line);
+                quantityInputs.push({ menu_item_id: item.menu_item_id, input: quantity });
+              });
+
+              const note = document.createElement("textarea");
+              note.maxLength = 500;
+              note.placeholder = "Optional note for the stall";
+              note.style.cssText = "width:100%;box-sizing:border-box;min-height:55px;margin-top:8px;";
+              changeBox.appendChild(note);
+
+              const send = document.createElement("button");
+              send.className = "button";
+              send.textContent = "Send Change Request";
+              send.addEventListener("click", async () => {
+                const proposedItems = [];
+                for (const entry of quantityInputs) {
+                  const quantity = Number(entry.input.value);
+                  if (!Number.isInteger(quantity) || quantity < 0 || quantity > 20) {
+                    alert("Enter a quantity between 0 and 20.");
+                    return;
+                  }
+                  if (quantity > 0) proposedItems.push({ menu_item_id: entry.menu_item_id, quantity });
+                }
+                if (!proposedItems.length) {
+                  alert("Your revised order must contain at least one item.");
+                  return;
+                }
+                send.disabled = true;
+                send.textContent = "Sending...";
+                try {
+                  const response = await fetch(SUPABASE_URL + "/functions/v1/order-change-requests", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "apikey": SUPABASE_PUBLISHABLE_KEY
+                    },
+                    body: JSON.stringify({
+                      action: "submit",
+                      tracking_code: saved.tracking_code,
+                      proposed_items: proposedItems,
+                      customer_note: note.value
+                    })
+                  });
+                  const result = await response.json();
+                  if (!response.ok) throw new Error(result.error || "Could not send the request.");
+                  send.textContent = "Request Sent";
+                  send.disabled = true;
+                  alert("Your change request has been sent to the stall for approval.");
+                } catch (error) {
+                  alert(error.message);
+                  send.disabled = false;
+                  send.textContent = "Send Change Request";
+                }
+              });
+              changeBox.appendChild(send);
+              card.appendChild(changeBox);
+            }
           }
 
           const trackLink = document.createElement("a");
