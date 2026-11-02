@@ -87,6 +87,55 @@
       </section>
 
       <section class="panel">
+        <div class="panel-header">
+          <h2>Subscription Payments</h2>
+          <button type="button" onclick="loadSubscriptionPayments()">Refresh History</button>
+        </div>
+        <p>Record payments received manually by the Platform Admin. Recording a payment activates the stall and updates its subscription dates. No online payment gateway is connected.</p>
+
+        <div class="card">
+          <h3>Record a Payment</h3>
+          <label for="subscriptionPaymentStall">Food Stall</label>
+          <select id="subscriptionPaymentStall" required onchange="loadSubscriptionPayments()">
+            <option value="">Select a stall</option>
+          </select>
+
+          <label for="subscriptionPaymentAmount">Amount Received (₹)</label>
+          <input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" placeholder="e.g. 999" required>
+
+          <label for="subscriptionPaymentMethod">Payment Method</label>
+          <select id="subscriptionPaymentMethod" required>
+            <option value="upi">UPI</option>
+            <option value="cash">Cash</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+
+          <label for="subscriptionPaymentDate">Payment Date</label>
+          <input id="subscriptionPaymentDate" type="date" required>
+
+          <label for="subscriptionPeriodStart">Subscription Period Start</label>
+          <input id="subscriptionPeriodStart" type="date" required>
+
+          <label for="subscriptionPeriodEnd">Subscription Period End</label>
+          <input id="subscriptionPeriodEnd" type="date" required>
+
+          <label for="subscriptionPaymentReference">Transaction Reference (optional)</label>
+          <input id="subscriptionPaymentReference" type="text" maxlength="150" placeholder="UPI/reference number">
+
+          <label for="subscriptionPaymentNotes">Notes (optional)</label>
+          <textarea id="subscriptionPaymentNotes" rows="3" maxlength="1000" placeholder="Any additional payment details"></textarea>
+
+          <button type="button" onclick="recordSubscriptionPayment()">Save Payment &amp; Activate Subscription</button>
+          <p id="subscriptionPaymentMessage" role="status"></p>
+        </div>
+
+        <div class="card">
+          <h3>Payment History</h3>
+          <div id="subscriptionPaymentHistory">Select a stall to view payment history.</div>
+        </div>
+      </section>
+
+      <section class="panel">
 
         <div class="panel-header">
           <h2>Food Stalls</h2>
