@@ -1824,3 +1824,120 @@ if (window.location.pathname.endsWith("stall.html")) {
     await loadStalls();
   })();
 }
+
+
+async function loadOrderChangeRequests() {
+  const message = document.getElementById("changeRequestsMessage");
+  const list = document.getElementById("changeRequestsList");
+  if (!message || !list) return;
+
+  try {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      message.textContent = "Sign in to view customer change requests.";
+      return;
+    }
+
+    const response = await fetch(
+      SUPABASE_URL + "/functions/v1/order-change-requests",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ action: "list" })
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Could not load requests.");
+
+    const requests = result.requests || [];
+    if (!requests.length) {
+      message.textContent = "No pending change requests.";
+      list.replaceChildren();
+      return;
+    }
+
+    const ids = [...new Set(requests.flatMap(request =>
+      (request.proposed_items || []).map(item => item.menu_item_id)
+    ))];
+    const { data: menuItems, error } = await supabaseClient
+      .from("menu_items").select("id,name,price").in("id", ids);
+    if (error) throw error;
+    const menuMap = new Map((menuItems || []).map(item => [item.id, item]));
+
+    list.innerHTML = requests.map(request => {
+      const order = Array.isArray(request.orders) ? request.orders[0] : request.orders;
+      const rows = (request.proposed_items || []).map(item => {
+        const menu = menuMap.get(item.menu_item_id);
+        return "<li>" + escapeHtml(menu?.name || "Menu item") +
+          " × " + Number(item.quantity) + "</li>";
+      }).join("");
+      return `
+        <div class="card">
+          <h3>Order Token: ${escapeHtml(order?.token_number ?? "Not assigned")}</h3>
+          <p><strong>Requested:</strong> ${escapeHtml(new Date(request.requested_at).toLocaleString())}</p>
+          <p><strong>Proposed items:</strong></p>
+          <ul>${rows}</ul>
+          <p><strong>Proposed total:</strong> ₹${Number(request.proposed_total).toFixed(2)}</p>
+          <p><strong>Customer note:</strong> ${escapeHtml(request.customer_note || "None")}</p>
+          <button onclick="decideOrderChangeRequest('${request.id}','approve')">Approve Change</button>
+          <button onclick="decideOrderChangeRequest('${request.id}','reject')">Reject Request</button>
+        </div>`;
+    }).join("");
+    message.textContent = requests.length + " pending change request(s).";
+  } catch (error) {
+    console.error("Change request loading failed:", error);
+    message.textContent = "Unable to load change requests: " + error.message;
+  }
+}
+
+async function decideOrderChangeRequest(requestId, decision) {
+  if (!["approve", "reject"].includes(decision)) return;
+  const promptText = decision === "approve"
+    ? "Approve this change? The order items and total will be updated."
+    : "Reject this customer change request?";
+  if (!window.confirm(promptText)) return;
+
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) {
+    alert("Please sign in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      SUPABASE_URL + "/functions/v1/order-change-requests",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ action: decision, request_id: requestId })
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "The request could not be processed.");
+    const message = document.getElementById("changeRequestsMessage");
+    if (message) message.textContent = decision === "approve"
+      ? "Change approved. The order total has been updated."
+      : "Change request rejected.";
+    await loadOrderChangeRequests();
+    if (typeof loadOrders === "function") await loadOrders();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  })[char]);
+}
+
