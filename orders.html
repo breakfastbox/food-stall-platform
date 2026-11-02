@@ -76,6 +76,11 @@
 </button>
 
     <p id="ordersMessage" class="muted">Loading orders...</p>
+    <h2>Customer Change Requests</h2>
+    <p class="muted">Only pending orders within the 5-minute change window are eligible.</p>
+    <div id="changeRequestsMessage" class="muted">Loading change requests...</div>
+    <div id="changeRequestsList"></div>
+
     <div id="ordersList"></div>
   </div>
 
@@ -83,10 +88,12 @@
   <script src="app.js"></script>
   <script>
   loadOrders();
+  loadOrderChangeRequests();
 
   setInterval(() => {
     if (!document.hidden) {
       loadOrders();
+      loadOrderChangeRequests();
     }
   }, 20000);
 </script>
