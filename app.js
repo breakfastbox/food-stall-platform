@@ -1552,12 +1552,13 @@ async function loadMenuCategories() {
 async function loadDailyReport() {
   const message = document.getElementById("reportMessage");
   const dateInput = document.getElementById("reportDate");
+  const periodInput = document.getElementById("reportPeriod");
+  const rangeDisplay = document.getElementById("reportRange");
   const button = document.getElementById("loadReportButton");
-
-  if (!message || !dateInput) return;
+  if (!message || !dateInput || !periodInput) return;
 
   const selectedDate = dateInput.value;
-
+  const period = periodInput.value;
   if (!selectedDate) {
     message.textContent = "Please select a report date.";
     return;
@@ -1565,7 +1566,6 @@ async function loadDailyReport() {
 
   const [year, month, day] = selectedDate.split("-").map(Number);
   const checkDate = new Date(year, month - 1, day);
-
   if (
     checkDate.getFullYear() !== year ||
     checkDate.getMonth() !== month - 1 ||
@@ -1575,296 +1575,195 @@ async function loadDailyReport() {
     return;
   }
 
+  // Use local calendar boundaries, then convert order timestamps to UTC.
+  const startDate = new Date(year, month - 1, day);
+  if (period === "weekly") {
+    const daysSinceMonday = (startDate.getDay() + 6) % 7;
+    startDate.setDate(startDate.getDate() - daysSinceMonday);
+  } else if (period === "monthly") {
+    startDate.setDate(1);
+  } else if (period !== "daily") {
+    message.textContent = "Please select a valid report period.";
+    return;
+  }
+
+  const endDate = new Date(startDate);
+  if (period === "weekly") endDate.setDate(endDate.getDate() + 7);
+  else if (period === "monthly") endDate.setMonth(endDate.getMonth() + 1);
+  else endDate.setDate(endDate.getDate() + 1);
+
+  const toDateInput = date => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  };
+  const formatDate = date => {
+    const [y, m, d] = toDateInput(date).split("-");
+    return d + "-" + m + "-" + y.slice(-2);
+  };
+  const startDateString = toDateInput(startDate);
+  const endDateString = toDateInput(new Date(endDate.getTime() - 86400000));
+  const periodLabel = period === "weekly" ? "Weekly" : period === "monthly" ? "Monthly" : "Daily";
+  if (rangeDisplay) {
+    rangeDisplay.textContent = periodLabel + " report: " +
+      formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000));
+  }
+
   message.textContent = "Loading report...";
   if (button) button.disabled = true;
 
   try {
-    // Find the existing Breakfast Box stall.
     const { data: stalls, error: stallError } = await supabaseClient
-      .from("stalls")
-      .select("id, name")
-      .eq("name", "Breakfast Box")
-      .limit(1);
-
+      .from("stalls").select("id, name").eq("name", "Breakfast Box").limit(1);
     if (stallError) throw stallError;
-
-    if (!stalls || stalls.length === 0) {
-      throw new Error("Breakfast Box stall could not be found.");
-    }
+    if (!stalls || stalls.length === 0) throw new Error("Breakfast Box stall could not be found.");
 
     const stall = stalls[0];
     document.getElementById("reportStallName").textContent = stall.name;
 
-    // Set the selected day's local time boundaries.
-    const startDate = new Date(selectedDate + "T00:00:00");
-
-    if (Number.isNaN(startDate.getTime())) {
-      throw new Error("The selected report date is invalid.");
-    }
-
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 1);
-
-    // Read orders created on the selected date.
     const { data: orders, error: ordersError } = await supabaseClient
       .from("orders")
-      .select(
-        "id, total_amount, subtotal, payment_status, order_status, created_at, stock_deducted_at"
-      )
+      .select("id, total_amount, subtotal, payment_status, order_status, created_at, stock_deducted_at")
       .eq("stall_id", stall.id)
       .gte("created_at", startDate.toISOString())
       .lt("created_at", endDate.toISOString());
-
     if (ordersError) throw ordersError;
 
-    // Exclude cancelled orders.
-    const validOrders = (orders || []).filter(
-      order => order.order_status !== "cancelled"
-    );
-
-    // Only paid orders count as collected sales.
+    const validOrders = (orders || []).filter(order => order.order_status !== "cancelled");
     const paidSales = validOrders
       .filter(order => order.payment_status === "paid")
-      .reduce(
-        (total, order) =>
-          total + Number(order.total_amount ?? order.subtotal ?? 0),
-        0
-      );
-
-    // Pending payments are shown separately, not counted as sales collected.
+      .reduce((sum, order) => sum + Number(order.total_amount ?? order.subtotal ?? 0), 0);
     const pendingPayments = validOrders
       .filter(order => order.payment_status === "pending")
-      .reduce(
-        (total, order) =>
-          total + Number(order.total_amount ?? order.subtotal ?? 0),
-        0
-      );
+      .reduce((sum, order) => sum + Number(order.total_amount ?? order.subtotal ?? 0), 0);
 
-    // Read business expenses recorded for the selected date.
     const { data: expenses, error: expensesError } = await supabaseClient
       .from("business_expenses")
       .select("amount")
       .eq("stall_id", stall.id)
-      .eq("expense_date", selectedDate);
-
+      .gte("expense_date", startDateString)
+      .lte("expense_date", endDateString);
     if (expensesError) throw expensesError;
+    const businessExpenses = (expenses || []).reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
-    const businessExpenses = (expenses || []).reduce(
-      (total, expense) => total + Number(expense.amount || 0),
-      0
+    // Keep the existing cautious recipe-cost estimate; do not change stock or recipe data.
+    const eligibleOrders = validOrders.filter(order =>
+      order.order_status === "completed" || Boolean(order.stock_deducted_at)
     );
-
-    // Estimate recipe cost for completed orders or orders with a recorded stock deduction.
-// Costs remain provisional when recipes, ingredient prices, or stock records are incomplete.
-   const eligibleOrders = validOrders.filter(
-  order =>
-    order.order_status === "completed" ||
-    Boolean(order.stock_deducted_at)
-);
-const completedOrdersWithoutDeduction = validOrders.filter(
-  order =>
-    order.order_status === "completed" &&
-    !order.stock_deducted_at
-).length;
+    const completedOrdersWithoutDeduction = validOrders.filter(order =>
+      order.order_status === "completed" && !order.stock_deducted_at
+    ).length;
     let ingredientCost = 0;
-let ingredientCostDataIncomplete = false;
+    let ingredientCostDataIncomplete = false;
+
     if (eligibleOrders.length > 0) {
       const orderIds = eligibleOrders.map(order => order.id);
-
-      const { data: orderItems, error: itemsError } =
-        await supabaseClient
-          .from("order_items")
-          .select("order_id, menu_item_id, quantity")
-          .in("order_id", orderIds);
-
+      const { data: orderItems, error: itemsError } = await supabaseClient
+        .from("order_items")
+        .select("order_id, menu_item_id, quantity")
+        .in("order_id", orderIds);
       if (itemsError) throw itemsError;
 
-      const menuItemIds = [
-        ...new Set(
-          (orderItems || [])
-            .map(item => item.menu_item_id)
-            .filter(Boolean)
-        )
-      ];
-if (menuItemIds.length === 0) {
-  ingredientCostDataIncomplete = true;
-} else {
-  const { data: recipeStatuses, error: recipeStatusError } =
-    await supabaseClient
-      .from("menu_items")
-      .select("id, recipe_complete")
-      .eq("stall_id", stall.id)
-      .in("id", menuItemIds);
+      const menuItemIds = [...new Set((orderItems || []).map(item => item.menu_item_id).filter(Boolean))];
+      if (menuItemIds.length === 0) {
+        ingredientCostDataIncomplete = true;
+      } else {
+        const { data: recipeStatuses, error: recipeStatusError } = await supabaseClient
+          .from("menu_items")
+          .select("id, recipe_complete")
+          .eq("stall_id", stall.id)
+          .in("id", menuItemIds);
+        if (recipeStatusError) throw recipeStatusError;
+        const recipeStatusMap = new Map((recipeStatuses || []).map(item => [
+          item.id, item.recipe_complete === true
+        ]));
+        if (menuItemIds.some(id => recipeStatusMap.get(id) !== true)) {
+          ingredientCostDataIncomplete = true;
+        }
+      }
 
-  if (recipeStatusError) throw recipeStatusError;
-
-  const recipeStatusMap = new Map(
-    (recipeStatuses || []).map(item => [
-      item.id,
-      item.recipe_complete === true
-    ])
-  );
-
-  if (
-    menuItemIds.some(
-      id => recipeStatusMap.get(id) !== true
-    )
-  ) {
-    ingredientCostDataIncomplete = true;
-  }
-}
       if (menuItemIds.length > 0) {
-        const { data: recipes, error: recipesError } =
-          await supabaseClient
-            .from("menu_item_ingredients")
-            .select(
-              "menu_item_id, inventory_item_id, quantity_required"
-            )
-            .in("menu_item_id", menuItemIds);
-
+        const { data: recipes, error: recipesError } = await supabaseClient
+          .from("menu_item_ingredients")
+          .select("menu_item_id, inventory_item_id, quantity_required")
+          .in("menu_item_id", menuItemIds);
         if (recipesError) throw recipesError;
 
-        const inventoryItemIds = [
-          ...new Set(
-            (recipes || [])
-              .map(recipe => recipe.inventory_item_id)
-              .filter(Boolean)
-          )
-        ];
-
-        if (inventoryItemIds.length > 0) {
-          const { data: ingredients, error: ingredientsError } =
-            await supabaseClient
+        const inventoryItemIds = [...new Set((recipes || []).map(recipe => recipe.inventory_item_id).filter(Boolean))];
+        const { data: ingredients, error: ingredientsError } = inventoryItemIds.length
+          ? await supabaseClient
               .from("inventory_items")
               .select("id, cost_per_unit")
               .eq("stall_id", stall.id)
-              .in("id", inventoryItemIds);
+              .in("id", inventoryItemIds)
+          : { data: [], error: null };
+        if (ingredientsError) throw ingredientsError;
 
-          if (ingredientsError) throw ingredientsError;
+        const inventoryItemsById = new Map((ingredients || []).map(item => [item.id, item]));
+        const recipesByMenuItem = new Map();
+        (recipes || []).forEach(recipe => {
+          if (!recipesByMenuItem.has(recipe.menu_item_id)) recipesByMenuItem.set(recipe.menu_item_id, []);
+          recipesByMenuItem.get(recipe.menu_item_id).push(recipe);
+        });
 
-       const inventoryItemsById = new Map(
-  (ingredients || []).map(item => [item.id, item])
-);
-
-const recipesByMenuItem = new Map();
-
-(recipes || []).forEach(recipe => {
-  if (!recipesByMenuItem.has(recipe.menu_item_id)) {
-    recipesByMenuItem.set(recipe.menu_item_id, []);
-  }
-
-  recipesByMenuItem.get(recipe.menu_item_id).push(recipe);
-});
-
-// Estimate recipe cost for each ordered menu item.
-(orderItems || []).forEach(item => {
-  const itemRecipes =
-    recipesByMenuItem.get(item.menu_item_id) || [];
-
-  if (!item.menu_item_id || itemRecipes.length === 0) {
-    ingredientCostDataIncomplete = true;
-    return;
-  }
-
-  const orderQuantity = Number(item.quantity);
-
-  if (!Number.isFinite(orderQuantity) || orderQuantity <= 0) {
-    ingredientCostDataIncomplete = true;
-    return;
-  }
-
-  itemRecipes.forEach(recipe => {
-    const ingredient =
-      inventoryItemsById.get(recipe.inventory_item_id);
-
-    const rawCost = ingredient
-      ? ingredient.cost_per_unit
-      : null;
-
-    const quantityRequired = Number(recipe.quantity_required);
-
-    const costPerUnit =
-      rawCost === null || rawCost === undefined || rawCost === ""
-        ? NaN
-        : Number(rawCost);
-
-    if (
-      !ingredient ||
-      !Number.isFinite(quantityRequired) ||
-      quantityRequired <= 0 ||
-      !Number.isFinite(costPerUnit) ||
-      costPerUnit <= 0
-    ) {
-      ingredientCostDataIncomplete = true;
-      return;
-    }
-
-    ingredientCost +=
-      orderQuantity * quantityRequired * costPerUnit;
-  });
-});
-       
-        }
+        (orderItems || []).forEach(item => {
+          const itemRecipes = recipesByMenuItem.get(item.menu_item_id) || [];
+          if (!item.menu_item_id || itemRecipes.length === 0) {
+            ingredientCostDataIncomplete = true;
+            return;
+          }
+          const orderQuantity = Number(item.quantity);
+          if (!Number.isFinite(orderQuantity) || orderQuantity <= 0) {
+            ingredientCostDataIncomplete = true;
+            return;
+          }
+          itemRecipes.forEach(recipe => {
+            const ingredient = inventoryItemsById.get(recipe.inventory_item_id);
+            const quantityRequired = Number(recipe.quantity_required);
+            const rawCost = ingredient ? ingredient.cost_per_unit : null;
+            const costPerUnit = rawCost === null || rawCost === undefined || rawCost === ""
+              ? NaN : Number(rawCost);
+            if (
+              !ingredient ||
+              !Number.isFinite(quantityRequired) || quantityRequired <= 0 ||
+              !Number.isFinite(costPerUnit) || costPerUnit <= 0
+            ) {
+              ingredientCostDataIncomplete = true;
+              return;
+            }
+            ingredientCost += orderQuantity * quantityRequired * costPerUnit;
+          });
+        });
       }
     }
 
-    // Estimated profit deducts recorded expenses and estimated
-    // recipe costs from paid sales. Purchases are not deducted again.
-    const estimatedProfit =
-      paidSales - ingredientCost - businessExpenses;
+    const estimatedProfit = paidSales - ingredientCost - businessExpenses;
+    const formatRupees = amount => "₹" + amount.toLocaleString("en-IN", {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+    document.getElementById("paidSales").textContent = formatRupees(paidSales);
+    document.getElementById("pendingPayments").textContent = formatRupees(pendingPayments);
+    document.getElementById("businessExpenses").textContent = formatRupees(businessExpenses);
+    document.getElementById("ingredientCost").textContent = formatRupees(ingredientCost);
+    document.getElementById("estimatedProfit").textContent = formatRupees(estimatedProfit);
 
-    const formatRupees = amount =>
-      "₹" + amount.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-
-    document.getElementById("paidSales").textContent =
-      formatRupees(paidSales);
-
-    document.getElementById("pendingPayments").textContent =
-      formatRupees(pendingPayments);
-
-    document.getElementById("businessExpenses").textContent =
-      formatRupees(businessExpenses);
-
-    const ingredientCostElement =
-      document.getElementById("ingredientCost");
-
-    if (ingredientCostElement) {
-      ingredientCostElement.textContent =
-        formatRupees(ingredientCost);
-    }
-
-    document.getElementById("estimatedProfit").textContent =
-      formatRupees(estimatedProfit);
-
-    const displayDate =
-      String(day).padStart(2, "0") + "-" +
-      String(month).padStart(2, "0") + "-" +
-      String(year).slice(-2);
-
-const costCoverageMessage =
-  eligibleOrders.length === 0
-    ? "No completed or stock-deducted orders were found, so ingredient cost was not calculated. ₹0.00 does not mean ingredients cost nothing. "
-    : "Ingredient cost is a provisional estimate based on recorded recipes for completed or stock-deducted orders. " +
-      (completedOrdersWithoutDeduction > 0
-        ? completedOrdersWithoutDeduction +
-          " completed order(s) have no recorded stock-deduction timestamp; recipe-based costs are included provisionally. "
-        : "") +
-      (ingredientCostDataIncomplete
-        ? "One or more menu items are not marked recipe-complete, or recipe records or ingredient prices are missing or invalid. Ingredient cost may be understated. "
-        : "");
-    message.textContent =
-      "Provisional report loaded for " +
-      displayDate +
-      ". " +
+    const costCoverageMessage = eligibleOrders.length === 0
+      ? " No completed or stock-deducted orders were found, so ingredient cost was not calculated; ₹0.00 does not mean ingredients cost nothing."
+      : " Ingredient cost is a provisional estimate from recorded recipes. " +
+        (completedOrdersWithoutDeduction > 0
+          ? completedOrdersWithoutDeduction + " completed order(s) have no recorded stock-deduction timestamp; their recipe costs are included provisionally. "
+          : "") +
+        (ingredientCostDataIncomplete
+          ? "Some menu items are not marked recipe-complete, or recipe records or ingredient prices are missing or invalid. Ingredient cost may be understated."
+          : "");
+    message.textContent = periodLabel + " report loaded for " +
+      formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000)) +
+      ". Paid sales exclude pending payments and cancelled orders." +
       costCoverageMessage +
-      "Profit is an estimate, not verified final profit. " +
-      "Incomplete recipes or missing ingredient prices may understate costs.";
-
+      " Estimated profit is provisional, not verified final profit.";
   } catch (error) {
-    console.error("Unable to load daily report:", error);
+    console.error("Unable to load report:", error);
     message.textContent = "Unable to load report: " + error.message;
   } finally {
     if (button) button.disabled = false;
@@ -1896,6 +1795,9 @@ function updateReportDateDisplay() {
 updateReportDateDisplay();
 
 reportDateInput.addEventListener("change", updateReportDateDisplay);
+
+    const reportPeriodInput = document.getElementById("reportPeriod");
+    if (reportPeriodInput) reportPeriodInput.addEventListener("change", loadDailyReport);
 
 
     loadDailyReport();
