@@ -244,6 +244,42 @@ async function logoutAdmin() {
 
 
 
+function formatSubscriptionDate(dateString) {
+  if (!dateString) return "Not set";
+
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+
+  return parts[2] + "-" + parts[1] + "-" + parts[0];
+}
+
+function getSubscriptionRemainingText(endDate) {
+  if (!endDate) {
+    return "No end date set";
+  }
+
+  const parts = endDate.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) {
+    return "Date unavailable";
+  }
+
+  const end = new Date(parts[0], parts[1] - 1, parts[2]);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const difference = Math.round((end.getTime() - today.getTime()) / 86400000);
+
+  if (difference < 0) {
+    return "End date passed " + Math.abs(difference) + " day(s) ago";
+  }
+
+  if (difference === 0) {
+    return "Ends today";
+  }
+
+  return difference + " day(s) remaining";
+}
+
 async function loadStalls() {
 
   const { data, error } = await supabaseClient
@@ -261,6 +297,11 @@ async function loadStalls() {
     document.getElementById("stallList").textContent =
       "Unable to load stalls: " + error.message;
 
+    const subscriptionList = document.getElementById("subscriptionList");
+    if (subscriptionList) {
+      subscriptionList.textContent = "Unable to load subscription details.";
+    }
+
     return;
   }
 
@@ -276,6 +317,31 @@ async function loadStalls() {
 
   document.getElementById("suspendedStalls").textContent =
     data.filter(stall => stall.status === "suspended").length;
+
+
+  const subscriptionList = document.getElementById("subscriptionList");
+
+  if (subscriptionList) {
+    if (data.length === 0) {
+      subscriptionList.textContent = "No subscription records yet.";
+    } else {
+      subscriptionList.innerHTML = data.map(stall => {
+        const statusLabel = String(stall.status || "unknown")
+          .replace(/_/g, " ")
+          .replace(/\\b\\w/g, character => character.toUpperCase());
+
+        return `
+          <div class="stall subscription-card">
+            <h3>${stall.name}</h3>
+            <p><strong>Subscription status:</strong> ${statusLabel}</p>
+            <p><strong>Start date:</strong> ${formatSubscriptionDate(stall.subscription_start)}</p>
+            <p><strong>End date:</strong> ${formatSubscriptionDate(stall.subscription_end)}</p>
+            <p><strong>Time remaining:</strong> ${getSubscriptionRemainingText(stall.subscription_end)}</p>
+          </div>
+        `;
+      }).join("");
+    }
+  }
 
 
   const stallList =
