@@ -361,7 +361,7 @@
         Promise.all(results.map(async ({ saved, order }) => {
           if (!order || !saved.tracking_code) return;
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 4500);
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
           try {
             const response = await fetch(
               SUPABASE_URL + "/functions/v1/order-change-requests",
@@ -397,7 +397,9 @@
             statusBox.appendChild(createTextElement("p", "Requested total: ₹" + Number(request.proposed_total || 0).toFixed(2)));
             card.appendChild(statusBox);
           } catch (statusError) {
-            console.warn("Change request status could not be loaded:", statusError);
+            if (statusError.name !== "AbortError") {
+              console.warn("Change request status could not be loaded:", statusError);
+            }
           } finally {
             clearTimeout(timeoutId);
           }
