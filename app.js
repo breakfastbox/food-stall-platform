@@ -328,7 +328,7 @@ async function loadStalls() {
       subscriptionList.innerHTML = data.map(stall => {
         const statusLabel = String(stall.status || "unknown")
           .replace(/_/g, " ")
-          .replace(/\\b\\w/g, character => character.toUpperCase());
+          .replace(/^./, character => character.toUpperCase());
 
         return `
           <div class="stall subscription-card">
