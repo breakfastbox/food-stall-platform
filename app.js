@@ -460,7 +460,9 @@ async function recordSubscriptionPayment() {
     document.getElementById("subscriptionPaymentAmount").value = "499";
     document.getElementById("subscriptionPaymentReference").value = "";
     document.getElementById("subscriptionPaymentNotes").value = "";
-    message.textContent = "Payment recorded successfully. The stall subscription is now Active.";
+    message.textContent = periodEnd < getIndiaDateInputValue()
+      ? "Payment recorded. The selected subscription period has already ended, so the stall remains Expired. Enter a current or future subscription period to reactivate it."
+      : "Payment recorded successfully. The stall subscription is now Active.";
 
     await loadStalls();
     await loadSubscriptionPayments();
