@@ -194,10 +194,9 @@ async function loginAdmin() {
   try {
     await setOrderingEnabled("resume");
   } catch (error) {
-    await supabaseClient.auth.signOut();
-    loginMessage.textContent =
-      error.message || "Could not resume ordering. Please try again.";
-    return;
+    // Keep the Platform Admin signed in so an expired or suspended stall
+    // can still be renewed from the Admin Dashboard.
+    console.warn("Ordering was not resumed:", error.message);
   }
 
   document.getElementById("loginBox").style.display = "none";
