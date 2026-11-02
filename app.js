@@ -350,7 +350,6 @@ async function loadSubscriptionPayments() {
 
   const methodLabels = {
     upi: "UPI",
-    cash: "Cash",
     bank_transfer: "Bank Transfer"
   };
 
@@ -403,7 +402,7 @@ async function recordSubscriptionPayment() {
 
   const confirmed = window.confirm(
     "Record ₹" + amount.toFixed(2) + " by " +
-    ({upi:"UPI",cash:"Cash",bank_transfer:"Bank Transfer"}[method] || method) +
+    ({upi:"UPI",bank_transfer:"Bank Transfer"}[method] || method) +
     " and activate this stall from " + periodStart + " to " + periodEnd + "?"
   );
   if (!confirmed) return;
