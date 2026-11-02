@@ -181,7 +181,7 @@
 
         const cards = [];
 
-        results.forEach(({ saved, order, failed }) => {
+        for (const { saved, order, failed } of results) {
           const card = document.createElement("div");
           card.className = "card";
 
@@ -377,13 +377,16 @@
           card.appendChild(trackLink);
 
           cards.push(card);
-        });
+        }
 
         historyList.replaceChildren(...cards);
 
         historyMessage.textContent =
           results.length + " saved order(s) found.";
 
+      } catch (error) {
+        console.error("Order history loading failed:", error);
+        historyMessage.textContent = "Unable to load your orders. Please refresh this page and try again.";
       } finally {
         historyLoading = false;
       }
