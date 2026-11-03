@@ -204,9 +204,7 @@ async function loginAdmin() {
 
   loginMessage.textContent = "";
 
-  await loadStallDashboard();
-  await loadMenuCategories();
-  await loadCategoriesForEditing();
+  await loadStalls();
 
 }
 
