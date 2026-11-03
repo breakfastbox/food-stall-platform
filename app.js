@@ -1264,6 +1264,18 @@ if (knownOrderIdsForAlerts === null) {
 
           <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
+
+          <label for="payment-status-${escapeHtml(order.id)}">
+            Update payment status:
+          </label>
+          <select id="payment-status-${escapeHtml(order.id)}">
+            <option value="pending" ${order.payment_status === "pending" ? "selected" : ""}>Pending</option>
+            <option value="paid" ${order.payment_status === "paid" ? "selected" : ""}>Paid</option>
+          </select>
+          <button onclick="updatePaymentStatus('${escapeHtml(order.id)}')">
+            Save Payment Status
+          </button>
+
           <p><strong>Subtotal:</strong> ₹${formatRupees(order.subtotal)}</p>
           <p><strong>Total:</strong> ₹${formatRupees(order.total_amount)}</p>
           <p><strong>Placed:</strong> ${escapeHtml(
@@ -1315,6 +1327,53 @@ function toggleCustomOrderDate() {
       String(today.getDate()).padStart(2, "0");
   }
 }
+
+async function updatePaymentStatus(orderId) {
+  const select = document.getElementById("payment-status-" + orderId);
+  const message = document.getElementById("ordersMessage");
+
+  if (!select || !message) return;
+
+  const newStatus = select.value;
+  if (!["pending", "paid"].includes(newStatus)) {
+    message.textContent = "Invalid payment status.";
+    return;
+  }
+
+  if (newStatus === "paid") {
+    const confirmed = window.confirm(
+      "Confirm that the full order payment has actually been received? Only choose Paid after receiving the money."
+    );
+    if (!confirmed) {
+      await loadOrders();
+      return;
+    }
+  }
+
+  message.textContent = "Updating payment status...";
+
+  const { data, error } = await supabaseClient
+    .from("orders")
+    .update({ payment_status: newStatus })
+    .eq("id", orderId)
+    .select("id");
+
+  if (error) {
+    console.error("Could not update payment status:", error);
+    message.textContent = "Unable to update payment status: " + error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    message.textContent = "Payment status was not changed. Check your permissions.";
+    await loadOrders();
+    return;
+  }
+
+  message.textContent = "Payment status updated successfully!";
+  await loadOrders();
+}
+
 
 async function updateOrderStatus(orderId) {
   const select = document.getElementById("status-" + orderId);
