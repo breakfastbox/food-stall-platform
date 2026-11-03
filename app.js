@@ -571,6 +571,7 @@ async function loadStalls() {
         <p><strong>Address:</strong> ${escapeHtml(stall.address || "Not added")}</p>
         <span class="status">${subscriptionState.label}</span>
         <br><br>
+        <button type="button" onclick="window.location.href='stall.html'">Open Stall Dashboard</button>
         ${isExpired
           ? '<p><strong>Renewal required:</strong> Record a subscription payment to reactivate this stall.</p>'
           : `<button onclick="changeStallStatus('${stall.id}', '${newStatus}')">${action}</button>`}
