@@ -1342,7 +1342,7 @@ async function updatePaymentStatus(orderId) {
 
   if (newStatus === "paid") {
     const confirmed = window.confirm(
-      "Confirm that the full order payment has actually been received? Only choose Paid after receiving the money."
+      "This will count the order total as collected sales in Reports. For a designated test order only, you may temporarily set it to Paid and then restore Pending immediately after testing. Continue?"
     );
     if (!confirmed) {
       await loadOrders();
