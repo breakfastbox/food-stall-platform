@@ -1151,9 +1151,9 @@ if (knownOrderIdsForAlerts === null) {
           <strong>${completedToday.length}</strong>
         </div>
         <div class="summary-card">
-          <span class="summary-label">Today's Sales</span>
+          <span class="summary-label">Completed Order Value</span>
           <strong>₹${formatRupees(completedSalesToday)}</strong>
-          <small>Completed orders only</small>
+          <small>Completed orders only; may include pending payments</small>
         </div>
       `;
     }
