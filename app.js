@@ -204,7 +204,9 @@ async function loginAdmin() {
 
   loginMessage.textContent = "";
 
-  loadStalls();
+  await loadStallDashboard();
+  await loadMenuCategories();
+  await loadCategoriesForEditing();
 
 }
 
@@ -1525,12 +1527,6 @@ async function deleteMenuCategory() {
   await loadStallDashboard();
 }
 
-if (window.location.pathname.endsWith("stall.html")) {
-  loadStallDashboard();
-  loadMenuCategories();
-  loadCategoriesForEditing();
-}
-
 async function addMenuCategory() {
 
   const categoryName = document.getElementById("categoryName").value.trim();
@@ -2078,7 +2074,9 @@ if (window.location.pathname.endsWith("stall.html")) {
 
     loginBox.style.display = "none";
     dashboard.style.display = "block";
-    await loadStalls();
+    await loadStallDashboard();
+    await loadMenuCategories();
+    await loadCategoriesForEditing();
   })();
 }
 
