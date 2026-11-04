@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Breakfast Box | Order Online</title>
+  <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -133,7 +133,7 @@
 
 <body>
   <header>
-    <h1>Breakfast Box</h1>
+    <h1 id="stallName">Loading stall...</h1>
     <p>A Better Way to Begin.</p>
     <p>Pure Vegetarian Breakfast</p>
   </header>
@@ -193,7 +193,7 @@
     </section>
   </main>
 
-  <footer>Breakfast Box · Fresh vegetarian breakfast</footer>
+  <footer id="pageFooter">Fresh vegetarian food</footer>
 
   <script>
     const SUPABASE_URL =
@@ -212,6 +212,8 @@
     );
 
     let stallId = null;
+    let stallName = "This stall";
+    let stallPhone = "";
     let menuItems = [];
 let stallOrderingPaused = false;
     const menuList = document.getElementById("menuList");
@@ -229,37 +231,47 @@ let stallOrderingPaused = false;
 
     async function loadMenu() {
       try {
-        const { data: stall, error: stallError } = await client
+        const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
+        let stallQuery = client
           .from("stalls")
-          .select("id, name, ordering_enabled")
-          .eq("name", "Breakfast Box")
-          .limit(1)
-          .maybeSingle();
+          .select("id, name, phone, status, subscription_end, ordering_enabled");
 
+        if (requestedStallId) {
+          stallQuery = stallQuery.eq("id", requestedStallId);
+        } else {
+          // Keep the original public URL working for Breakfast Box.
+          stallQuery = stallQuery.eq("name", "Breakfast Box");
+        }
+
+        const { data: stall, error: stallError } = await stallQuery.limit(1).maybeSingle();
         if (stallError) throw stallError;
 
         if (!stall) {
-          menuList.textContent = "Breakfast Box could not be found.";
+          menuList.textContent = "This stall could not be found or is not available for online ordering.";
+          document.getElementById("stallName").textContent = "Stall unavailable";
           return;
         }
 
         stallId = stall.id;
-stallOrderingPaused = stall.ordering_enabled !== true;
-if (stallOrderingPaused) {
-  showMessage(
-    "Ordering is temporarily paused. Please check back later."
-  );
+        stallName = stall.name;
+        stallPhone = stall.phone || "";
+        document.getElementById("stallName").textContent = stall.name;
+        document.title = stall.name + " | Order Online";
+        document.getElementById("pageFooter").textContent = stall.name + " · Online ordering";
 
-  placeOrderButton.disabled = true;
+        stallOrderingPaused =
+          stall.ordering_enabled !== true ||
+          !["trial", "active"].includes(stall.status) ||
+          (stall.subscription_end && stall.subscription_end < new Date().toISOString().slice(0, 10));
 
-  document.querySelectorAll(
-    "#menuList input[type='number']"
-  ).forEach(input => {
-    input.disabled = true;
-  });
-} else {
-  placeOrderButton.disabled = false;
-}
+        if (stallOrderingPaused) {
+          menuList.textContent = "Online ordering is temporarily paused for this stall.";
+          showMessage("Ordering is temporarily paused. Please check back later.");
+          placeOrderButton.disabled = true;
+          return;
+        }
+
+        placeOrderButton.disabled = false;
         const { data, error } = await client
           .from("menu_items")
           .select("id, name, description, price, image_url, is_available")
@@ -442,7 +454,7 @@ if (!validPhone) {
        
         const order = result.order;
         const whatsappMessage =
-          "Hello Breakfast Box! I have placed an order.\n" +
+          "Hello " + stallName + "! I have placed an order.\n" +
           "Token: " + String(order.token_number).padStart(4, "0") + "\n" +
           "Status: " +
 (order.order_status.toLowerCase() === "pending"
@@ -451,8 +463,10 @@ if (!validPhone) {
           "Total: ₹" + money(order.total_amount) + "\n" +
           "Thank you!";
 
-        const whatsappUrl =
-          "https://wa.me/919969357477?text=" + encodeURIComponent(whatsappMessage);
+        const whatsappNumber = stallPhone.replace(/[^0-9]/g, "");
+        const whatsappUrl = whatsappNumber
+          ? "https://wa.me/" + whatsappNumber + "?text=" + encodeURIComponent(whatsappMessage)
+          : null;
 
         showMessage(
           "Test order placed successfully!\n" +
@@ -463,23 +477,24 @@ if (!validPhone) {
           "success"
         );
 
-        const whatsappLink = document.createElement("a");
-        whatsappLink.href = whatsappUrl;
-        whatsappLink.target = "_blank";
-        whatsappLink.rel = "noopener noreferrer";
-        whatsappLink.textContent = "Confirm on WhatsApp";
-        whatsappLink.style.display = "inline-block";
-        whatsappLink.style.marginTop = "12px";
-        whatsappLink.style.padding = "12px 18px";
-        whatsappLink.style.background = "#25D366";
-        whatsappLink.style.color = "#ffffff";
-        whatsappLink.style.borderRadius = "8px";
-        whatsappLink.style.textDecoration = "none";
-        whatsappLink.style.fontWeight = "bold";
-
         const messageElement = document.getElementById("message");
-        messageElement.appendChild(document.createElement("br"));
-        messageElement.appendChild(whatsappLink);
+        if (whatsappUrl) {
+          const whatsappLink = document.createElement("a");
+          whatsappLink.href = whatsappUrl;
+          whatsappLink.target = "_blank";
+          whatsappLink.rel = "noopener noreferrer";
+          whatsappLink.textContent = "Confirm on WhatsApp";
+          whatsappLink.style.display = "inline-block";
+          whatsappLink.style.marginTop = "12px";
+          whatsappLink.style.padding = "12px 18px";
+          whatsappLink.style.background = "#25D366";
+          whatsappLink.style.color = "#ffffff";
+          whatsappLink.style.borderRadius = "8px";
+          whatsappLink.style.textDecoration = "none";
+          whatsappLink.style.fontWeight = "bold";
+          messageElement.appendChild(document.createElement("br"));
+          messageElement.appendChild(whatsappLink);
+        }
 
         // Create the customer's private tracking link.
         if (order.tracking_code) {
