@@ -1248,23 +1248,18 @@ async function loadOrders() {
   };
 
   try {
-    const { data: stalls, error: stallError } = await supabaseClient
-      .from("stalls")
-      .select("id")
-      .eq("name", "Breakfast Box")
-      .limit(1);
-
-    if (stallError) throw stallError;
-
-    if (!stalls || stalls.length === 0) {
-      throw new Error("Breakfast Box stall could not be found.");
-    }
+    // Always load orders for the stall assigned to the signed-in account.
+    const assignedStall = (await getCurrentStallContext()).stall;
+    const heading = document.querySelector(".container > p.muted");
+    if (heading) heading.textContent = assignedStall.name + " — manage customer orders";
 
     const { data: orders, error } = await supabaseClient
       .from("orders")
       .select("id, token_number, order_status, payment_status, subtotal, total_amount, created_at")
-      .eq("stall_id", stalls[0].id)
+      .eq("stall_id", assignedStall.id)
       .order("created_at", { ascending: false });
+
+    if (error) throw error;
 
        const currentOrderIds = new Set(
   (orders || []).map(order => order.id)
