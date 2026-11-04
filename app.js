@@ -311,12 +311,6 @@ async function loginStallOwner() {
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
     loginMessage.textContent = "";
-    if (currentUserRole !== "admin") {
-      ["ordersActionCard", "reportsActionCard", "stockActionCard"].forEach(id => {
-        const card = document.getElementById(id);
-        if (card) card.style.display = "none";
-      });
-    }
     await loadStallDashboard();
     await loadMenuCategories();
     await loadCategoriesForEditing();
@@ -2300,12 +2294,6 @@ if (window.location.pathname.endsWith("stall.html")) {
       await loadMenuCategories();
       await loadCategoriesForEditing();
 
-      if (currentUserRole !== "admin") {
-        ["ordersActionCard", "reportsActionCard", "stockActionCard"].forEach(id => {
-          const card = document.getElementById(id);
-          if (card) card.style.display = "none";
-        });
-      }
     } catch (contextError) {
       console.error("Stall dashboard access check failed:", contextError);
       dashboard.style.display = "none";
