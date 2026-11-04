@@ -916,7 +916,12 @@ async function loadStallDashboard() {
 
 
 function openMenu() {
-  alert("Menu Management is coming next.");
+  const menuSection = document.getElementById("menuManagement");
+  if (menuSection) {
+    menuSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    alert("Menu Management section could not be found.");
+  }
 }
 
 
