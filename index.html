@@ -27,9 +27,22 @@
     >
 
     <button onclick="loginAdmin()">Login</button>
+    <button type="button" onclick="requestPasswordReset('email', 'loginMessage')">Forgot password?</button>
 
     <p id="loginMessage"></p>
 
+  </div>
+
+  <div class="login-box" id="passwordRecoveryBox" style="display: none;">
+    <h1>Food Stall Platform</h1>
+    <h2>Set a new password</h2>
+    <div id="passwordRecoveryFields">
+      <input type="password" id="newPassword" placeholder="New password" autocomplete="new-password">
+      <input type="password" id="confirmNewPassword" placeholder="Confirm new password" autocomplete="new-password">
+      <button type="button" onclick="completePasswordReset()">Save new password</button>
+    </div>
+    <p id="passwordRecoveryMessage" role="status" aria-live="polite"></p>
+    <button type="button" id="returnToLoginButton" onclick="returnToLogin()" style="display: none;">Return to login</button>
   </div>
 
 
