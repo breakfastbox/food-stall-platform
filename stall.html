@@ -63,6 +63,24 @@
       </section>
 
 
+
+      <section class="panel" id="stallBrandingPanel">
+        <h2>Stall Profile & Branding</h2>
+        <p>Use the same stall name registered with Food Stall Platform. Your name and logo will appear on your customer ordering page.</p>
+        <div class="field">
+          <label for="brandingStallName">Registered Stall Name</label>
+          <input type="text" id="brandingStallName" maxlength="100" placeholder="Your registered stall name">
+        </div>
+        <div class="field">
+          <label for="brandingLogoFile">Stall Logo</label>
+          <input type="file" id="brandingLogoFile" accept="image/png,image/jpeg,image/webp">
+          <small>PNG, JPG or WEBP · Maximum 2 MB</small>
+        </div>
+        <img id="brandingLogoPreview" alt="Stall logo preview" hidden style="max-width:180px;max-height:140px;object-fit:contain;margin:8px 0;border-radius:8px;">
+        <p id="brandingMessage" aria-live="polite"></p>
+        <button type="button" id="saveBrandingButton" onclick="saveStallBranding()">Save Stall Profile</button>
+      </section>
+
       <section class="stats">
 
         <div class="card">
