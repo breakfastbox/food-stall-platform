@@ -108,7 +108,7 @@ async function getCurrentStallContext() {
 
   let stallQuery = supabaseClient
     .from("stalls")
-    .select("id, name, status, ordering_enabled")
+    .select("id, name, status, ordering_enabled, logo_url")
     .limit(1);
 
   if (profile.role === "admin") {
@@ -811,6 +811,8 @@ async function loadStallDashboard() {
   }
 
   document.getElementById("stallName").textContent = stall.name;
+  const stallLogo = document.getElementById("stallLogo");
+  if (stallLogo && stall.logo_url) { stallLogo.src = stall.logo_url; stallLogo.hidden = false; }
   document.getElementById("stallStatus").textContent = stall.status;
 
   const { data: categories, error: categoryError } = await supabaseClient
