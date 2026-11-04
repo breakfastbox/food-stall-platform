@@ -133,6 +133,7 @@
 
 <body>
   <header>
+    <img id="customerStallLogo" alt="Stall logo" hidden style="display:block;max-width:150px;max-height:110px;object-fit:contain;margin:0 auto 12px;border-radius:8px;">
     <h1 id="stallName">Loading stall...</h1>
   </header>
 
@@ -232,7 +233,7 @@ let stallOrderingPaused = false;
         const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
         let stallQuery = client
           .from("stalls")
-          .select("id, name, phone, status, subscription_end, ordering_enabled");
+          .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url");
 
         if (requestedStallId) {
           stallQuery = stallQuery.eq("id", requestedStallId);
@@ -254,6 +255,8 @@ let stallOrderingPaused = false;
         stallName = stall.name;
         stallPhone = stall.phone || "";
         document.getElementById("stallName").textContent = stall.name;
+        const customerLogo = document.getElementById("customerStallLogo");
+        if (customerLogo) { customerLogo.hidden = !stall.logo_url; if (stall.logo_url) customerLogo.src = stall.logo_url; }
         document.title = stall.name + " | Order Online";
         document.getElementById("pageFooter").textContent = stall.name + " · Online ordering";
 
