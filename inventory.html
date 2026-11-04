@@ -733,26 +733,53 @@ if (recipeCard) {
 
     async function initializeInventory() {
       try {
-        const { data, error } = await supabaseClient
-          .from("stalls")
-          .select("id, name")
-          .eq("name", "Breakfast Box")
-          .limit(2);
+        const { data: { user }, error: userError } =
+          await supabaseClient.auth.getUser();
 
-        if (error) throw error;
-
-        if (!data || data.length !== 1) {
-          throw new Error(
-            "Could not identify exactly one Breakfast Box stall."
-          );
+        if (userError || !user) {
+          throw new Error("Please sign in from the stall dashboard first.");
         }
 
-        stallId = data[0].id;
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("id, role, stall_id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          throw new Error("Could not verify your account: " + profileError.message);
+        }
+        if (!profile) {
+          throw new Error("Your account profile is not set up. Please contact the platform administrator.");
+        }
+
+        let stallQuery = supabaseClient
+          .from("stalls")
+          .select("id, name")
+          .limit(1);
+
+        if (profile.role === "admin") {
+          stallQuery = stallQuery.eq("name", "Breakfast Box");
+        } else if (["stall_owner", "staff"].includes(profile.role) && profile.stall_id) {
+          stallQuery = stallQuery.eq("id", profile.stall_id);
+        } else {
+          throw new Error("This account does not have inventory access.");
+        }
+
+        const { data: stall, error: stallError } = await stallQuery.maybeSingle();
+        if (stallError) {
+          throw new Error("Could not load your assigned stall: " + stallError.message);
+        }
+        if (!stall) {
+          throw new Error("No stall is assigned to this account.");
+        }
+
+        stallId = stall.id;
 
         document.getElementById("connectionStatus").textContent =
-          "Connected to " + data[0].name + " inventory.";
+          "Connected to " + stall.name + " inventory.";
 
-      await loadInventoryMode();
+        await loadInventoryMode();
         await loadRecipeOptions();
         await loadInventory();
         await loadPurchaseItems();
@@ -761,7 +788,6 @@ if (recipeCard) {
       } catch (error) {
         document.getElementById("connectionStatus").textContent =
           "Connection or loading problem.";
-
         showMessage(error.message, true);
         console.error(error);
       }
