@@ -967,20 +967,19 @@ async function loadOrdersInternal() {
 
   message.textContent = "Loading orders...";
 
-  // Find Breakfast Box stall
-  const { data: stalls, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .limit(1);
-
-  if (stallError || !stalls || stalls.length === 0) {
-    console.error("Could not find stall:", stallError);
-    message.textContent = "Could not load the Breakfast Box stall.";
+  // Resolve the stall assigned to the signed-in account.
+  let stall;
+  try {
+    stall = (await getCurrentStallContext()).stall;
+  } catch (stallError) {
+    console.error("Could not resolve signed-in stall:", stallError);
+    message.textContent = "Could not load your assigned stall: " + stallError.message;
     return;
   }
 
-  const stallId = stalls[0].id;
+  const stallId = stall.id;
+  const heading = document.querySelector(".container > p.muted");
+  if (heading) heading.textContent = stall.name + " — manage customer orders";
 
   // Load orders
   const { data: orders, error } = await supabaseClient
@@ -2085,12 +2084,7 @@ async function loadDailyReport() {
   if (button) button.disabled = true;
 
   try {
-    const { data: stalls, error: stallError } = await supabaseClient
-      .from("stalls").select("id, name").eq("name", "Breakfast Box").limit(1);
-    if (stallError) throw stallError;
-    if (!stalls || stalls.length === 0) throw new Error("Breakfast Box stall could not be found.");
-
-    const stall = stalls[0];
+    const stall = (await getCurrentStallContext()).stall;
     document.getElementById("reportStallName").textContent = stall.name;
 
     const { data: orders, error: ordersError } = await supabaseClient
@@ -2158,6 +2152,7 @@ async function loadDailyReport() {
         const { data: recipes, error: recipesError } = await supabaseClient
           .from("menu_item_ingredients")
           .select("menu_item_id, inventory_item_id, quantity_required")
+          .eq("stall_id", stall.id)
           .in("menu_item_id", menuItemIds);
         if (recipesError) throw recipesError;
 
