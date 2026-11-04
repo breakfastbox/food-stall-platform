@@ -1752,34 +1752,44 @@ async function deleteMenuCategory() {
 }
 
 async function addMenuCategory() {
-
-  const categoryName = document.getElementById("categoryName").value.trim();
+  const nameInput = document.getElementById("categoryName");
   const message = document.getElementById("categoryMessage");
+  const categoryName = nameInput.value.trim();
 
   if (!categoryName) {
     message.textContent = "Please enter a category name.";
     return;
   }
 
+  message.textContent = "Adding category...";
 
-
-  const { data: categories, error } = await supabaseClient
-    .from("menu_categories")
-    .select("id, name")
-    .eq("stall_id", stall.id)
-    .order("sort_order", { ascending: true });
-
-  if (error) {
-    console.error("Could not load categories:", error);
+  let stallId;
+  try {
+    stallId = (await getCurrentStallContext()).stall.id;
+  } catch (stallError) {
+    message.textContent = "Could not load your assigned stall: " + stallError.message;
     return;
   }
 
-  categories.forEach(category => {
-    const option = document.createElement("option");
-    option.value = category.id;
-    option.textContent = category.name;
-    categorySelect.appendChild(option);
-  });
+  const { error } = await supabaseClient
+    .from("menu_categories")
+    .insert({
+      stall_id: stallId,
+      name: categoryName
+    });
+
+  if (error) {
+    console.error("Could not add category:", error);
+    message.textContent = "Unable to add category: " + error.message;
+    return;
+  }
+
+  message.textContent = "Category added successfully!";
+  nameInput.value = "";
+
+  await loadCategoriesForEditing();
+  await loadMenuCategories();
+  await loadStallDashboard();
 }
 
 async function addMenuItem() {
