@@ -1552,6 +1552,14 @@ async function updateOrderStatus(orderId) {
   if (!select || !message) return;
 
   const newStatus = select.value;
+  let assignedStallId;
+  try {
+    assignedStallId = (await getCurrentStallContext()).stall.id;
+  } catch (contextError) {
+    message.textContent = "Could not verify your stall: " + contextError.message;
+    return;
+  }
+
   if (newStatus === "cancelled") {
   const confirmed = window.confirm(
     "Are you sure you want to cancel this order? Any recorded stock deductions will be restored."
@@ -1584,6 +1592,7 @@ if (newStatus === "accepted") {
     .from("orders")
     .update({ order_status: newStatus })
     .eq("id", orderId)
+    .eq("stall_id", assignedStallId)
     .select("id");
 }
 
@@ -2339,11 +2348,15 @@ async function loadOrderChangeRequests() {
       return;
     }
 
+    const assignedStall = (await getCurrentStallContext()).stall;
     const ids = [...new Set(requests.flatMap(request =>
       (request.proposed_items || []).map(item => item.menu_item_id)
     ))];
     const { data: menuItems, error } = await supabaseClient
-      .from("menu_items").select("id,name,price").in("id", ids);
+      .from("menu_items")
+      .select("id,name,price")
+      .eq("stall_id", assignedStall.id)
+      .in("id", ids);
     if (error) throw error;
     const menuMap = new Map((menuItems || []).map(item => [item.id, item]));
 
