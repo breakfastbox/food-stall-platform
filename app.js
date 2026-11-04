@@ -798,6 +798,89 @@ async function changeStallStatus(stallId, newStatus) {
   loadStalls();
 }
 
+
+async function saveStallBranding() {
+  const button = document.getElementById("saveBrandingButton");
+  const message = document.getElementById("brandingMessage");
+  const nameInput = document.getElementById("brandingStallName");
+  const fileInput = document.getElementById("brandingLogoFile");
+  if (!button || !message || !nameInput || !fileInput) return;
+
+  const registeredName = nameInput.value.trim();
+  if (!registeredName) {
+    message.textContent = "Please enter your registered stall name.";
+    return;
+  }
+  if (registeredName.length > 100) {
+    message.textContent = "Stall name must be 100 characters or fewer.";
+    return;
+  }
+
+  const file = fileInput.files && fileInput.files[0];
+  if (file) {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      message.textContent = "Please choose a PNG, JPG or WEBP image.";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      message.textContent = "Logo must be 2 MB or smaller.";
+      return;
+    }
+  }
+
+  button.disabled = true;
+  message.textContent = "Saving stall profile...";
+  try {
+    const context = await getCurrentStallContext();
+    const stall = context.stall;
+    const updates = { name: registeredName };
+
+    if (file) {
+      const extension = file.type === "image/png" ? "png" :
+        file.type === "image/webp" ? "webp" : "jpg";
+      const filePath = stall.id + "/" + Date.now() + "-logo." + extension;
+      const { error: uploadError } = await supabaseClient.storage
+        .from("stall-logos")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          contentType: file.type,
+          upsert: false
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabaseClient.storage
+        .from("stall-logos")
+        .getPublicUrl(filePath);
+      updates.logo_url = publicData.publicUrl;
+    }
+
+    const { data: savedStall, error: saveError } = await supabaseClient
+      .from("stalls")
+      .update(updates)
+      .eq("id", stall.id)
+      .select("id, name, logo_url, status, ordering_enabled")
+      .single();
+    if (saveError) throw saveError;
+
+    document.getElementById("stallName").textContent = savedStall.name;
+    nameInput.value = savedStall.name;
+    const headerLogo = document.getElementById("stallLogo");
+    const preview = document.getElementById("brandingLogoPreview");
+    if (savedStall.logo_url) {
+      if (headerLogo) { headerLogo.src = savedStall.logo_url; headerLogo.hidden = false; }
+      if (preview) { preview.src = savedStall.logo_url; preview.hidden = false; }
+    }
+    fileInput.value = "";
+    message.textContent = "Stall profile saved successfully.";
+  } catch (error) {
+    console.error("Could not save stall branding:", error);
+    message.textContent = "Could not save stall profile: " + (error.message || "Please try again.");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function loadStallDashboard() {
   let stall;
   try {
@@ -811,8 +894,12 @@ async function loadStallDashboard() {
   }
 
   document.getElementById("stallName").textContent = stall.name;
+  const brandingName = document.getElementById("brandingStallName");
+  if (brandingName) brandingName.value = stall.name || "";
   const stallLogo = document.getElementById("stallLogo");
-  if (stallLogo && stall.logo_url) { stallLogo.src = stall.logo_url; stallLogo.hidden = false; }
+  const brandingPreview = document.getElementById("brandingLogoPreview");
+  if (stallLogo) { stallLogo.hidden = !stall.logo_url; if (stall.logo_url) stallLogo.src = stall.logo_url; }
+  if (brandingPreview) { brandingPreview.hidden = !stall.logo_url; if (stall.logo_url) brandingPreview.src = stall.logo_url; }
   document.getElementById("stallStatus").textContent = stall.status;
 
   const { data: categories, error: categoryError } = await supabaseClient
