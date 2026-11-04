@@ -926,6 +926,9 @@ function openOrders() {
 function openReports() {
   window.location.href = "reports.html";
 }
+function openInventory() {
+  window.location.href = "inventory.html";
+}
 
 
 window.foodStallKnownOrderIds =
