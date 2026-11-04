@@ -139,48 +139,44 @@
 
 
       <section class="panel">
-<section class="panel">
+        <h2>Add Menu Category</h2>
 
-  <h2>Add Menu Category</h2>
+        <input
+          type="text"
+          id="categoryName"
+          placeholder="Category name"
+        >
 
-  <input
-    type="text"
-    id="categoryName"
-    
-<hr>
+        <button type="button" onclick="addMenuCategory()">
+          Add Category
+        </button>
 
-<h3>Edit Existing Category</h3>
+        <p id="categoryMessage"></p>
 
-<select id="editCategorySelect">
-  <option value="">Select a category</option>
-</select>
+        <hr>
 
-<input
-  type="text"
-  id="editCategoryName"
-  placeholder="Enter new category name"
->
+        <h3>Edit Existing Category</h3>
 
-<button onclick="updateMenuCategory()">
-  Save Category Name
-</button>
+        <select id="editCategorySelect">
+          <option value="">Select a category</option>
+        </select>
 
-<p id="editCategoryMessage"></p>
+        <input
+          type="text"
+          id="editCategoryName"
+          placeholder="Enter new category name"
+        >
 
-<button onclick="deleteMenuCategory()">
-  Delete Selected Category
-</button>
+        <button type="button" onclick="updateMenuCategory()">
+          Save Category Name
+        </button>
 
-    placeholder="Category name"
-  >
+        <p id="editCategoryMessage"></p>
 
-  <button onclick="addMenuCategory()">
-    Add Category
-  </button>
-
-  <p id="categoryMessage"></p>
-
-</section>
+        <button type="button" onclick="deleteMenuCategory()">
+          Delete Selected Category
+        </button>
+      </section>
   <h2>Add Menu Item</h2>
 
   <input
