@@ -6,6 +6,129 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
+
+const APP_SITE_URL = "https://breakfastbox.github.io/food-stall-platform/";
+let currentStallId = null;
+let currentUserRole = null;
+let currentStallRecord = null;
+
+function showPasswordRecoveryForm() {
+  const loginBox = document.getElementById("loginBox");
+  const dashboard = document.getElementById("dashboard");
+  const recoveryBox = document.getElementById("passwordRecoveryBox");
+  if (!recoveryBox) return;
+  if (loginBox) loginBox.style.display = "none";
+  if (dashboard) dashboard.style.display = "none";
+  recoveryBox.style.display = "block";
+}
+
+supabaseClient.auth.onAuthStateChange((event) => {
+  if (event === "PASSWORD_RECOVERY") showPasswordRecoveryForm();
+});
+
+if (new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery") {
+  showPasswordRecoveryForm();
+}
+
+async function requestPasswordReset(emailInputId, messageId) {
+  const email = document.getElementById(emailInputId)?.value.trim();
+  const message = document.getElementById(messageId);
+  if (!email) {
+    if (message) message.textContent = "Enter your email address first.";
+    return;
+  }
+
+  if (message) message.textContent = "Sending password reset email...";
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: APP_SITE_URL
+  });
+
+  if (message) {
+    message.textContent = error
+      ? "Unable to send reset email: " + error.message
+      : "Password reset email sent. Open the link in that email to set a new password.";
+  }
+}
+
+async function completePasswordReset() {
+  const password = document.getElementById("newPassword")?.value || "";
+  const confirmation = document.getElementById("confirmNewPassword")?.value || "";
+  const message = document.getElementById("passwordRecoveryMessage");
+
+  if (password.length < 8) {
+    message.textContent = "Use a password with at least 8 characters.";
+    return;
+  }
+  if (password !== confirmation) {
+    message.textContent = "The passwords do not match.";
+    return;
+  }
+
+  message.textContent = "Saving your new password...";
+  const { error } = await supabaseClient.auth.updateUser({ password });
+  if (error) {
+    message.textContent = "Unable to update password: " + error.message;
+    return;
+  }
+
+  await supabaseClient.auth.signOut();
+  const fields = document.getElementById("passwordRecoveryFields");
+  if (fields) fields.style.display = "none";
+  const returnButton = document.getElementById("returnToLoginButton");
+  if (returnButton) returnButton.style.display = "inline-block";
+  message.textContent = "Password updated successfully. You can now return to login and sign in with your new password.";
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function returnToLogin() {
+  const recoveryBox = document.getElementById("passwordRecoveryBox");
+  const loginBox = document.getElementById("loginBox");
+  if (recoveryBox) recoveryBox.style.display = "none";
+  if (loginBox) loginBox.style.display = "block";
+  const fields = document.getElementById("passwordRecoveryFields");
+  if (fields) fields.style.display = "block";
+  const returnButton = document.getElementById("returnToLoginButton");
+  if (returnButton) returnButton.style.display = "none";
+  const message = document.getElementById("passwordRecoveryMessage");
+  if (message) message.textContent = "";
+}
+
+async function getCurrentStallContext() {
+  const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+  if (userError || !user) throw new Error("Please sign in to continue.");
+
+  const { data: profile, error: profileError } = await supabaseClient
+    .from("profiles")
+    .select("id, role, stall_id, full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) throw new Error("Could not verify your account: " + profileError.message);
+  if (!profile) throw new Error("Your account profile is not set up. Please contact the platform administrator.");
+
+  let stallQuery = supabaseClient
+    .from("stalls")
+    .select("id, name, status, ordering_enabled")
+    .limit(1);
+
+  if (profile.role === "admin") {
+    stallQuery = stallQuery.eq("name", "Breakfast Box");
+  } else if (["stall_owner", "staff"].includes(profile.role) && profile.stall_id) {
+    stallQuery = stallQuery.eq("id", profile.stall_id);
+  } else {
+    throw new Error("This account does not have stall dashboard access.");
+  }
+
+  const { data: stall, error: stallError } = await stallQuery.maybeSingle();
+  if (stallError) throw new Error("Could not load your assigned stall: " + stallError.message);
+  if (!stall) throw new Error("No stall is assigned to this account.");
+
+  currentStallId = stall.id;
+  currentUserRole = profile.role;
+  currentStallRecord = stall;
+  return { user, profile, stall };
+}
+
 let knownOrderIdsForAlerts = null;
 let orderSoundAlertsEnabled = false;
 let orderAlertAudioContext = null;
@@ -169,6 +292,49 @@ async function setOrderingEnabled(action) {
   return data;
 }
 
+
+async function loginStallOwner() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const loginMessage = document.getElementById("loginMessage");
+
+  loginMessage.textContent = "Logging in...";
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    loginMessage.textContent = "Login failed: " + error.message;
+    return;
+  }
+
+  try {
+    await getCurrentStallContext();
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    loginMessage.textContent = "";
+    await loadStallDashboard();
+    await loadMenuCategories();
+    await loadCategoriesForEditing();
+  } catch (error) {
+    await supabaseClient.auth.signOut();
+    loginMessage.textContent = error.message;
+  }
+}
+
+async function logoutStallOwner() {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) {
+    alert("Logout failed: " + error.message);
+    return;
+  }
+
+  currentStallId = null;
+  currentUserRole = null;
+  currentStallRecord = null;
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("loginBox").style.display = "block";
+  const message = document.getElementById("loginMessage");
+  if (message) message.textContent = "";
+}
 
 async function loginAdmin() {
 
@@ -633,19 +799,16 @@ async function changeStallStatus(stallId, newStatus) {
 }
 
 async function loadStallDashboard() {
-  const { data: stalls, error } = await supabaseClient
-    .from("stalls")
-    .select("id, name, status")
-    .eq("name", "Breakfast Box")
-    .limit(1);
-
-  if (error || !stalls || stalls.length === 0) {
-    console.error(error || "Breakfast Box stall not found");
-    document.getElementById("stallName").textContent = "Stall not found";
+  let stall;
+  try {
+    const context = await getCurrentStallContext();
+    stall = context.stall;
+  } catch (error) {
+    console.error("Could not resolve signed-in stall:", error);
+    const name = document.getElementById("stallName");
+    if (name) name.textContent = "Stall access unavailable";
     return;
   }
-
-  const stall = stalls[0];
 
   document.getElementById("stallName").textContent = stall.name;
   document.getElementById("stallStatus").textContent = stall.status;
@@ -1449,14 +1612,11 @@ async function loadCategoriesForEditing() {
 
   select.innerHTML = '<option value="">Select a category</option>';
 
-  const { data: stall, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .single();
-
-  if (stallError || !stall) {
-    console.error("Could not find Breakfast Box:", stallError);
+  let stall;
+  try {
+    stall = (await getCurrentStallContext()).stall;
+  } catch (stallError) {
+    console.error("Could not resolve assigned stall:", stallError);
     return;
   }
 
@@ -1653,24 +1813,13 @@ const categoryId =
   message.textContent = "Adding menu item...";
 
 
-  const { data: stalls, error: stallError } =
-    await supabaseClient
-      .from("stalls")
-      .select("id")
-      .eq("name", "Breakfast Box")
-      .limit(1);
-
-
-  if (stallError || !stalls || stalls.length === 0) {
-
-    message.textContent =
-      "Breakfast Box stall could not be found.";
-
+  let stallId;
+  try {
+    stallId = (await getCurrentStallContext()).stall.id;
+  } catch (stallError) {
+    message.textContent = "Could not load your assigned stall: " + stallError.message;
     return;
   }
-
-
-  const stallId = stalls[0].id;
 
 
   const { error } = await supabaseClient
@@ -1825,14 +1974,11 @@ async function loadMenuCategories() {
   categorySelect.innerHTML =
     '<option value="">Select a category</option>';
 
-  const { data: stall, error: stallError } = await supabaseClient
-    .from("stalls")
-    .select("id")
-    .eq("name", "Breakfast Box")
-    .single();
-
-  if (stallError) {
-    console.error("Could not find stall:", stallError);
+  let stall;
+  try {
+    stall = (await getCurrentStallContext()).stall;
+  } catch (stallError) {
+    console.error("Could not resolve assigned stall:", stallError);
     return;
   }
 
@@ -2111,30 +2257,42 @@ reportDateInput.addEventListener("change", updateReportDateDisplay);
   }
 }
 
-/* Initialize the stall dashboard according to login status. */
+/* Initialize the stall dashboard for the signed-in user's assigned stall. */
 if (window.location.pathname.endsWith("stall.html")) {
   (async function initializeStallDashboard() {
     const loginBox = document.getElementById("loginBox");
     const dashboard = document.getElementById("dashboard");
-
     if (!loginBox || !dashboard) return;
 
-    const {
-      data: { session },
-      error
-    } = await supabaseClient.auth.getSession();
-
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error || !session) {
       dashboard.style.display = "none";
       loginBox.style.display = "block";
       return;
     }
 
-    loginBox.style.display = "none";
-    dashboard.style.display = "block";
-    await loadStallDashboard();
-    await loadMenuCategories();
-    await loadCategoriesForEditing();
+    try {
+      await getCurrentStallContext();
+      loginBox.style.display = "none";
+      dashboard.style.display = "block";
+      await loadStallDashboard();
+      await loadMenuCategories();
+      await loadCategoriesForEditing();
+
+      if (currentUserRole !== "admin") {
+        ["ordersActionCard", "reportsActionCard", "stockActionCard"].forEach(id => {
+          const card = document.getElementById(id);
+          if (card) card.style.display = "none";
+        });
+      }
+    } catch (contextError) {
+      console.error("Stall dashboard access check failed:", contextError);
+      dashboard.style.display = "none";
+      loginBox.style.display = "block";
+      const message = document.getElementById("loginMessage");
+      if (message) message.textContent = contextError.message;
+      await supabaseClient.auth.signOut();
+    }
   })();
 }
 
