@@ -15,12 +15,12 @@
 <div class="login-box" id="loginBox" style="display: none;">
 
   <h1>Food Stall Platform</h1>
-  <h2>Admin Login</h2>
+  <h2>Stall / Admin Login</h2>
 
   <input
     type="email"
     id="email"
-    placeholder="Admin email"
+    placeholder="Email address"
   >
 
   <input
@@ -29,7 +29,8 @@
     placeholder="Password"
   >
 
-  <button onclick="loginAdmin()">Login</button>
+  <button onclick="loginStallOwner()">Login</button>
+  <button type="button" onclick="requestPasswordReset('email', 'loginMessage')">Forgot password?</button>
 
   <p id="loginMessage"></p>
 
@@ -44,7 +45,7 @@
         <p>Food Stall Management</p>
       </div>
 
-      <button onclick="logoutAdmin()">Logout</button>
+      <button onclick="logoutStallOwner()">Logout</button>
     </header>
 
 
@@ -106,7 +107,7 @@
           </div>
 
 
-          <div class="card">
+          <div class="card" id="ordersActionCard">
             <h3>📦 Orders</h3>
             <p>View and manage customer orders.</p>
             <button onclick="openOrders()">
@@ -115,7 +116,7 @@
           </div>
 
 
-          <div class="card">
+          <div class="card" id="reportsActionCard">
             <h3>📊 Reports</h3>
             <p>View sales and business reports.</p>
             <button onclick="openReports()">
@@ -124,7 +125,7 @@
           </div>
 
 
-          <div class="card">
+          <div class="card" id="stockActionCard">
             <h3>📦 Stock</h3>
             <p>Manage your inventory.</p>
             <button onclick="openInventory()">
