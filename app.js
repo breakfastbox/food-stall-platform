@@ -871,7 +871,7 @@ async function loadStallDashboard() {
             <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
-            <button type="button" onclick="window.deleteMenuItem('${item.id}', ${JSON.stringify(item.name).replace(/</g, "\\u003c")})">
+            <button type="button" onclick="window.deleteMenuItem('${item.id}')">
               Delete
             </button>
           </div>
@@ -902,7 +902,7 @@ async function loadStallDashboard() {
             <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
-            <button type="button" onclick="window.deleteMenuItem('${item.id}', ${JSON.stringify(item.name).replace(/</g, "\\u003c")})">
+            <button type="button" onclick="window.deleteMenuItem('${item.id}')">
               Delete
             </button>
           </div>
@@ -1958,9 +1958,9 @@ async function editMenuItem(itemId) {
   loadStallDashboard();
 }
 
-window.deleteMenuItem = async function deleteMenuItem(itemId, itemName) {
+window.deleteMenuItem = async function deleteMenuItem(itemId) {
   const accepted = confirm(
-    "Are you sure you want to delete " + itemName + "?"
+    "Are you sure you want to delete this menu item?"
   );
 
   if (!accepted) {
