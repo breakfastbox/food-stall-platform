@@ -2774,3 +2774,59 @@ async function copyApplicationLink(token) {
     window.prompt("Copy this link and send it to the applicant on WhatsApp:", url);
   }
 }
+
+
+/* Restore the Platform Admin session when the dashboard is refreshed. */
+if (window.location.pathname.endsWith("index.html") || window.location.pathname.endsWith("/")) {
+  (async function initializeAdminDashboard() {
+    const loginBox = document.getElementById("loginBox");
+    const dashboard = document.getElementById("dashboard");
+    if (!loginBox || !dashboard) return;
+
+    if (isPasswordSetupUrl()) {
+      showPasswordRecoveryForm();
+      return;
+    }
+
+    const loginMessage = document.getElementById("loginMessage");
+    try {
+      const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) {
+        dashboard.style.display = "none";
+        loginBox.style.display = "block";
+        return;
+      }
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !user) throw userError || new Error("Your session has expired. Please sign in again.");
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (!profile || profile.role !== "admin") {
+        throw new Error("This account does not have Platform Admin access.");
+      }
+
+      loginBox.style.display = "none";
+      dashboard.style.display = "block";
+      if (loginMessage) loginMessage.textContent = "";
+      await loadStalls();
+      await loadStallApplications();
+    } catch (error) {
+      console.error("Admin session restore failed:", error);
+      dashboard.style.display = "none";
+      loginBox.style.display = "block";
+      if (loginMessage) {
+        loginMessage.textContent = error.message || "Please sign in again.";
+      }
+      if (error.message && /session has expired|invalid.*token/i.test(error.message)) {
+        await supabaseClient.auth.signOut();
+      }
+    }
+  })();
+}
