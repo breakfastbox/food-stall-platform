@@ -2516,3 +2516,52 @@ function escapeHtml(value) {
   })[char]);
 }
 
+async function registerNewStall() {
+  const fields = {
+    stallName: document.getElementById("newStallName")?.value.trim() || "",
+    ownerName: document.getElementById("newStallOwner")?.value.trim() || "",
+    email: document.getElementById("newStallEmail")?.value.trim().toLowerCase() || "",
+    phone: document.getElementById("newStallPhone")?.value.trim() || "",
+    address: document.getElementById("newStallAddress")?.value.trim() || ""
+  };
+  const message = document.getElementById("stallRegistrationMessage");
+  const button = document.getElementById("registerStallButton");
+
+  if (!fields.stallName || !fields.ownerName || !fields.email || !fields.phone) {
+    message.textContent = "Please complete the stall name, owner name, email and phone number.";
+    return;
+  }
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(fields.email)) {
+    message.textContent = "Enter a valid owner email address.";
+    return;
+  }
+
+  if (button) button.disabled = true;
+  message.textContent = "Registering stall and sending the owner's invitation...";
+
+  try {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session) throw new Error("Please sign in again as Platform Admin.");
+
+    const { data, error } = await supabaseClient.functions.invoke("register-stall", {
+      body: fields,
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+
+    if (error) throw new Error(data?.error || error.message || "Registration could not be completed.");
+    if (!data?.success) throw new Error(data?.error || "Registration could not be completed.");
+
+    message.textContent = "Stall registered successfully. An invitation has been sent to " + fields.email + ". Online ordering remains paused until you activate it.";
+    ["newStallName", "newStallOwner", "newStallEmail", "newStallPhone", "newStallAddress"].forEach(id => {
+      const input = document.getElementById(id);
+      if (input) input.value = "";
+    });
+    await loadStalls();
+  } catch (error) {
+    console.error("Stall registration failed:", error);
+    message.textContent = "Unable to register stall: " + error.message;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
