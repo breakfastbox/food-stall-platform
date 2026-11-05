@@ -274,7 +274,16 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script src="app.js"></script>
+  <script>
+    // Show only the password form on owner setup links, even before app.js loads.
+    if (new URLSearchParams(window.location.search).get("setup") === "password") {
+      const loginBox = document.getElementById("loginBox");
+      const recoveryBox = document.getElementById("passwordRecoveryBox");
+      if (loginBox) loginBox.style.setProperty("display", "none", "important");
+      if (recoveryBox) recoveryBox.style.setProperty("display", "block", "important");
+    }
+  </script>
+  <script src="app.js?v=password-setup-3"></script>
 
 </body>
 </html>
