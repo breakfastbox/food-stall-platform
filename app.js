@@ -2397,6 +2397,12 @@ if (window.location.pathname.endsWith("stall.html")) {
     const dashboard = document.getElementById("dashboard");
     if (!loginBox || !dashboard) return;
 
+    // Password setup links must never be switched back to the login screen.
+    if (isPasswordSetupUrl()) {
+      showPasswordRecoveryForm();
+      return;
+    }
+
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error || !session) {
       dashboard.style.display = "none";
