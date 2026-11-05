@@ -2638,9 +2638,29 @@ async function generateOwnerSetupLink(applicationId) {
       throw new Error(data?.error || error?.message || "Could not generate the setup link.");
     }
 
+    const { data: application, error: applicationError } = await supabaseClient
+      .from("stall_applications")
+      .select("stall_name, owner_name, phone")
+      .eq("id", applicationId)
+      .maybeSingle();
+    if (applicationError || !application) {
+      throw new Error("Setup link was created, but applicant contact details could not be loaded. You can still copy the link.");
+    }
+
+    const phone = String(application.phone || "").replace(/[^0-9]/g, "");
+    const message = "Hello " + application.owner_name + ",\n\nWelcome to Food Stall Platform! Your " +
+      application.stall_name + " stall account has been created with a 7-day free trial.\n\n" +
+      "Please open this secure link to set your password and access your owner dashboard:\n" +
+      data.action_link + "\n\nThank you!";
+    const whatsappUrl = phone
+      ? "https://wa.me/" + phone + "?text=" + encodeURIComponent(message)
+      : "";
     result.innerHTML = '<p>' + escapeHtml(data.message) + '</p>' +
       '<input type="text" readonly id="ownerSetupLinkInput-' + applicationId + '" value="' + escapeHtml(data.action_link) + '" style="width:100%;box-sizing:border-box">' +
-      '<button type="button" onclick="copyOwnerSetupLink(\'' + applicationId + '\')">Copy WhatsApp Setup Link</button>';
+      '<button type="button" onclick="copyOwnerSetupLink(\'' + applicationId + '\')">Copy Setup Link</button>' +
+      (whatsappUrl
+        ? ' <a class="button" href="' + escapeHtml(whatsappUrl) + '" target="_blank" rel="noopener">Open WhatsApp &amp; Send Message</a>'
+        : '<p>Applicant phone number is missing. Copy the setup link and send it manually.</p>');
   } catch (error) {
     console.error("Owner setup link generation failed:", error);
     result.textContent = error.message;
