@@ -14,7 +14,7 @@
 <p id="applicationMessage" role="status" aria-live="polite"></p>
 </form></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
-const client=window.supabase.createClient("https://anlgfcltudysjnsipsmd.supabase.co","SUPABASE_ANON_KEY_PLACEHOLDER");
+const client=window.supabase.createClient("https://anlgfcltudysjnsipsmd.supabase.co","sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv");
 document.getElementById("applicationForm").addEventListener("submit",async e=>{
  e.preventDefault();const btn=document.getElementById("submitApplication"),msg=document.getElementById("applicationMessage");
  const body={stall_name:document.getElementById("stall_name").value.trim(),owner_name:document.getElementById("owner_name").value.trim(),email:document.getElementById("email").value.trim(),phone:document.getElementById("phone").value.trim(),address:document.getElementById("address").value.trim(),website:document.getElementById("website").value};
