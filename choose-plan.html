@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Choose Your Subscription</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="login-box" style="max-width:650px;margin:30px auto;padding:24px">
+<h1>Food Stall Platform</h1><h2>Choose Your Subscription</h2><p>Your application has been accepted. Select how you would like to begin.</p>
+<div class="panel"><h3>7-Day Free Trial</h3><p>Explore the full platform with customer ordering enabled for 7 days.</p><button class="button-primary" id="trialButton" type="button">Choose Free Trial</button></div>
+<div class="panel"><h3>Paid Subscription</h3><p>₹499/month. Choose this option to proceed with payment. Your account will be activated after payment is received and verified by the Platform Admin.</p><button class="button-primary" id="paidButton" type="button">Choose Paid Subscription</button></div>
+<p id="planMessage" role="status" aria-live="polite"></p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const client=window.supabase.createClient("https://anlgfcltudysjnsipsmd.supabase.co","SUPABASE_ANON_KEY_PLACEHOLDER");
+const token=new URLSearchParams(location.search).get("token");let busy=false;
+async function choose(plan){const msg=document.getElementById("planMessage");if(!token){msg.textContent="This link is incomplete. Please contact the Platform Admin.";return;}if(busy)return;busy=true;document.getElementById("trialButton").disabled=true;document.getElementById("paidButton").disabled=true;msg.textContent="Saving your selection...";
+try{const {data,error}=await client.functions.invoke("choose-stall-plan",{body:{token,plan}});if(error)throw new Error(data?.error||error.message);msg.textContent=plan==="trial"?"Free trial selected. The Platform Admin will now create your account and send your login setup link on WhatsApp.":"Paid subscription selected. The Platform Admin will contact you on WhatsApp with payment instructions. Your account will be activated after payment is verified.";}
+catch(e){msg.textContent=e.message;document.getElementById("trialButton").disabled=false;document.getElementById("paidButton").disabled=false;busy=false;}}
+document.getElementById("trialButton").addEventListener("click",()=>choose("trial"));document.getElementById("paidButton").addEventListener("click",()=>choose("paid"));
+</script></body></html>
