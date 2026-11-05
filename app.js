@@ -639,6 +639,7 @@ async function recordSubscriptionPayment() {
       : "Payment recorded successfully. The stall subscription is now Active.";
 
     await loadStalls();
+    await loadStallApplications();
     await loadSubscriptionPayments();
   } catch (error) {
     console.error("Could not record subscription payment:", error);
@@ -648,7 +649,7 @@ async function recordSubscriptionPayment() {
   }
 }
 
-async function loadStalls() {
+async function loadStalls(preselectPaymentStallId = null) {
 
   const { data, error } = await supabaseClient
     .from("stalls")
@@ -753,6 +754,13 @@ async function loadStalls() {
   }).join("");
 
   await loadSubscriptionPaymentStalls(data);
+  if (preselectPaymentStallId) {
+    const paymentSelect = document.getElementById("subscriptionPaymentStall");
+    if (paymentSelect) {
+      paymentSelect.value = preselectPaymentStallId;
+      await loadSubscriptionPayments();
+    }
+  }
 }
 
 
@@ -2576,13 +2584,87 @@ async function registerNewStall() {
 
 
 
+async function convertStallApplication(applicationId) {
+  const { data: application, error: lookupError } = await supabaseClient
+    .from("stall_applications")
+    .select("stall_name, selected_plan")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (lookupError || !application || !["trial", "paid"].includes(application.selected_plan)) {
+    alert("Could not verify this application's selected plan. Refresh and try again.");
+    return;
+  }
+
+  const confirmation = application.selected_plan === "trial"
+    ? "Create the 7-day trial stall and owner login for " + application.stall_name + "? Customer ordering will be enabled."
+    : "Prepare a suspended stall and owner login for " + application.stall_name + "? Record the verified subscription payment before sending the owner's setup link.";
+  if (!window.confirm(confirmation)) return;
+
+  try {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session) throw new Error("Please sign in again as Platform Admin.");
+
+    const { data, error } = await supabaseClient.functions.invoke("convert-stall-application", {
+      body: { application_id: applicationId },
+      headers: { Authorization: "Bearer " + session.access_token }
+    });
+    if (error || !data?.success) throw new Error(data?.error || error?.message || "Could not create this stall.");
+
+    alert(data.message);
+    await loadStalls(data.stall_id);
+    await loadStallApplications();
+  } catch (error) {
+    console.error("Application conversion failed:", error);
+    alert("Unable to create stall: " + error.message);
+    await loadStallApplications();
+  }
+}
+
+async function generateOwnerSetupLink(applicationId) {
+  const result = document.getElementById("ownerSetupLink-" + applicationId);
+  if (!result) return;
+  result.textContent = "Generating secure password setup link...";
+
+  try {
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session) throw new Error("Please sign in again as Platform Admin.");
+
+    const { data, error } = await supabaseClient.functions.invoke("generate-owner-setup-link", {
+      body: { application_id: applicationId },
+      headers: { Authorization: "Bearer " + session.access_token }
+    });
+    if (error || !data?.success || !data.action_link) {
+      throw new Error(data?.error || error?.message || "Could not generate the setup link.");
+    }
+
+    result.innerHTML = '<p>' + escapeHtml(data.message) + '</p>' +
+      '<input type="text" readonly id="ownerSetupLinkInput-' + applicationId + '" value="' + escapeHtml(data.action_link) + '" style="width:100%;box-sizing:border-box">' +
+      '<button type="button" onclick="copyOwnerSetupLink(\\'' + applicationId + '\\')">Copy WhatsApp Setup Link</button>';
+  } catch (error) {
+    console.error("Owner setup link generation failed:", error);
+    result.textContent = error.message;
+  }
+}
+
+async function copyOwnerSetupLink(applicationId) {
+  const input = document.getElementById("ownerSetupLinkInput-" + applicationId);
+  if (!input?.value) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    alert("Owner setup link copied. Send it to the owner through WhatsApp.");
+  } catch {
+    window.prompt("Copy this secure owner setup link and send it through WhatsApp:", input.value);
+  }
+}
+
 async function loadStallApplications() {
   const target = document.getElementById("stallApplicationsList");
   if (!target) return;
   target.textContent = "Loading applications...";
   const { data, error } = await supabaseClient
     .from("stall_applications")
-    .select("id, stall_name, owner_name, email, phone, address, status, selected_plan, approval_token, created_at")
+    .select("id, stall_name, owner_name, email, phone, address, status, selected_plan, approval_token, converted_stall_id, created_at")
     .order("created_at", { ascending: false });
   if (error) {
     target.textContent = "Unable to load applications: " + error.message;
@@ -2601,10 +2683,21 @@ async function loadStallApplications() {
     const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
     const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
     const actions = app.status === "submitted"
-      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
+      ? '<button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'approved\\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'rejected\\')">Reject</button>'
       : app.status === "approved" && app.approval_token
-        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\'' + app.approval_token + '\')">Copy Link</button>'
-        : "";
+        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\\'' + app.approval_token + '\\')">Copy Link</button>'
+        : app.status === "converted" && app.converted_stall_id
+          ? '<p><strong>Stall account:</strong> Created</p>' +
+            (app.selected_plan === "trial"
+              ? '<p>7-day trial is active and customer ordering is enabled.</p>'
+              : '<p>Paid stall is prepared but remains suspended until you record the verified subscription payment.</p>') +
+            '<button type="button" onclick="generateOwnerSetupLink(\\'' + app.id + '\\')">Generate Owner Setup Link</button>' +
+            '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
+          : app.status === "approved" && app.selected_plan
+            ? '<button type="button" onclick="convertStallApplication(\\'' + app.id + '\\')">' +
+              (app.selected_plan === "trial" ? 'Create Trial Stall &amp; Owner Login' : 'Prepare Paid Stall for Payment') +
+              '</button>'
+            : "";
     return '<article class="stall" style="margin:12px 0"><h3>' + escapeHtml(app.stall_name) + '</h3>' +
       '<p><strong>Owner:</strong> ' + escapeHtml(app.owner_name) + '</p>' +
       '<p><strong>Email:</strong> ' + escapeHtml(app.email) + '</p>' +
