@@ -22,12 +22,22 @@ function showPasswordRecoveryForm() {
   recoveryBox.style.display = "block";
 }
 
+function isPasswordSetupUrl() {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return query.get("setup") === "password" ||
+    query.get("type") === "recovery" ||
+    hash.get("type") === "recovery" ||
+    hash.get("type") === "invite";
+}
+
 supabaseClient.auth.onAuthStateChange((event) => {
-  const inviteLink = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "invite";
-  if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && inviteLink)) showPasswordRecoveryForm();
+  if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isPasswordSetupUrl())) {
+    showPasswordRecoveryForm();
+  }
 });
 
-if (new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery") {
+if (isPasswordSetupUrl()) {
   showPasswordRecoveryForm();
 }
 
