@@ -208,6 +208,40 @@
         </div>
       </section>
 
+      <section class="panel" id="stallRegistrationPanel">
+        <div class="panel-header">
+          <div>
+            <h2>Register a New Stall</h2>
+            <p>Add the stall and create its owner's separate login account.</p>
+          </div>
+        </div>
+        <div class="payment-form-grid">
+          <div class="form-field">
+            <label for="newStallName">Registered stall name *</label>
+            <input id="newStallName" type="text" maxlength="100" required placeholder="Enter stall name">
+          </div>
+          <div class="form-field">
+            <label for="newStallOwner">Owner full name *</label>
+            <input id="newStallOwner" type="text" maxlength="100" required placeholder="Enter owner's name">
+          </div>
+          <div class="form-field">
+            <label for="newStallEmail">Owner email / login *</label>
+            <input id="newStallEmail" type="email" maxlength="254" required placeholder="owner@example.com">
+          </div>
+          <div class="form-field">
+            <label for="newStallPhone">Phone number *</label>
+            <input id="newStallPhone" type="tel" maxlength="20" required placeholder="Enter phone number">
+          </div>
+          <div class="form-field field-full">
+            <label for="newStallAddress">Stall address / area</label>
+            <input id="newStallAddress" type="text" maxlength="250" placeholder="Enter address">
+          </div>
+        </div>
+        <p class="subscription-price-note">New stalls are created as Trial with online ordering paused. The owner receives an email invitation to set their password.</p>
+        <button class="button-primary" id="registerStallButton" type="button" onclick="registerNewStall()">Register Stall &amp; Send Invitation</button>
+        <p id="stallRegistrationMessage" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="panel">
 
         <div class="panel-header">
