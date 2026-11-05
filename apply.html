@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Apply to Food Stall Platform</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="login-box" style="max-width:650px;margin:30px auto;padding:24px">
+<h1>Food Stall Platform</h1><h2>Stall Owner Application</h2>
+<p>Fill in your details to apply. Your application will be reviewed by the Platform Admin.</p>
+<form id="applicationForm">
+<div class="form-field"><label for="stall_name">Stall name *</label><input id="stall_name" maxlength="100" required></div>
+<div class="form-field"><label for="owner_name">Owner full name *</label><input id="owner_name" maxlength="100" required></div>
+<div class="form-field"><label for="email">Email address *</label><input id="email" type="email" maxlength="254" required></div>
+<div class="form-field"><label for="phone">WhatsApp phone number *</label><input id="phone" type="tel" maxlength="20" required placeholder="Include country code, e.g. +91"></div>
+<div class="form-field"><label for="address">Stall address / area</label><input id="address" maxlength="250"></div>
+<div style="position:absolute;left:-10000px" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
+<button class="button-primary" id="submitApplication" type="submit">Submit Application</button>
+<p id="applicationMessage" role="status" aria-live="polite"></p>
+</form></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const client=window.supabase.createClient("https://anlgfcltudysjnsipsmd.supabase.co","SUPABASE_ANON_KEY_PLACEHOLDER");
+document.getElementById("applicationForm").addEventListener("submit",async e=>{
+ e.preventDefault();const btn=document.getElementById("submitApplication"),msg=document.getElementById("applicationMessage");
+ const body={stall_name:document.getElementById("stall_name").value.trim(),owner_name:document.getElementById("owner_name").value.trim(),email:document.getElementById("email").value.trim(),phone:document.getElementById("phone").value.trim(),address:document.getElementById("address").value.trim(),website:document.getElementById("website").value};
+ btn.disabled=true;msg.textContent="Submitting your application...";
+ try{const {data,error}=await client.functions.invoke("submit-stall-application",{body});if(error)throw new Error(data?.error||error.message);msg.textContent="Your application has been submitted successfully. The Platform Admin will contact you on WhatsApp after reviewing it.";document.getElementById("applicationForm").reset();}
+ catch(err){msg.textContent="Unable to submit: "+err.message;}finally{btn.disabled=false;}
+});
+</script></body></html>
