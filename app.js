@@ -453,7 +453,14 @@ function getSubscriptionStatusInfo(stall) {
   if (status === "expired") {
     return { key: "expired", label: "Expired", daysRemaining };
   }
-  if (daysRemaining >= 0 && daysRemaining <= 7 && ["active", "trial"].includes(status)) {
+  if (status === "trial" && daysRemaining >= 0) {
+    return {
+      key: "trial",
+      label: daysRemaining === 0 ? "Trial — ends today" : `Trial — ${daysRemaining} day(s) left`,
+      daysRemaining
+    };
+  }
+  if (daysRemaining >= 0 && daysRemaining <= 7 && status === "active") {
     return { key: "expiring_soon", label: "Expiring Soon", daysRemaining };
   }
 
@@ -2552,7 +2559,7 @@ async function registerNewStall() {
     if (error) throw new Error(data?.error || error.message || "Registration could not be completed.");
     if (!data?.success) throw new Error(data?.error || "Registration could not be completed.");
 
-    message.textContent = "Stall registered successfully. An invitation has been sent to " + fields.email + ". Online ordering remains paused until you activate it.";
+    message.textContent = "Stall registered successfully. An invitation has been sent to " + fields.email + ". Full app access and customer ordering are enabled during the 7-day free trial.";
     ["newStallName", "newStallOwner", "newStallEmail", "newStallPhone", "newStallAddress"].forEach(id => {
       const input = document.getElementById(id);
       if (input) input.value = "";
