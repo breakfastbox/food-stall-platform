@@ -23,7 +23,8 @@ function showPasswordRecoveryForm() {
 }
 
 supabaseClient.auth.onAuthStateChange((event) => {
-  if (event === "PASSWORD_RECOVERY") showPasswordRecoveryForm();
+  const inviteLink = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "invite";
+  if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && inviteLink)) showPasswordRecoveryForm();
 });
 
 if (new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "recovery") {
