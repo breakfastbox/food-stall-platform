@@ -372,6 +372,7 @@ async function loginAdmin() {
   loginMessage.textContent = "";
 
   await loadStalls();
+  await loadStallApplications();
 
 }
 
@@ -2573,3 +2574,71 @@ async function registerNewStall() {
   }
 }
 
+
+
+async function loadStallApplications() {
+  const target = document.getElementById("stallApplicationsList");
+  if (!target) return;
+  target.textContent = "Loading applications...";
+  const { data, error } = await supabaseClient
+    .from("stall_applications")
+    .select("id, stall_name, owner_name, email, phone, address, status, selected_plan, approval_token, created_at")
+    .order("created_at", { ascending: false });
+  if (error) {
+    target.textContent = "Unable to load applications: " + error.message;
+    return;
+  }
+  if (!data || !data.length) {
+    target.textContent = "No applications received yet.";
+    return;
+  }
+  target.innerHTML = data.map(app => {
+    const created = new Date(app.created_at).toLocaleString("en-IN");
+    const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
+    const plan = app.selected_plan === "trial" ? "7-day Free Trial selected" :
+      app.selected_plan === "paid" ? "Paid Subscription selected" : "Awaiting subscription choice";
+    const waText = encodeURIComponent("Hello " + app.owner_name + ", regarding your application for " + app.stall_name + " on Food Stall Platform.");
+    const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
+    const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
+    const actions = app.status === "submitted"
+      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
+      : app.status === "approved" && app.approval_token
+        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\'' + app.approval_token + '\')">Copy Link</button>'
+        : "";
+    return '<article class="stall" style="margin:12px 0"><h3>' + escapeHtml(app.stall_name) + '</h3>' +
+      '<p><strong>Owner:</strong> ' + escapeHtml(app.owner_name) + '</p>' +
+      '<p><strong>Email:</strong> ' + escapeHtml(app.email) + '</p>' +
+      '<p><strong>WhatsApp:</strong> ' + escapeHtml(app.phone) + '</p>' +
+      '<p><strong>Address:</strong> ' + escapeHtml(app.address || "Not provided") + '</p>' +
+      '<p><strong>Received:</strong> ' + escapeHtml(created) + '</p>' +
+      '<p><strong>Status:</strong> ' + escapeHtml(status) + '</p>' +
+      '<p><strong>Subscription choice:</strong> ' + plan + '</p>' +
+      whatsapp + actions + '</article>';
+  }).join("");
+}
+
+async function decideStallApplication(applicationId, decision) {
+  if (!["approved", "rejected"].includes(decision)) return;
+  const confirmText = decision === "approved"
+    ? "Accept this application and create a private subscription-choice link?"
+    : "Reject this application?";
+  if (!window.confirm(confirmText)) return;
+  const token = decision === "approved" ? crypto.randomUUID() + crypto.randomUUID() : null;
+  const update = { status: decision, decision_at: new Date().toISOString(), approval_token: token };
+  const { error } = await supabaseClient.from("stall_applications").update(update).eq("id", applicationId).eq("status", "submitted");
+  if (error) {
+    alert("Could not update application: " + error.message);
+    return;
+  }
+  await loadStallApplications();
+}
+
+async function copyApplicationLink(token) {
+  const url = APP_SITE_URL + "choose-plan.html?token=" + encodeURIComponent(token);
+  try {
+    await navigator.clipboard.writeText(url);
+    alert("Subscription-choice link copied. Send it to the accepted applicant on WhatsApp.");
+  } catch {
+    window.prompt("Copy this link and send it to the applicant on WhatsApp:", url);
+  }
+}
