@@ -2640,7 +2640,7 @@ async function generateOwnerSetupLink(applicationId) {
 
     result.innerHTML = '<p>' + escapeHtml(data.message) + '</p>' +
       '<input type="text" readonly id="ownerSetupLinkInput-' + applicationId + '" value="' + escapeHtml(data.action_link) + '" style="width:100%;box-sizing:border-box">' +
-      '<button type="button" onclick="copyOwnerSetupLink(\\'' + applicationId + '\\')">Copy WhatsApp Setup Link</button>';
+      '<button type="button" onclick="copyOwnerSetupLink(\'' + applicationId + '\')">Copy WhatsApp Setup Link</button>';
   } catch (error) {
     console.error("Owner setup link generation failed:", error);
     result.textContent = error.message;
@@ -2683,18 +2683,18 @@ async function loadStallApplications() {
     const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
     const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
     const actions = app.status === "submitted"
-      ? '<button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'approved\\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'rejected\\')">Reject</button>'
+      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
       : app.status === "approved" && app.approval_token
-        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\\'' + app.approval_token + '\\')">Copy Link</button>'
+        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\'' + app.approval_token + '\')">Copy Link</button>'
         : app.status === "converted" && app.converted_stall_id
           ? '<p><strong>Stall account:</strong> Created</p>' +
             (app.selected_plan === "trial"
               ? '<p>7-day trial is active and customer ordering is enabled.</p>'
               : '<p>Paid stall is prepared but remains suspended until you record the verified subscription payment.</p>') +
-            '<button type="button" onclick="generateOwnerSetupLink(\\'' + app.id + '\\')">Generate Owner Setup Link</button>' +
+            '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link</button>' +
             '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
           : app.status === "approved" && app.selected_plan
-            ? '<button type="button" onclick="convertStallApplication(\\'' + app.id + '\\')">' +
+            ? '<button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
               (app.selected_plan === "trial" ? 'Create Trial Stall &amp; Owner Login' : 'Prepare Paid Stall for Payment') +
               '</button>'
             : "";
