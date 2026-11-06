@@ -324,6 +324,19 @@ async function loginStallOwner() {
 
   try {
     await getCurrentStallContext();
+
+    // Token sequence resets only on a stall owner's first login on a later India date.
+    // Midnight and same-day logout/login do not reset the counter.
+    if (["stall_owner", "staff"].includes(currentUserRole)) {
+      const { error: tokenSessionError } = await supabaseClient.rpc(
+        "start_stall_token_session",
+        { p_stall_id: currentStallId }
+      );
+      if (tokenSessionError) {
+        throw new Error("Could not initialize the stall token sequence: " + tokenSessionError.message);
+      }
+    }
+
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
     loginMessage.textContent = "";
