@@ -70,6 +70,45 @@
       text-align: center;
       overflow-wrap: anywhere;
     }
+
+    .change-panel {
+      margin-top: 20px;
+      padding: 14px;
+      border: 1px solid #d9e5dc;
+      border-radius: 10px;
+      background: #fbfdfb;
+    }
+    .change-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    .change-row input {
+      width: 76px;
+      padding: 9px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+      font-size: 16px;
+    }
+    .change-note {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+      font: inherit;
+    }
+    .change-submit {
+      width: 100%;
+      background: #247a43;
+      color: white;
+      font-weight: bold;
+    }
+    .change-muted { color: #666; font-size: 13px; }
   </style>
 </head>
 
@@ -183,6 +222,163 @@ function displayOrder(order) {
   result.appendChild(footer);
 
   message.replaceChildren(result);
+  renderOrderChangePanel(order, result);
+}
+
+const CHANGE_REQUEST_URL = SUPABASE_URL + "/functions/v1/order-change-requests";
+
+async function renderOrderChangePanel(order, parent) {
+  if (!order.stall_id || !order.created_at) return;
+
+  const panel = document.createElement("section");
+  panel.className = "change-panel";
+  const title = document.createElement("h3");
+  title.textContent = "Need to change your order?";
+  panel.appendChild(title);
+  const info = document.createElement("p");
+  info.className = "change-muted";
+  panel.appendChild(info);
+  parent.appendChild(panel);
+
+  const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
+  const stillEligible = order.order_status === "pending" &&
+    !order.stock_deducted_at && Date.now() < deadline;
+
+  try {
+    const statusResponse = await fetch(CHANGE_REQUEST_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_PUBLISHABLE_KEY
+      },
+      body: JSON.stringify({ action: "status", tracking_code: trackingCode })
+    });
+    const statusData = await statusResponse.json();
+    if (!statusResponse.ok) throw new Error(statusData.error || "Could not check change request status.");
+
+    const existing = statusData.request;
+    if (existing && existing.request_status === "pending") {
+      info.textContent = "Your change request is waiting for the stall to approve it. The original order remains unchanged until approval.";
+      return;
+    }
+    if (existing && ["approved", "rejected", "expired"].includes(existing.request_status)) {
+      info.textContent = "Last change request: " + existing.request_status + ".";
+    }
+    if (!stillEligible) {
+      info.textContent = order.order_status !== "pending"
+        ? "Changes are locked because the stall has updated your order status to " + order.order_status + "."
+        : "The 5-minute change window has ended. Please contact the stall for help.";
+      return;
+    }
+
+    const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    info.textContent = "You can request changes for " + Math.floor(remaining / 60) +
+      ":" + String(remaining % 60).padStart(2, "0") +
+      " more. The stall must approve your request.";
+
+    const { data: menu, error } = await supabaseClient
+      .from("menu_items")
+      .select("id, name, price")
+      .eq("stall_id", order.stall_id)
+      .eq("is_available", true)
+      .order("name");
+    if (error) throw error;
+    if (!menu || !menu.length) {
+      info.textContent += " No menu items are currently available to select.";
+      return;
+    }
+
+    const quantities = new Map((order.items || []).map(item =>
+      [item.menu_item_id, Number(item.quantity)]
+    ));
+    const fields = document.createElement("div");
+    menu.forEach(item => {
+      const row = document.createElement("label");
+      row.className = "change-row";
+      const name = document.createElement("span");
+      name.textContent = item.name + " · ₹" + Number(item.price).toFixed(2);
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "20";
+      input.step = "1";
+      input.value = String(quantities.get(item.id) || 0);
+      input.dataset.menuItemId = item.id;
+      input.setAttribute("aria-label", "Quantity of " + item.name);
+      row.append(name, input);
+      fields.appendChild(row);
+    });
+    panel.appendChild(fields);
+
+    const noteLabel = document.createElement("p");
+    noteLabel.textContent = "Note (optional)";
+    noteLabel.style.textAlign = "left";
+    panel.appendChild(noteLabel);
+    const note = document.createElement("textarea");
+    note.className = "change-note";
+    note.maxLength = 500;
+    note.placeholder = "Add a note for the stall";
+    panel.appendChild(note);
+
+    const submit = document.createElement("button");
+    submit.className = "change-submit";
+    submit.textContent = "Send Change Request";
+    panel.appendChild(submit);
+    const feedback = document.createElement("p");
+    feedback.className = "change-muted";
+    panel.appendChild(feedback);
+
+    submit.addEventListener("click", async () => {
+      const proposedItems = Array.from(fields.querySelectorAll("input[data-menu-item-id]"))
+        .map(input => ({
+          menu_item_id: input.dataset.menuItemId,
+          quantity: Number(input.value)
+        }))
+        .filter(item => item.quantity > 0);
+      if (!proposedItems.length) {
+        feedback.textContent = "Please keep at least one item in your order.";
+        return;
+      }
+      if (proposedItems.some(item => !Number.isInteger(item.quantity) || item.quantity > 20)) {
+        feedback.textContent = "Each quantity must be between 1 and 20.";
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = "Sending...";
+      try {
+        const response = await fetch(CHANGE_REQUEST_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({
+            action: "submit",
+            tracking_code: trackingCode,
+            proposed_items: proposedItems,
+            customer_note: note.value.trim()
+          })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Could not send your change request.");
+        }
+        info.textContent = "Your change request has been sent. The original order will remain unchanged until the stall approves it.";
+        fields.replaceChildren();
+        note.remove();
+        noteLabel.remove();
+        submit.remove();
+        feedback.textContent = "Request sent successfully.";
+      } catch (error) {
+        feedback.textContent = error.message;
+        submit.disabled = false;
+        submit.textContent = "Send Change Request";
+      }
+    });
+  } catch (error) {
+    console.error("Order change panel failed:", error);
+    info.textContent = "Order changes are temporarily unavailable. Please contact the stall.";
+  }
 }
 
 async function checkOrderByCode(code) {
