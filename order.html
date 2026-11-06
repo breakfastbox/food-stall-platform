@@ -55,6 +55,15 @@
 
     .menu-item:last-child { border-bottom: 0; }
 
+    .menu-item-photo {
+      width: 88px;
+      height: 88px;
+      flex: 0 0 88px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #f0f0f0;
+    }
+
     .item-name { font-weight: bold; }
     .item-description { color: #666; font-size: 13px; margin-top: 5px; }
     .item-price { color: #176b45; margin-top: 6px; font-weight: bold; }
@@ -296,6 +305,19 @@ let stallOrderingPaused = false;
           row.className = "menu-item";
 
           const details = document.createElement("div");
+          details.style.flex = "1";
+          details.style.minWidth = "0";
+
+          if (item.image_url) {
+            const photo = document.createElement("img");
+            photo.className = "menu-item-photo";
+            photo.src = item.image_url;
+            photo.alt = item.name;
+            photo.loading = "lazy";
+            photo.onerror = () => photo.remove();
+            row.append(photo);
+          }
+
           const name = document.createElement("div");
           name.className = "item-name";
           name.textContent = item.name;
