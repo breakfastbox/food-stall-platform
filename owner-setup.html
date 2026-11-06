@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta property="og:title" content="Food Stall Platform — Secure Owner Setup">
+  <meta property="og:description" content="Continue to securely set your stall owner password.">
+  <title>Secure Owner Setup — Food Stall Platform</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 20px; background: #f4f6f8; color: #18212b; font-family: Arial, sans-serif; }
+    main { width: 100%; max-width: 440px; padding: 28px; border-radius: 14px; background: #fff; box-shadow: 0 8px 28px rgba(0,0,0,.08); text-align: center; }
+    h1 { margin-top: 0; font-size: 24px; }
+    p { line-height: 1.55; color: #4b5563; }
+    button { width: 100%; padding: 14px 18px; margin-top: 12px; border: 0; border-radius: 8px; background: #1769aa; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+    #error { color: #b42318; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Food Stall Platform</h1>
+    <p>Your secure owner setup link is ready.</p>
+    <p>Tap the button below to continue to the password setup page.</p>
+    <button id="continueButton" type="button">Continue to Password Setup</button>
+    <p id="error" role="status" aria-live="polite"></p>
+  </main>
+  <script>
+    document.getElementById("continueButton").addEventListener("click", function () {
+      const error = document.getElementById("error");
+      try {
+        const encoded = window.location.hash.slice(1);
+        if (!encoded) throw new Error("The setup link is incomplete. Please ask the Platform Admin for a fresh link.");
+        const target = new URL(decodeURIComponent(encoded));
+        if (target.origin !== "https://anlgfcltudysjnsipsmd.supabase.co" ||
+            target.pathname !== "/auth/v1/verify" ||
+            target.searchParams.get("type") !== "recovery") {
+          throw new Error("This setup link is not valid. Please ask the Platform Admin for a fresh link.");
+        }
+        window.location.assign(target.href);
+      } catch (e) {
+        error.textContent = e.message || "Unable to open the secure setup link.";
+      }
+    });
+  </script>
+</body>
+</html>
