@@ -231,11 +231,13 @@
     step="0.01"
   >
 
+  <label for="itemPhotoFile">Food Photo (optional)</label>
   <input
-    type="text"
-    id="itemImage"
-    placeholder="Photo URL (optional)"
+    type="file"
+    id="itemPhotoFile"
+    accept="image/png,image/jpeg,image/webp"
   >
+  <small>Choose from your phone gallery · PNG, JPG or WEBP · Maximum 2 MB</small>
 
   <label>
     <input
@@ -283,7 +285,7 @@
       if (recoveryBox) recoveryBox.style.setProperty("display", "block", "important");
     }
   </script>
-  <script src="app.js?v=password-setup-5"></script>
+  <script src="app.js?v=menu-photo-upload-1"></script>
 
 </body>
 </html>
