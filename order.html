@@ -240,6 +240,18 @@ let stallOrderingPaused = false;
     async function loadMenu() {
       try {
         const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
+
+        // When a stall ID is supplied, start loading its menu at the same
+        // time as its public stall details instead of waiting for the first request.
+        const requestedMenuPromise = requestedStallId
+          ? client
+              .from("menu_items")
+              .select("id, name, description, price, image_url, is_available")
+              .eq("stall_id", requestedStallId)
+              .eq("is_available", true)
+              .order("name")
+          : null;
+
         let stallQuery = client
           .from("stalls")
           .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url");
@@ -282,13 +294,16 @@ let stallOrderingPaused = false;
         }
 
         placeOrderButton.disabled = false;
-        const { data, error } = await client
-          .from("menu_items")
-          .select("id, name, description, price, image_url, is_available")
-          .eq("stall_id", stallId)
-          .eq("is_available", true)
-          .order("name");
+        const menuResult = requestedMenuPromise
+          ? await requestedMenuPromise
+          : await client
+              .from("menu_items")
+              .select("id, name, description, price, image_url, is_available")
+              .eq("stall_id", stallId)
+              .eq("is_available", true)
+              .order("name");
 
+        const { data, error } = menuResult;
         if (error) throw error;
 
         menuItems = data || [];
@@ -313,7 +328,8 @@ let stallOrderingPaused = false;
             photo.className = "menu-item-photo";
             photo.src = item.image_url;
             photo.alt = item.name;
-            photo.loading = "lazy";
+            photo.loading = "eager";
+            photo.decoding = "async";
             photo.onerror = () => photo.remove();
             row.append(photo);
           }
