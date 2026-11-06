@@ -75,7 +75,7 @@
 
 <body>
   <main class="container">
-    <h1>Breakfast Box</h1>
+    <h1 id="stallName">Order Tracking</h1>
     <p style="text-align: center;">Check the status of your order</p>
 
     <form id="trackOrderForm">
@@ -129,6 +129,11 @@ const message = document.getElementById("message");
 const trackingForm = document.getElementById("trackOrderForm");
 
 function displayOrder(order) {
+  if (order.stall_name) {
+    document.getElementById("stallName").textContent = order.stall_name;
+    document.title = order.stall_name + " | Track Order";
+  }
+
   const result = document.createElement("div");
   result.style.textAlign = "left";
   result.style.marginTop = "16px";
