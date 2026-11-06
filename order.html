@@ -326,11 +326,24 @@ let stallOrderingPaused = false;
           if (item.image_url) {
             const photo = document.createElement("img");
             photo.className = "menu-item-photo";
-            photo.src = item.image_url;
+            // Add a version query so a previously cached failed image response
+            // cannot keep the menu photo hidden on the customer's device.
+            const photoUrl = new URL(item.image_url);
+            photoUrl.searchParams.set("menu_photo_refresh", "2");
+            photo.src = photoUrl.toString();
             photo.alt = item.name;
             photo.loading = "eager";
             photo.decoding = "async";
-            photo.onerror = () => photo.remove();
+            photo.style.display = "block";
+            photo.onerror = () => {
+              const fallback = document.createElement("a");
+              fallback.href = item.image_url;
+              fallback.target = "_blank";
+              fallback.rel = "noopener noreferrer";
+              fallback.textContent = "Open item photo";
+              fallback.style.cssText = "display:flex;align-items:center;justify-content:center;width:88px;min-width:88px;height:88px;background:#f0f0f0;border-radius:10px;font-size:12px;text-align:center;padding:6px;";
+              photo.replaceWith(fallback);
+            };
             row.append(photo);
           }
 
