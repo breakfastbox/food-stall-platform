@@ -123,7 +123,12 @@ async function getCurrentStallContext() {
     .limit(1);
 
   if (profile.role === "admin") {
-    stallQuery = stallQuery.eq("name", "Breakfast Box");
+    // Platform Admin may open a specific stall from the admin stall list.
+    // Without a stall_id, preserve the default Breakfast Box dashboard.
+    const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
+    stallQuery = requestedStallId
+      ? stallQuery.eq("id", requestedStallId)
+      : stallQuery.eq("name", "Breakfast Box");
   } else if (["stall_owner", "staff"].includes(profile.role) && profile.stall_id) {
     stallQuery = stallQuery.eq("id", profile.stall_id);
   } else {
@@ -1038,14 +1043,20 @@ function openMenu() {
 
 
 
+function getStallScopedUrl(page) {
+  const stallId = currentStallId ||
+    new URLSearchParams(window.location.search).get("stall_id");
+  return page + (stallId ? "?stall_id=" + encodeURIComponent(stallId) : "");
+}
+
 function openOrders() {
-  window.location.href = "orders.html";
+  window.location.href = getStallScopedUrl("orders.html");
 }
 function openReports() {
-  window.location.href = "reports.html";
+  window.location.href = getStallScopedUrl("reports.html");
 }
 function openInventory() {
-  window.location.href = "inventory.html";
+  window.location.href = getStallScopedUrl("inventory.html");
 }
 
 
