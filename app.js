@@ -2663,20 +2663,23 @@ async function generateOwnerSetupLink(applicationId) {
       throw new Error("Setup link was created, but applicant contact details could not be loaded. You can still copy the link.");
     }
 
+    // Share a safe landing page, not the one-time Supabase link itself.
+    // WhatsApp link-preview crawlers may open direct recovery links and consume their one-time token.
+    const safeSetupUrl = APP_SITE_URL + "owner-setup.html#" + encodeURIComponent(data.action_link);
     const phone = String(application.phone || "").replace(/[^0-9]/g, "");
     const message = "Hello " + application.owner_name + ",\n\nWelcome to Food Stall Platform! Your " +
       application.stall_name + " stall account has been created with a 7-day free trial.\n\n" +
-      "Please open this secure link to set your password and access your owner dashboard:\n" +
-      data.action_link + "\n\nThank you!";
+      "Please open this page, then tap Continue to securely set your password:\n" +
+      safeSetupUrl + "\n\nThank you!";
     const whatsappUrl = phone
       ? "https://wa.me/" + phone + "?text=" + encodeURIComponent(message)
       : "";
     result.innerHTML = '<p>' + escapeHtml(data.message) + '</p>' +
-      '<input type="text" readonly id="ownerSetupLinkInput-' + applicationId + '" value="' + escapeHtml(data.action_link) + '" style="width:100%;box-sizing:border-box">' +
-      '<button type="button" onclick="copyOwnerSetupLink(\'' + applicationId + '\')">Copy Setup Link</button>' +
+      '<input type="text" readonly id="ownerSetupLinkInput-' + applicationId + '" value="' + escapeHtml(safeSetupUrl) + '" style="width:100%;box-sizing:border-box">' +
+      '<button type="button" onclick="copyOwnerSetupLink(\'' + applicationId + '\')">Copy Safe Setup Link</button>' +
       (whatsappUrl
         ? ' <a class="button" href="' + escapeHtml(whatsappUrl) + '" target="_blank" rel="noopener">Open WhatsApp &amp; Send Message</a>'
-        : '<p>Applicant phone number is missing. Copy the setup link and send it manually.</p>');
+        : '<p>Applicant phone number is missing. Copy the safe setup link and send it manually.</p>');
   } catch (error) {
     console.error("Owner setup link generation failed:", error);
     result.textContent = error.message;
