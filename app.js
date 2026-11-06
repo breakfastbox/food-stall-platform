@@ -942,7 +942,7 @@ async function loadStallDashboard() {
 
   const { data: menuItems, error: menuError } = await supabaseClient
     .from("menu_items")
-    .select("id, name, description, price, is_available, category_id")
+    .select("id, name, description, price, is_available, category_id, image_url")
     .eq("stall_id", stall.id)
     .order("created_at", { ascending: true });
 
@@ -970,8 +970,9 @@ async function loadStallDashboard() {
         <h2>${category.name}</h2>
         ${items.map(item => `
           <div class="stall" id="menu-item-${item.id}">
-            <h3>${item.name}</h3>
-            <p>${item.description || "No description"}</p>
+            ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" style="width:100%;max-width:220px;max-height:160px;object-fit:cover;border-radius:10px;">` : ""}
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(item.description || "No description")}</p>
             <p>Price: ₹${item.price}</p>
             <span class="status">
               ${item.is_available ? "Available" : "Unavailable"}
@@ -1001,8 +1002,9 @@ async function loadStallDashboard() {
         <h2>Uncategorized</h2>
         ${uncategorizedItems.map(item => `
           <div class="stall" id="menu-item-${item.id}">
-            <h3>${item.name}</h3>
-            <p>${item.description || "No description"}</p>
+            ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" style="width:100%;max-width:220px;max-height:160px;object-fit:cover;border-radius:10px;">` : ""}
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(item.description || "No description")}</p>
             <p>Price: ₹${item.price}</p>
             <span class="status">
               ${item.is_available ? "Available" : "Unavailable"}
@@ -1914,42 +1916,36 @@ async function addMenuCategory() {
 }
 
 async function addMenuItem() {
-
-  const name =
-    document.getElementById("itemName").value.trim();
-
-  const description =
-    document.getElementById("itemDescription").value.trim();
-
-  const price =
-    Number(document.getElementById("itemPrice").value);
-
-  const imageUrl =
-    document.getElementById("itemImage").value.trim();
-const categoryId =
-  document.getElementById("itemCategory").value;
-  const isAvailable =
-    document.getElementById("itemAvailable").checked;
-
-  const message =
-    document.getElementById("menuMessage");
-
+  const name = document.getElementById("itemName").value.trim();
+  const description = document.getElementById("itemDescription").value.trim();
+  const price = Number(document.getElementById("itemPrice").value);
+  const categoryId = document.getElementById("itemCategory").value;
+  const isAvailable = document.getElementById("itemAvailable").checked;
+  const photoInput = document.getElementById("itemPhotoFile");
+  const photoFile = photoInput?.files?.[0] || null;
+  const message = document.getElementById("menuMessage");
 
   if (!name) {
     message.textContent = "Please enter the food item name.";
     return;
   }
-
-
-  if (price < 0 || isNaN(price)) {
+  if (!Number.isFinite(price) || price < 0) {
     message.textContent = "Please enter a valid price.";
     return;
   }
-
+  if (photoFile) {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowedTypes.includes(photoFile.type)) {
+      message.textContent = "Please choose a PNG, JPG or WEBP image.";
+      return;
+    }
+    if (photoFile.size > 2 * 1024 * 1024) {
+      message.textContent = "Food photo must be 2 MB or smaller.";
+      return;
+    }
+  }
 
   message.textContent = "Adding menu item...";
-
-
   let stallId;
   try {
     stallId = (await getCurrentStallContext()).stall.id;
@@ -1958,43 +1954,54 @@ const categoryId =
     return;
   }
 
+  let imageUrl = null;
+  if (photoFile) {
+    const extension = photoFile.type === "image/png" ? "png" :
+      photoFile.type === "image/webp" ? "webp" : "jpg";
+    const filePath = stallId + "/menu-items/" + crypto.randomUUID() + "." + extension;
+    const { error: uploadError } = await supabaseClient.storage
+      .from("stall-logos")
+      .upload(filePath, photoFile, {
+        cacheControl: "3600",
+        contentType: photoFile.type,
+        upsert: false
+      });
+    if (uploadError) {
+      console.error("Menu photo upload failed:", uploadError);
+      message.textContent = "Could not upload food photo: " + uploadError.message;
+      return;
+    }
+    const { data: publicData } = supabaseClient.storage
+      .from("stall-logos")
+      .getPublicUrl(filePath);
+    imageUrl = publicData.publicUrl;
+  }
 
   const { error } = await supabaseClient
     .from("menu_items")
-   
-.insert({
-  stall_id: stallId,
-  category_id: categoryId || null,
-  name: name,
-  description: description || null,
-  price: price,
-  image_url: imageUrl || null,
-  is_available: isAvailable
-});
+    .insert({
+      stall_id: stallId,
+      category_id: categoryId || null,
+      name,
+      description: description || null,
+      price,
+      image_url: imageUrl,
+      is_available: isAvailable
+    });
 
   if (error) {
-
-    console.error(error);
-
-    message.textContent =
-      "Unable to add item: " + error.message;
-
+    console.error("Could not add menu item:", error);
+    message.textContent = "Unable to add item: " + error.message;
     return;
   }
 
-
-  message.textContent =
-    "Menu item added successfully!";
-
-
+  message.textContent = "Menu item added successfully!";
   document.getElementById("itemName").value = "";
   document.getElementById("itemDescription").value = "";
   document.getElementById("itemPrice").value = "";
-  document.getElementById("itemImage").value = "";
+  if (photoInput) photoInput.value = "";
   document.getElementById("itemAvailable").checked = true;
-
-
-  loadStallDashboard();
+  await loadStallDashboard();
 }
 async function toggleMenuItem(itemId, currentStatus) {
 
