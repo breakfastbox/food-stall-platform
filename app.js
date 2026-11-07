@@ -386,6 +386,32 @@ async function loginAdmin() {
     return;
   }
 
+  // The root page is reserved for Platform Admin accounts.
+  // A valid stall-owner password must never open the admin dashboard.
+  try {
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error("Could not verify your account. Please sign in again.");
+    }
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) throw new Error("Could not verify account permissions: " + profileError.message);
+    if (!profile || profile.role !== "admin") {
+      await supabaseClient.auth.signOut();
+      loginMessage.textContent = "This is a stall-owner account. Please sign in from the Stall Dashboard page.";
+      return;
+    }
+  } catch (roleError) {
+    await supabaseClient.auth.signOut();
+    loginMessage.textContent = roleError.message || "This account does not have Platform Admin access.";
+    return;
+  }
+
   try {
     await setOrderingEnabled("resume");
   } catch (error) {
