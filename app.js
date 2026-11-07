@@ -2397,6 +2397,8 @@ async function loadDailyReport() {
     const formatRupees = amount => "₹" + amount.toLocaleString("en-IN", {
       minimumFractionDigits: 2, maximumFractionDigits: 2
     });
+    const totalOrdersElement = document.getElementById("totalOrders");
+    if (totalOrdersElement) totalOrdersElement.textContent = String(validOrders.length);
     document.getElementById("paidSales").textContent = formatRupees(paidSales);
     document.getElementById("pendingPayments").textContent = formatRupees(pendingPayments);
     document.getElementById("businessExpenses").textContent = formatRupees(businessExpenses);
