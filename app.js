@@ -2239,6 +2239,7 @@ async function loadDailyReport() {
     // Daily reports follow the stall's explicit login session, not midnight.
     // Weekly and monthly reports continue to use calendar boundaries.
     let sessionReport = false;
+    let reportSession = null;
     if (period === "daily") {
       const { data: session, error: sessionError } = await supabaseClient
         .from("stall_token_sessions")
@@ -2248,6 +2249,7 @@ async function loadDailyReport() {
         .maybeSingle();
       if (sessionError) throw sessionError;
       if (session) {
+        reportSession = session;
         reportStartDate = new Date(session.started_at);
         reportEndDate = session.ended_at ? new Date(session.ended_at) : new Date();
         sessionReport = true;
@@ -2267,7 +2269,7 @@ async function loadDailyReport() {
           hour: "2-digit", minute: "2-digit"
         });
         rangeDisplay.textContent = "Daily stall session: " + startLabel + " to " +
-          (session.ended_at ? endLabel : "now (continues until next-day login)");
+          (reportSession.ended_at ? endLabel : "now (continues until next-day login)");
       } else {
         rangeDisplay.textContent = periodLabel + " report: " +
           formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000));
