@@ -2223,13 +2223,11 @@ async function loadDailyReport() {
     const [y, m, d] = toDateInput(date).split("-");
     return d + "-" + m + "-" + y.slice(-2);
   };
-  const startDateString = toDateInput(startDate);
-  const endDateString = toDateInput(new Date(endDate.getTime() - 86400000));
+  let reportStartDate = startDate;
+  let reportEndDate = endDate;
+  let reportStartDateString = toDateInput(startDate);
+  let reportEndDateString = toDateInput(new Date(endDate.getTime() - 86400000));
   const periodLabel = period === "weekly" ? "Weekly" : period === "monthly" ? "Monthly" : "Daily";
-  if (rangeDisplay) {
-    rangeDisplay.textContent = periodLabel + " report: " +
-      formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000));
-  }
 
   message.textContent = "Loading report...";
   if (button) button.disabled = true;
@@ -2238,12 +2236,50 @@ async function loadDailyReport() {
     const stall = (await getCurrentStallContext()).stall;
     document.getElementById("reportStallName").textContent = stall.name;
 
+    // Daily reports follow the stall's explicit login session, not midnight.
+    // Weekly and monthly reports continue to use calendar boundaries.
+    let sessionReport = false;
+    if (period === "daily") {
+      const { data: session, error: sessionError } = await supabaseClient
+        .from("stall_token_sessions")
+        .select("started_at, ended_at")
+        .eq("stall_id", stall.id)
+        .eq("session_date", selectedDate)
+        .maybeSingle();
+      if (sessionError) throw sessionError;
+      if (session) {
+        reportStartDate = new Date(session.started_at);
+        reportEndDate = session.ended_at ? new Date(session.ended_at) : new Date();
+        sessionReport = true;
+      }
+    }
+
+    reportStartDateString = toDateInput(reportStartDate);
+    reportEndDateString = toDateInput(reportEndDate);
+    if (rangeDisplay) {
+      if (sessionReport) {
+        const startLabel = reportStartDate.toLocaleString("en-IN", {
+          day: "2-digit", month: "2-digit", year: "2-digit",
+          hour: "2-digit", minute: "2-digit"
+        });
+        const endLabel = reportEndDate.toLocaleString("en-IN", {
+          day: "2-digit", month: "2-digit", year: "2-digit",
+          hour: "2-digit", minute: "2-digit"
+        });
+        rangeDisplay.textContent = "Daily stall session: " + startLabel + " to " +
+          (session.ended_at ? endLabel : "now (continues until next-day login)");
+      } else {
+        rangeDisplay.textContent = periodLabel + " report: " +
+          formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000));
+      }
+    }
+
     const { data: orders, error: ordersError } = await supabaseClient
       .from("orders")
       .select("id, total_amount, subtotal, payment_status, order_status, created_at, stock_deducted_at")
       .eq("stall_id", stall.id)
-      .gte("created_at", startDate.toISOString())
-      .lt("created_at", endDate.toISOString());
+      .gte("created_at", reportStartDate.toISOString())
+      .lt("created_at", reportEndDate.toISOString());
     if (ordersError) throw ordersError;
 
     const validOrders = (orders || []).filter(order => order.order_status !== "cancelled");
@@ -2258,8 +2294,8 @@ async function loadDailyReport() {
       .from("business_expenses")
       .select("amount")
       .eq("stall_id", stall.id)
-      .gte("expense_date", startDateString)
-      .lte("expense_date", endDateString);
+      .gte("expense_date", reportStartDateString)
+      .lte("expense_date", reportEndDateString);
     if (expensesError) throw expensesError;
     const businessExpenses = (expenses || []).reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
@@ -2374,8 +2410,8 @@ async function loadDailyReport() {
         (ingredientCostDataIncomplete
           ? "Some menu items are not marked recipe-complete, or recipe records or ingredient prices are missing or invalid. Ingredient cost may be understated."
           : "");
-    message.textContent = periodLabel + " report loaded for " +
-      formatDate(startDate) + " to " + formatDate(new Date(endDate.getTime() - 86400000)) +
+    message.textContent = (sessionReport ? "Daily stall-session report loaded" : periodLabel + " report loaded") +
+      " for " + formatDate(reportStartDate) + " to " + formatDate(reportEndDate) +
       ". Paid sales exclude pending payments and cancelled orders." +
       costCoverageMessage +
       " Estimated profit is provisional, not verified final profit.";
