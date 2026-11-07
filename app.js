@@ -520,6 +520,21 @@ function getLocalDateInputValue() {
     String(today.getDate()).padStart(2, "0");
 }
 
+function getOneMonthSubscriptionEnd(startDate) {
+  const parts = String(startDate || "").split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return "";
+  const [year, month, day] = parts;
+  const nextMonth = new Date(Date.UTC(year, month, 1));
+  const targetYear = nextMonth.getUTCFullYear();
+  const targetMonth = nextMonth.getUTCMonth();
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(day, lastDay);
+  const end = new Date(Date.UTC(targetYear, targetMonth, clampedDay) - 86400000);
+  return end.getUTCFullYear() + "-" +
+    String(end.getUTCMonth() + 1).padStart(2, "0") + "-" +
+    String(end.getUTCDate()).padStart(2, "0");
+}
+
 async function loadSubscriptionPaymentStalls(stalls) {
   const select = document.getElementById("subscriptionPaymentStall");
   if (!select) return;
@@ -543,10 +558,25 @@ async function loadSubscriptionPaymentStalls(stalls) {
   }
 
   const today = getIndiaDateInputValue();
-  ["subscriptionPaymentDate", "subscriptionPeriodStart", "subscriptionPeriodEnd"].forEach(id => {
-    const input = document.getElementById(id);
-    if (input && !input.value) input.value = today;
-  });
+  const paymentDateInput = document.getElementById("subscriptionPaymentDate");
+  const periodStartInput = document.getElementById("subscriptionPeriodStart");
+  const periodEndInput = document.getElementById("subscriptionPeriodEnd");
+
+  if (paymentDateInput && !paymentDateInput.value) paymentDateInput.value = today;
+  if (periodStartInput && !periodStartInput.value) periodStartInput.value = today;
+  if (periodEndInput && (!periodEndInput.value ||
+      periodEndInput.value === periodStartInput?.value)) {
+    periodEndInput.value = getOneMonthSubscriptionEnd(periodStartInput?.value || today);
+  }
+
+  if (periodStartInput && !periodStartInput.dataset.endDateLinked) {
+    periodStartInput.addEventListener("change", () => {
+      if (periodEndInput) {
+        periodEndInput.value = getOneMonthSubscriptionEnd(periodStartInput.value);
+      }
+    });
+    periodStartInput.dataset.endDateLinked = "true";
+  }
 
   await loadSubscriptionPayments();
 }
