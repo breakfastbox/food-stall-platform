@@ -1650,6 +1650,10 @@ if (knownOrderIdsForAlerts === null) {
         `
         : "<p>No item details recorded.</p>";
 
+      const customerInstructions = String(order.special_instructions || "").trim()
+        ? `<div style="margin:12px 0;padding:14px 16px;border:2px solid #dc2626;border-left:7px solid #dc2626;border-radius:10px;background:#fff1f2;color:#991b1b;font-weight:700;"><div style="font-size:15px;margin-bottom:6px;">⚠ CUSTOMER INSTRUCTIONS</div><div style="white-space:pre-wrap;">${escapeHtml(order.special_instructions)}</div></div>`
+        : "";
+
       const token = order.token_number == null
         ? "Not assigned"
         : String(order.token_number).padStart(4, "0");
@@ -1660,6 +1664,7 @@ if (knownOrderIdsForAlerts === null) {
 
           <p><strong>Food Items:</strong></p>
           ${itemList}
+          ${customerInstructions}
 
           <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
