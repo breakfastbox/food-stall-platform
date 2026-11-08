@@ -1053,6 +1053,10 @@ async function loadStallDashboard() {
             </span>
             <br><br>
             <button onclick="editMenuItem('${item.id}')">Edit</button>
+            <label style="display:inline-block;margin:6px 4px;">
+              Change photo
+              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="changeMenuItemPhoto('${item.id}', this)" style="display:block;max-width:190px;">
+            </label>
             <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
@@ -1085,6 +1089,10 @@ async function loadStallDashboard() {
             </span>
             <br><br>
             <button onclick="editMenuItem('${item.id}')">Edit</button>
+            <label style="display:inline-block;margin:6px 4px;">
+              Change photo
+              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="changeMenuItemPhoto('${item.id}', this)" style="display:block;max-width:190px;">
+            </label>
             <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
@@ -2109,61 +2117,74 @@ async function toggleMenuItem(itemId, currentStatus) {
   loadStallDashboard();
 }
 async function editMenuItem(itemId) {
-
-  const newName =
-    prompt("Enter new item name:");
-
-  if (newName === null) {
-    return;
-  }
-
-
-  const newPrice =
-    prompt("Enter new price:");
-
-  if (newPrice === null) {
-    return;
-  }
-
-
+  const newName = prompt("Enter new item name:");
+  if (newName === null) return;
+  const newPrice = prompt("Enter new price:");
+  if (newPrice === null) return;
   const price = Number(newPrice);
-
-
-  if (!newName.trim() || isNaN(price) || price < 0) {
-
-    alert(
-      "Please enter a valid name and price."
-    );
-
+  if (!newName.trim() || !Number.isFinite(price) || price < 0) {
+    alert("Please enter a valid name and price.");
     return;
   }
-
-
   const { error } = await supabaseClient
     .from("menu_items")
-    .update({
-      name: newName.trim(),
-      price: price
-    })
+    .update({ name: newName.trim(), price })
     .eq("id", itemId);
-
-
   if (error) {
-
     console.error(error);
-
-    alert(
-      "Unable to update item: " +
-      error.message
-    );
-
+    alert("Unable to update item: " + error.message);
     return;
   }
-
-
   alert("Menu item updated successfully!");
+  await loadStallDashboard();
+}
 
-  loadStallDashboard();
+async function changeMenuItemPhoto(itemId, input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const message = document.getElementById("menuMessage");
+  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    if (message) message.textContent = "Choose a PNG, JPG or WEBP image.";
+    input.value = "";
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    if (message) message.textContent = "Food photo must be 2 MB or smaller.";
+    input.value = "";
+    return;
+  }
+  try {
+    if (message) message.textContent = "Uploading replacement photo...";
+    const stall = (await getCurrentStallContext()).stall;
+    const extension = file.type === "image/png" ? "png" :
+      file.type === "image/webp" ? "webp" : "jpg";
+    const filePath = stall.id + "/menu-items/" + crypto.randomUUID() + "." + extension;
+    const { error: uploadError } = await supabaseClient.storage
+      .from("stall-logos")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        contentType: file.type,
+        upsert: false
+      });
+    if (uploadError) throw uploadError;
+    const { data: publicData } = supabaseClient.storage
+      .from("stall-logos")
+      .getPublicUrl(filePath);
+    const { error: updateError } = await supabaseClient
+      .from("menu_items")
+      .update({ image_url: publicData.publicUrl })
+      .eq("id", itemId)
+      .eq("stall_id", stall.id);
+    if (updateError) throw updateError;
+    if (message) message.textContent = "Menu photo updated successfully.";
+    await loadStallDashboard();
+  } catch (error) {
+    console.error("Could not replace menu photo:", error);
+    if (message) message.textContent = "Could not update photo: " + (error.message || "Please try again.");
+  } finally {
+    if (input) input.value = "";
+  }
 }
 
 window.deleteMenuItem = async function deleteMenuItem(itemId) {
