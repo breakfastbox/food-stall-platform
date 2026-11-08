@@ -20,7 +20,17 @@
     .category-order-actions { display:flex; gap:5px; }
     .category-order-actions button { min-width:36px; padding:7px; background:#f5ece3; color:#553722; }
     .category-order-row[aria-grabbed="true"] { outline:2px solid #b77945; }
-  </style>
+  
+    .menu-item-order-hint { color:#667085; font-size:13px; margin:8px 0 12px; }
+    .menu-item-order-controls { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .menu-item-order-handle { cursor:grab; touch-action:none; padding:7px 12px; font-size:18px; }
+    .menu-item-order-handle:active { cursor:grabbing; }
+    .menu-item-order-label { color:#667085; font-size:13px; }
+    .menu-item-order-actions { display:inline-flex; gap:5px; margin-left:auto; }
+    .menu-item-order-actions button { min-width:36px; padding:6px 10px; }
+    #menuList [data-menu-item-row].dragging { opacity:.55; outline:2px dashed #64748b; }
+    #menuList .menu-item-order-controls.drop-target { background:#eef4ff; border-radius:8px; }
+</style>
 </head>
 
 <body>
@@ -308,7 +318,7 @@
       if (recoveryBox) recoveryBox.style.setProperty("display", "block", "important");
     }
   </script>
-  <script src="app.js?v=category-drag-sort-20261108"></script>
+  <script src="app.js?v=category-and-item-drag-sort-20261108"></script>
 
 </body>
 </html>
