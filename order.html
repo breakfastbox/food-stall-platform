@@ -207,7 +207,8 @@
     .quantity-control { display:flex; align-items:center; gap:5px; margin-top:9px; }
     .quantity-control button { width:30px; height:30px; min-height:30px; padding:0; border:1px solid #e4d7cb; border-radius:9px; background:#fbf6ef; color:var(--coffee); font-weight:800; }
     .quantity-control input[type="number"] { width:39px; min-height:30px; height:30px; padding:2px; border:0; background:#fbf6ef; font-size:13px; }
-    .menu-photo-placeholder { display:flex; align-items:center; justify-content:center; padding:8px; color:#987e6a; font-size:11px; font-weight:700; text-align:center; background:linear-gradient(145deg,#f7eee4,#ead9c7); }\n    .menu-empty { grid-column:1/-1; padding:35px 18px; border:1px dashed #dfd0c2; border-radius:16px; color:var(--muted); text-align:center; background:#fff; }
+    .menu-photo-placeholder { display:flex; align-items:center; justify-content:center; padding:8px; color:#987e6a; font-size:11px; font-weight:700; text-align:center; background:linear-gradient(145deg,#f7eee4,#ead9c7); }
+    .menu-empty { grid-column:1/-1; padding:35px 18px; border:1px dashed #dfd0c2; border-radius:16px; color:var(--muted); text-align:center; background:#fff; }
     .checkout-panel { scroll-margin-top:18px; }
     .total { border-radius:14px; }
     .mobile-order-bar { display:none; }
@@ -325,7 +326,8 @@
     </section>
   </main>
 
-  <button type="button" id="mobileOrderBar" class="mobile-order-bar" aria-label="Go to checkout"><span><strong id="mobileOrderCount">0 items</strong><small>View your order</small></span><strong>₹<span id="mobileOrderTotal">0.00</span>　→</strong></button>\n  <footer id="pageFooter">Fresh vegetarian food</footer>
+  <button type="button" id="mobileOrderBar" class="mobile-order-bar" aria-label="Go to checkout"><span><strong id="mobileOrderCount">0 items</strong><small>View your order</small></span><strong>₹<span id="mobileOrderTotal">0.00</span>　→</strong></button>
+  <footer id="pageFooter">Fresh vegetarian food</footer>
 
   <script>
     const SUPABASE_URL =
@@ -346,7 +348,8 @@
     let stallId = null;
     let stallName = "This stall";
     let stallPhone = "";
-    let menuItems = [];\n    let menuCategories = [];\n    let activeCategory = "all";\n    let menuSearchTerm = "";
+    let menuItems = [];
+    let menuCategories = [];\n    let activeCategory = "all";\n    let menuSearchTerm = "";
 let stallOrderingPaused = false;
     const menuList = document.getElementById("menuList");
     const message = document.getElementById("message");
