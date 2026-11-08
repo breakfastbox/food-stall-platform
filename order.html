@@ -176,7 +176,61 @@
     .success { color: #176b45; }
     .error { color: #b42318; }
     footer { text-align: center; color: #8b7b70; font-size: 12px; padding: 18px 15px 28px; }
-    @media (max-width: 520px) {
+
+    /* Customer-facing menu refresh */
+    header { padding: 48px 20px 58px; }
+    header h1 { font-size: clamp(34px, 7vw, 54px); }
+    header p { font-size: 15px; }
+    main { width: min(1080px, 100%); margin-top: 30px; padding-bottom: 100px; }
+    .intro { margin: 0 3px 22px; }
+    .intro h2, .menu-heading h2 { font-size: clamp(27px, 4vw, 34px); }
+    .menu-section { margin: 0 0 22px; }
+    .menu-heading { display:flex; justify-content:space-between; align-items:end; margin:0 3px 18px; }
+    .eyebrow { display:block; margin-bottom:7px; color:var(--caramel); font-size:10px; font-weight:850; letter-spacing:1.7px; }
+    .menu-heading h2 { margin:0 0 5px; }
+    .menu-tools { position:sticky; top:0; z-index:5; padding:12px 0 14px; background:var(--cream); }
+    .menu-search { display:flex; align-items:center; gap:10px; height:48px; padding:0 15px; border:1px solid #e8ddd2; border-radius:14px; background:#fff; box-shadow:0 5px 18px #4a2b1708; }
+    .menu-search span { color:var(--caramel); font-size:25px; line-height:1; }
+    .menu-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--ink); font-size:14px; }
+    .menu-search input:focus { outline:0; }
+    .category-filters { display:flex; gap:8px; overflow-x:auto; padding:12px 1px 3px; scrollbar-width:thin; }
+    .category-chip { flex:0 0 auto; padding:9px 14px; border:1px solid #e8ddd2; border-radius:999px; background:#fff; color:#65564d; font-size:12px; font-weight:750; }
+    .category-chip.active { border-color:var(--coffee); background:var(--coffee); color:#fff; }
+    .menu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .menu-item { position:relative; display:flex; align-items:stretch; gap:13px; min-width:0; min-height:142px; padding:12px; border:1px solid #eee4da; border-radius:18px; background:#fff; box-shadow:0 7px 22px #4a2b1708; }
+    .menu-item:last-child { padding-bottom:12px; border-bottom:1px solid #eee4da; }
+    .menu-item-photo { width:116px; height:116px; flex:0 0 116px; border-radius:13px; }
+    .menu-item-details { display:flex; flex:1; flex-direction:column; min-width:0; }
+    .item-name { font-size:15px; }
+    .item-description { display:-webkit-box; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; min-height:32px; }
+    .item-price { margin-top:auto; padding-top:8px; font-size:16px; }
+    .quantity-control { display:flex; align-items:center; gap:5px; margin-top:9px; }
+    .quantity-control button { width:30px; height:30px; min-height:30px; padding:0; border:1px solid #e4d7cb; border-radius:9px; background:#fbf6ef; color:var(--coffee); font-weight:800; }
+    .quantity-control input[type="number"] { width:39px; min-height:30px; height:30px; padding:2px; border:0; background:#fbf6ef; font-size:13px; }
+    .menu-photo-placeholder { display:flex; align-items:center; justify-content:center; padding:8px; color:#987e6a; font-size:11px; font-weight:700; text-align:center; background:linear-gradient(145deg,#f7eee4,#ead9c7); }\n    .menu-empty { grid-column:1/-1; padding:35px 18px; border:1px dashed #dfd0c2; border-radius:16px; color:var(--muted); text-align:center; background:#fff; }
+    .checkout-panel { scroll-margin-top:18px; }
+    .total { border-radius:14px; }
+    .mobile-order-bar { display:none; }
+    @media (max-width:700px) {
+      main { margin-top:20px; padding-inline:13px; padding-bottom:115px; }
+      header { padding:36px 16px 43px; }
+      .menu-grid { grid-template-columns:1fr; gap:10px; }
+      .menu-item { min-height:126px; padding:10px; border-radius:15px; }
+      .menu-item-photo { width:104px; height:104px; flex-basis:104px; }
+      .menu-tools { margin-inline:-2px; }
+      .category-filters { margin-right:-13px; }
+      .mobile-order-bar { position:fixed; z-index:20; left:12px; right:12px; bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; width:calc(100% - 24px); min-height:60px; padding:10px 17px; border:1px solid #ffffff20; border-radius:16px; background:linear-gradient(135deg,#276f4e,#174b34); color:white; text-align:left; box-shadow:0 10px 30px #172d2180; }
+      .mobile-order-bar span { display:flex; flex-direction:column; gap:1px; }
+      .mobile-order-bar small { color:#e1f0e7; font-size:11px; font-weight:500; }
+      .mobile-order-bar strong { font-size:14px; }
+      .mobile-order-bar > strong { font-size:17px; }
+    }
+    @media (max-width:380px) {
+      .menu-item { gap:9px; }
+      .menu-item-photo { width:88px; height:88px; flex-basis:88px; }
+      .item-name { font-size:14px; }
+    }
+\n    @media (max-width: 520px) {
       header { padding: 28px 16px 35px; }
       main { margin-top: 18px; padding-inline: 12px; }
       .menu-item { gap: 10px; }
@@ -208,15 +262,21 @@
       <h2>Something delicious awaits.</h2>
       <p>Explore the menu, choose your quantities and place your order in a few easy steps.</p>
     </div>
-    <section class="panel">
-      <h2>Explore the menu</h2>
-      <p class="section-hint">Choose the quantity beside each item. Your total updates automatically.</p>
-      <div id="menuList">Loading menu...</div>
+    <section class="menu-section" aria-label="Menu">
+      <div class="menu-heading">
+        <div><span class="eyebrow">MADE FRESH FOR YOU</span><h2>Explore our menu</h2>
+        <p class="section-hint">Find your favourites and add them to your order.</p></div>
+      </div>
+      <div class="menu-tools">
+        <label class="menu-search"><span aria-hidden="true">⌕</span><input id="menuSearch" type="search" placeholder="Search dishes..." autocomplete="off" aria-label="Search menu"></label>
+        <div id="categoryFilters" class="category-filters" aria-label="Menu categories"></div>
+      </div>
+      <div id="menuList" class="menu-grid">Loading menu...</div>
     </section>
 
     <section class="panel">
       <h2>Where should we reach you?</h2>
-      <p class="section-hint">Add your contact details so the stall can confirm your order.</p>
+      <p class="section-hint">Share your details so the stall can confirm your order.</p>
 
       <form id="orderForm">
         <div class="field">
@@ -265,7 +325,7 @@
     </section>
   </main>
 
-  <footer id="pageFooter">Fresh vegetarian food</footer>
+  <button type="button" id="mobileOrderBar" class="mobile-order-bar" aria-label="Go to checkout"><span><strong id="mobileOrderCount">0 items</strong><small>View your order</small></span><strong>₹<span id="mobileOrderTotal">0.00</span>　→</strong></button>\n  <footer id="pageFooter">Fresh vegetarian food</footer>
 
   <script>
     const SUPABASE_URL =
@@ -286,7 +346,7 @@
     let stallId = null;
     let stallName = "This stall";
     let stallPhone = "";
-    let menuItems = [];
+    let menuItems = [];\n    let menuCategories = [];\n    let activeCategory = "all";\n    let menuSearchTerm = "";
 let stallOrderingPaused = false;
     const menuList = document.getElementById("menuList");
     const message = document.getElementById("message");
@@ -310,7 +370,7 @@ let stallOrderingPaused = false;
         const requestedMenuPromise = requestedStallId
           ? client
               .from("menu_items")
-              .select("id, name, description, price, image_url, is_available")
+              .select("id, name, description, price, image_url, is_available, category_id")
               .eq("stall_id", requestedStallId)
               .eq("is_available", true)
               .gt("price", 0)
@@ -373,78 +433,19 @@ let stallOrderingPaused = false;
         if (error) throw error;
 
         menuItems = data || [];
+        const { data: categoryRows, error: categoryError } = await client
+          .from("menu_categories")
+          .select("id, name, sort_order")
+          .eq("stall_id", stallId)
+          .order("sort_order")
+          .order("name");
+        if (categoryError) console.warn("Menu categories could not be loaded:", categoryError);
+        menuCategories = (categoryRows || []).filter(category =>
+          menuItems.some(item => item.category_id === category.id)
+        );
 
-        if (menuItems.length === 0) {
-          menuList.textContent = "No available menu items yet.";
-          return;
-        }
-
-        menuList.replaceChildren();
-
-        menuItems.forEach(item => {
-          const row = document.createElement("div");
-          row.className = "menu-item";
-
-          const details = document.createElement("div");
-          details.style.flex = "1";
-          details.style.minWidth = "0";
-
-          if (item.image_url) {
-            const photo = document.createElement("img");
-            photo.className = "menu-item-photo";
-            // Use the exact public Storage URL that was verified to open directly.
-            photo.src = item.image_url;
-            photo.alt = item.name;
-            photo.loading = "eager";
-            photo.decoding = "async";
-            photo.referrerPolicy = "no-referrer";
-            photo.style.display = "block";
-            photo.onerror = () => {
-              const fallback = document.createElement("a");
-              fallback.href = item.image_url;
-              fallback.target = "_blank";
-              fallback.rel = "noopener noreferrer";
-              fallback.textContent = "View photo";
-              fallback.style.cssText = "display:flex;align-items:center;justify-content:center;width:88px;min-width:88px;height:88px;background:#f0f0f0;border-radius:10px;font-size:12px;text-align:center;padding:6px;";
-              photo.replaceWith(fallback);
-            };
-            row.append(photo);
-          }
-
-          const name = document.createElement("div");
-          name.className = "item-name";
-          name.textContent = item.name;
-
-          const price = document.createElement("div");
-          price.className = "item-price";
-          price.textContent = "₹" + money(item.price);
-
-          details.append(name);
-
-          if (item.description) {
-            const description = document.createElement("div");
-            description.className = "item-description";
-            description.textContent = item.description;
-            details.append(description);
-          }
-
-          details.append(price);
-
-          const quantity = document.createElement("input");
-          quantity.type = "number";
-          quantity.min = "0";
-          quantity.max = "50";
-          quantity.step = "1";
-          quantity.value = "0";
-         quantity.disabled = stallOrderingPaused;
-          quantity.setAttribute("aria-label", "Quantity of " + item.name);
-          quantity.dataset.itemId = item.id;
-          quantity.addEventListener("input", updateTotal);
-
-          row.append(details, quantity);
-          menuList.append(row);
-        });
-
+        renderCategoryFilters();
+        renderMenuItems();
         updateTotal();
       } catch (error) {
         console.error(error);
@@ -452,6 +453,141 @@ let stallOrderingPaused = false;
           "Could not load the menu. Check the page's browser console and Supabase permissions.";
       }
     }
+
+
+    function renderCategoryFilters() {
+      const container = document.getElementById("categoryFilters");
+      if (!container) return;
+      container.replaceChildren();
+      const counts = new Map();
+      menuItems.forEach(item => counts.set(item.category_id || "other", (counts.get(item.category_id || "other") || 0) + 1));
+      const filters = [{ id:"all", name:"All items" }, ...menuCategories.map(category => ({ id:category.id, name:category.name }))];
+      if (menuItems.some(item => !menuCategories.some(category => category.id === item.category_id))) {
+        filters.push({ id:"other", name:"More" });
+      }
+      filters.forEach(category => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "category-chip" + (activeCategory === category.id ? " active" : "");
+        button.textContent = category.name;
+        button.setAttribute("aria-pressed", String(activeCategory === category.id));
+        button.addEventListener("click", () => {
+          activeCategory = category.id;
+          renderCategoryFilters();
+          renderMenuItems();
+        });
+        container.append(button);
+      });
+    }
+
+    function renderMenuItems() {
+      menuList.replaceChildren();
+      const normalizedSearch = menuSearchTerm.trim().toLowerCase();
+      const visibleItems = menuItems.filter(item => {
+        const categoryMatch = activeCategory === "all" ||
+          (activeCategory === "other"
+            ? !menuCategories.some(category => category.id === item.category_id)
+            : item.category_id === activeCategory);
+        const searchMatch = !normalizedSearch ||
+          (item.name + " " + (item.description || "")).toLowerCase().includes(normalizedSearch);
+        return categoryMatch && searchMatch;
+      });
+      if (!visibleItems.length) {
+        const empty = document.createElement("div");
+        empty.className = "menu-empty";
+        empty.textContent = normalizedSearch ? "No dishes match your search. Try another name." : "No items in this category yet.";
+        menuList.append(empty);
+        return;
+      }
+
+      visibleItems.forEach(item => {
+        const row = document.createElement("article");
+        row.className = "menu-item";
+        const details = document.createElement("div");
+        details.className = "menu-item-details";
+
+        if (item.image_url) {
+          const photo = document.createElement("img");
+          photo.className = "menu-item-photo";
+          photo.src = item.image_url;
+          photo.alt = item.name;
+          photo.loading = "lazy";
+          photo.decoding = "async";
+          photo.referrerPolicy = "no-referrer";
+          photo.onerror = () => {
+            const fallback = document.createElement("div");
+            fallback.className = "menu-item-photo menu-photo-placeholder";
+            fallback.textContent = "Photo unavailable";
+            photo.replaceWith(fallback);
+          };
+          row.append(photo);
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "menu-item-photo menu-photo-placeholder";
+          placeholder.textContent = "Freshly made";
+          row.append(placeholder);
+        }
+
+        const name = document.createElement("div");
+        name.className = "item-name";
+        name.textContent = item.name;
+        details.append(name);
+
+        if (item.description) {
+          const description = document.createElement("div");
+          description.className = "item-description";
+          description.textContent = item.description;
+          details.append(description);
+        }
+
+        const price = document.createElement("div");
+        price.className = "item-price";
+        price.textContent = "₹" + money(item.price);
+        details.append(price);
+
+        const quantityControl = document.createElement("div");
+        quantityControl.className = "quantity-control";
+        const minus = document.createElement("button");
+        minus.type = "button";
+        minus.textContent = "−";
+        minus.setAttribute("aria-label", "Decrease " + item.name);
+        const quantity = document.createElement("input");
+        quantity.type = "number";
+        quantity.min = "0";
+        quantity.max = "50";
+        quantity.step = "1";
+        quantity.value = "0";
+        quantity.disabled = stallOrderingPaused;
+        quantity.setAttribute("aria-label", "Quantity of " + item.name);
+        quantity.dataset.itemId = item.id;
+        quantity.addEventListener("input", updateTotal);
+        const plus = document.createElement("button");
+        plus.type = "button";
+        plus.textContent = "+";
+        plus.setAttribute("aria-label", "Increase " + item.name);
+        minus.addEventListener("click", () => {
+          quantity.value = String(Math.max(0, Number(quantity.value || 0) - 1));
+          updateTotal();
+        });
+        plus.addEventListener("click", () => {
+          quantity.value = String(Math.min(50, Number(quantity.value || 0) + 1));
+          updateTotal();
+        });
+        quantityControl.append(minus, quantity, plus);
+        details.append(quantityControl);
+        row.append(details);
+        menuList.append(row);
+      });
+    }
+
+    document.getElementById("menuSearch")?.addEventListener("input", event => {
+      menuSearchTerm = event.target.value || "";
+      renderMenuItems();
+    });
+
+    document.getElementById("mobileOrderBar")?.addEventListener("click", () => {
+      document.getElementById("checkoutPanel")?.scrollIntoView({ behavior:"smooth", block:"start" });
+    });
 
     function getSelectedItems() {
       return Array.from(menuList.querySelectorAll("input[data-item-id]"))
@@ -480,6 +616,11 @@ let stallOrderingPaused = false;
       });
 
       document.getElementById("orderTotal").textContent = money(total);
+      const selectedCount = getSelectedItems().reduce((sum, item) => sum + item.quantity, 0);
+      const mobileCount = document.getElementById("mobileOrderCount");
+      const mobileTotal = document.getElementById("mobileOrderTotal");
+      if (mobileCount) mobileCount.textContent = selectedCount + (selectedCount === 1 ? " item" : " items");
+      if (mobileTotal) mobileTotal.textContent = money(total);
     }
 
     document.getElementById("orderForm").addEventListener("submit", async event => {
