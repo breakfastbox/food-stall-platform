@@ -264,7 +264,7 @@
             card.appendChild(itemList);
 
             const changeDeadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
-            if (order.order_status === "pending" && Date.now() < changeDeadline) {
+            if (["pending", "accepted"].includes(order.order_status) && !order.stock_deducted_at && Date.now() < changeDeadline) {
               const changeBox = document.createElement("div");
               changeBox.style.cssText = "margin-top:16px;padding:14px;border:1px solid #d7e5dc;border-radius:9px;background:#f8fcf9;";
               changeBox.appendChild(createTextElement("h3", "Request an Order Change"));
