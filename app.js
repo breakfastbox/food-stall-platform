@@ -1205,6 +1205,27 @@ async function loadOrdersInternal() {
     return;
   }
 
+  // Fetch customer instructions independently so they are never lost in the
+  // main order payload or hidden by a stale/partial column selection.
+  if (orders && orders.length) {
+    const { data: instructionRows, error: instructionError } = await supabaseClient
+      .from("orders")
+      .select("id, special_instructions")
+      .eq("stall_id", stallId)
+      .in("id", orders.map(order => order.id));
+
+    if (instructionError) {
+      console.error("Could not load customer instructions:", instructionError);
+    } else {
+      const instructionByOrderId = new Map(
+        (instructionRows || []).map(row => [row.id, row.special_instructions])
+      );
+      orders.forEach(order => {
+        order.special_instructions = instructionByOrderId.get(order.id) ?? order.special_instructions ?? "";
+      });
+    }
+  }
+
   if (!orders || orders.length === 0) {
     if (!window.foodStallOrdersInitialized) {
       window.foodStallKnownOrderIds = new Set();
