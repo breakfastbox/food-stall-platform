@@ -340,7 +340,7 @@
   </main>
 
   <button type="button" id="mobileOrderBar" class="mobile-order-bar" aria-label="Go to checkout"><span><strong id="mobileOrderCount">0 items</strong><small>View your order</small></span><strong>₹<span id="mobileOrderTotal">0.00</span>　→</strong></button>
-  <footer id="pageFooter">Fresh vegetarian food</footer>
+  <footer id="pageFooter">Fresh food · Online ordering</footer><div class="customer-history-link"><a id="orderHistoryLink" href="order-history.html">My Orders</a></div>
 
   <script>
     const SUPABASE_URL =
@@ -425,6 +425,8 @@ let stallOrderingPaused = false;
         if (customerLogo) { customerLogo.hidden = !stall.logo_url; if (stall.logo_url) customerLogo.src = stall.logo_url; }
         document.title = stall.name + " | Order Online";
         document.getElementById("pageFooter").textContent = stall.name + " · Online ordering";
+        const historyLink = document.getElementById("orderHistoryLink");
+        if (historyLink) historyLink.href = "order-history.html?stall_id=" + encodeURIComponent(stall.id);
 
         stallOrderingPaused =
           stall.ordering_enabled !== true ||
@@ -862,6 +864,8 @@ try {
   if (!alreadySaved) {
     savedOrders.unshift({
       tracking_code: order.tracking_code,
+      stall_id: stallId,
+      stall_name: stallName,
       saved_at: new Date().toISOString()
     });
 
@@ -895,6 +899,20 @@ try {
 
           messageElement.appendChild(document.createElement("br"));
           messageElement.appendChild(trackingLink);
+
+          const historyLink = document.createElement("a");
+          historyLink.href = "order-history.html?stall_id=" + encodeURIComponent(stallId);
+          historyLink.textContent = "View My Orders";
+          historyLink.style.display = "inline-block";
+          historyLink.style.marginTop = "12px";
+          historyLink.style.marginLeft = "10px";
+          historyLink.style.padding = "12px 18px";
+          historyLink.style.background = "#f5ece3";
+          historyLink.style.color = "#553722";
+          historyLink.style.borderRadius = "8px";
+          historyLink.style.textDecoration = "none";
+          historyLink.style.fontWeight = "bold";
+          messageElement.appendChild(historyLink);
 
         } else {
           const trackingNote = document.createElement("p");
