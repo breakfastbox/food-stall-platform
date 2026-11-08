@@ -1007,7 +1007,8 @@ async function loadStallDashboard() {
     .from("menu_categories")
     .select("id, name, sort_order")
     .eq("stall_id", stall.id)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
 
   if (categoryError) {
     console.error("Could not load categories:", categoryError);
@@ -1977,12 +1978,17 @@ async function saveCategoryDisplayOrder(stallId) {
 
   try {
     for (let index = 0; index < rows.length; index++) {
-      const { error } = await supabaseClient
+      const { data: updatedCategory, error } = await supabaseClient
         .from("menu_categories")
         .update({ sort_order: index + 1 })
         .eq("id", rows[index].dataset.categoryId)
-        .eq("stall_id", stallId);
+        .eq("stall_id", stallId)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!updatedCategory) {
+        throw new Error("A category position was not saved. Please sign in with the stall-owner account and try again.");
+      }
     }
     message.textContent = "Category order saved. Customers will see this order.";
     await loadCategoriesForEditing();
@@ -2237,11 +2243,24 @@ async function addMenuCategory() {
     return;
   }
 
+  const { data: existingCategories, error: categoryOrderError } = await supabaseClient
+    .from("menu_categories")
+    .select("sort_order")
+    .eq("stall_id", stallId);
+  if (categoryOrderError) {
+    message.textContent = "Could not prepare the new category position: " + categoryOrderError.message;
+    return;
+  }
+  const nextSortOrder = (existingCategories || []).reduce(
+    (highest, category) => Math.max(highest, Number(category.sort_order) || 0), 0
+  ) + 1;
+
   const { error } = await supabaseClient
     .from("menu_categories")
     .insert({
       stall_id: stallId,
-      name: categoryName
+      name: categoryName,
+      sort_order: nextSortOrder
     });
 
   if (error) {
