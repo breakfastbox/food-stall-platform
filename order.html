@@ -195,6 +195,7 @@
     .menu-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--ink); font-size:14px; }
     .menu-search input:focus { outline:0; }
     .category-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding:5px 0 12px; }
+    .category-grid[hidden] { display:none; }
     .category-card { display:flex; flex-direction:column; overflow:hidden; padding:0; border:1px solid #eadfd5; border-radius:17px; background:#fff; color:var(--coffee); text-align:left; box-shadow:0 7px 22px #4a2b1708; transition:transform .15s ease, box-shadow .15s ease; }
     .category-card:hover { transform:translateY(-2px); box-shadow:0 11px 26px #4a2b1714; }
     .category-thumb { display:block; width:100%; aspect-ratio:16/10; object-fit:cover; background:linear-gradient(145deg,#f7eee4,#e8d5c1); }
