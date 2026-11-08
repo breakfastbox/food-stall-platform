@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders - Food Stall Platform</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f6fa;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 18px;
+      margin: 15px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    button, select {
+      padding: 10px;
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
+    }
+
+    .status {
+      font-weight: bold;
+    }
+
+    .muted {
+      color: #666;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .summary-card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .summary-label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .summary-card strong {
+      font-size: 25px;
+    }
+
+    .summary-card small {
+      color: #777;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 Order Management</h1>
+    <p class="muted">Loading stall orders...</p>
+
+    <button onclick="loadOrders()">Refresh Orders</button>
+
+<button
+  id="enableOrderSoundButton"
+  onclick="enableOrderSoundAlerts()"
+>
+  Enable Sound Alerts
+</button>
+
+<p id="orderSoundStatus" class="muted">
+  Sound alerts are off. Click to enable.
+</p>
+ 
+<button
+  id="enableBrowserNotificationsButton"
+  onclick="enableBrowserOrderNotifications()"
+>
+  Enable Browser Notifications
+</button>
+
+<p id="browserNotificationStatus" class="muted">
+  Browser notifications are off. Click to enable.
+</p>
+
+<button onclick="window.location.href='stall.html' + window.location.search">
+  Back to Dashboard
+</button>
+
+    <h2>Today's Overview</h2>
+    <div id="dailyOrderSummary" class="summary-grid" aria-live="polite">
+      <div class="summary-card"><span class="summary-label">Total Orders Today</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Pending Orders</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Completed Orders</span><strong>—</strong></div>
+      <div class="summary-card"><span class="summary-label">Today's Sales</span><strong>—</strong><small>Completed orders only</small></div>
+    </div>
+
+    <div class="card">
+      <label for="orderStatusFilter"><strong>Filter orders by status:</strong></label>
+      <select id="orderStatusFilter" onchange="loadOrders()">
+        <option value="all">All Orders</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="preparing">Preparing</option>
+        <option value="ready">Ready</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <label for="orderDateFilter"><strong>Filter orders by date:</strong></label>
+      <select id="orderDateFilter" onchange="toggleCustomOrderDate(); loadOrders();">
+        <option value="all">All Dates</option>
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="custom">Choose a Date</option>
+      </select>
+      <input
+        type="date"
+        id="customOrderDate"
+        aria-label="Choose order date"
+        style="display:none; padding:10px; margin:5px 5px 5px 0;"
+        onchange="loadOrders()"
+      >
+    </div>
+
+    <p id="ordersMessage" class="muted">Loading orders...</p>
+    <h2>Customer Change Requests</h2>
+    <p class="muted">Only pending orders within the 5-minute change window are eligible.</p>
+    <div id="changeRequestsMessage" class="muted">Loading change requests...</div>
+    <div id="changeRequestsList"></div>
+
+    <div id="ordersList"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js?v=customer-instructions-live-page-20261108-1530"></script>
+  <script>
+  loadOrders();
+  loadOrderChangeRequests();
+
+  setInterval(() => {
+    if (!document.hidden) {
+      loadOrders();
+      loadOrderChangeRequests();
+    }
+  }, 20000);
+</script>
+</body>
+</html>
