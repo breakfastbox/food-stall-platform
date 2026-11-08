@@ -194,9 +194,18 @@
     .menu-search span { color:var(--caramel); font-size:25px; line-height:1; }
     .menu-search input { width:100%; min-width:0; border:0; outline:0; background:transparent; color:var(--ink); font-size:14px; }
     .menu-search input:focus { outline:0; }
-    .category-filters { display:flex; gap:8px; overflow-x:auto; padding:12px 1px 3px; scrollbar-width:thin; }
-    .category-chip { flex:0 0 auto; padding:9px 14px; border:1px solid #e8ddd2; border-radius:999px; background:#fff; color:#65564d; font-size:12px; font-weight:750; }
-    .category-chip.active { border-color:var(--coffee); background:var(--coffee); color:#fff; }
+    .category-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding:5px 0 12px; }
+    .category-card { display:flex; flex-direction:column; overflow:hidden; padding:0; border:1px solid #eadfd5; border-radius:17px; background:#fff; color:var(--coffee); text-align:left; box-shadow:0 7px 22px #4a2b1708; transition:transform .15s ease, box-shadow .15s ease; }
+    .category-card:hover { transform:translateY(-2px); box-shadow:0 11px 26px #4a2b1714; }
+    .category-thumb { display:block; width:100%; aspect-ratio:16/10; object-fit:cover; background:linear-gradient(145deg,#f7eee4,#e8d5c1); }
+    .category-thumb-fallback { display:flex; align-items:center; justify-content:center; color:#8b6244; font-family:Georgia,serif; font-size:34px; font-weight:700; }
+    .category-card-copy { display:flex; flex-direction:column; gap:3px; padding:11px 12px 13px; }
+    .category-card-name { font-size:14px; font-weight:800; line-height:1.25; }
+    .category-card-count { color:var(--muted); font-size:11px; }
+    .category-back { display:none; align-items:center; gap:7px; margin:0 0 10px; padding:7px 0; background:transparent; color:var(--caramel); font-size:13px; font-weight:800; }
+    .category-back.visible { display:inline-flex; }
+    .menu-heading { align-items:center; }
+    @media (max-width:700px) { .category-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; } .category-card { border-radius:15px; } .category-card-copy { padding:10px; } .category-card-name { font-size:13px; } }
     .menu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
     .menu-item { position:relative; display:flex; align-items:stretch; gap:13px; min-width:0; min-height:142px; padding:12px; border:1px solid #eee4da; border-radius:18px; background:#fff; box-shadow:0 7px 22px #4a2b1708; }
     .menu-item:last-child { padding-bottom:12px; border-bottom:1px solid #eee4da; }
@@ -220,7 +229,7 @@
       .menu-item { min-height:126px; padding:10px; border-radius:15px; }
       .menu-item-photo { width:104px; height:104px; flex-basis:104px; }
       .menu-tools { margin-inline:-2px; }
-      .category-filters { margin-right:-13px; }
+      .category-grid { margin-inline:0; }
       .mobile-order-bar { position:fixed; z-index:20; left:12px; right:12px; bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; width:calc(100% - 24px); min-height:60px; padding:10px 17px; border:1px solid #ffffff20; border-radius:16px; background:linear-gradient(135deg,#276f4e,#174b34); color:white; text-align:left; box-shadow:0 10px 30px #172d2180; }
       .mobile-order-bar span { display:flex; flex-direction:column; gap:1px; }
       .mobile-order-bar small { color:#e1f0e7; font-size:11px; font-weight:500; }
@@ -267,12 +276,13 @@
     </div>
     <section class="menu-section" aria-label="Menu">
       <div class="menu-heading">
-        <div><span class="eyebrow">MADE FRESH FOR YOU</span><h2>Explore our menu</h2>
-        <p class="section-hint">Find your favourites and add them to your order.</p></div>
+        <div><span class="eyebrow">MADE FRESH FOR YOU</span><h2 id="menuTitle">Explore categories</h2>
+        <p id="menuHint" class="section-hint">Choose a category to browse its dishes.</p></div>
       </div>
       <div class="menu-tools">
         <label class="menu-search"><span aria-hidden="true">⌕</span><input id="menuSearch" type="search" placeholder="Search dishes..." autocomplete="off" aria-label="Search menu"></label>
-        <div id="categoryFilters" class="category-filters" aria-label="Menu categories"></div>
+        <button type="button" id="categoryBack" class="category-back" aria-label="Back to categories">← All categories</button>
+        <div id="categoryFilters" class="category-grid" aria-label="Menu categories"></div>
       </div>
       <div id="menuList" class="menu-grid">Loading menu...</div>
     </section>
@@ -463,36 +473,98 @@ let stallOrderingPaused = false;
     }
 
 
+    function getMenuGroups() {
+      const groups = menuCategories.map(category => ({
+        id: category.id,
+        name: category.name,
+        items: menuItems.filter(item => item.category_id === category.id)
+      })).filter(group => group.items.length);
+      const uncategorized = menuItems.filter(item =>
+        !menuCategories.some(category => category.id === item.category_id)
+      );
+      if (uncategorized.length) groups.push({ id:"other", name:"More items", items:uncategorized });
+      return groups;
+    }
+
     function renderCategoryFilters() {
       const container = document.getElementById("categoryFilters");
       if (!container) return;
       container.replaceChildren();
-      const counts = new Map();
-      menuItems.forEach(item => counts.set(item.category_id || "other", (counts.get(item.category_id || "other") || 0) + 1));
-      const filters = [{ id:"all", name:"All items" }, ...menuCategories.map(category => ({ id:category.id, name:category.name }))];
-      if (menuItems.some(item => !menuCategories.some(category => category.id === item.category_id))) {
-        filters.push({ id:"other", name:"More" });
-      }
-      filters.forEach(category => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "category-chip" + (activeCategory === category.id ? " active" : "");
-        button.textContent = category.name;
-        button.setAttribute("aria-pressed", String(activeCategory === category.id));
-        button.addEventListener("click", () => {
+      const groups = getMenuGroups();
+      groups.forEach(category => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "category-card";
+        card.setAttribute("aria-label", category.name + ", " + category.items.length + " dishes");
+
+        const featured = category.items.find(item => item.image_url);
+        if (featured) {
+          const image = document.createElement("img");
+          image.className = "category-thumb";
+          image.src = featured.image_url;
+          image.alt = "";
+          image.loading = "lazy";
+          image.decoding = "async";
+          image.onerror = () => {
+            const fallback = document.createElement("div");
+            fallback.className = "category-thumb category-thumb-fallback";
+            fallback.textContent = category.name.trim().charAt(0).toUpperCase() || "食";
+            image.replaceWith(fallback);
+          };
+          card.append(image);
+        } else {
+          const fallback = document.createElement("div");
+          fallback.className = "category-thumb category-thumb-fallback";
+          fallback.textContent = category.name.trim().charAt(0).toUpperCase() || "食";
+          card.append(fallback);
+        }
+
+        const copy = document.createElement("span");
+        copy.className = "category-card-copy";
+        const name = document.createElement("span");
+        name.className = "category-card-name";
+        name.textContent = category.name;
+        const count = document.createElement("span");
+        count.className = "category-card-count";
+        count.textContent = category.items.length + (category.items.length === 1 ? " dish" : " dishes");
+        copy.append(name, count);
+        card.append(copy);
+        card.addEventListener("click", () => {
           activeCategory = category.id;
+          menuSearchTerm = "";
+          document.getElementById("menuSearch").value = "";
           renderCategoryFilters();
           renderMenuItems();
         });
-        container.append(button);
+        container.append(card);
       });
     }
 
     function renderMenuItems() {
       menuList.replaceChildren();
       const normalizedSearch = menuSearchTerm.trim().toLowerCase();
+      const selectedGroup = getMenuGroups().find(group => group.id === activeCategory);
+      const showCategoryTiles = activeCategory === "all" && !normalizedSearch;
+      const backButton = document.getElementById("categoryBack");
+      const title = document.getElementById("menuTitle");
+      const hint = document.getElementById("menuHint");
+
+      if (showCategoryTiles) {
+        if (backButton) backButton.classList.remove("visible");
+        if (title) title.textContent = "Explore categories";
+        if (hint) hint.textContent = "Choose a category to browse its dishes.";
+        renderCategoryFilters();
+        return;
+      }
+
+      if (backButton) backButton.classList.add("visible");
+      if (title) title.textContent = normalizedSearch ? "Search results" : (selectedGroup?.name || "Menu");
+      if (hint) hint.textContent = normalizedSearch
+        ? "Showing dishes from all categories that match your search."
+        : "Choose your favourites and add them to your order.";
+
       const visibleItems = menuItems.filter(item => {
-        const categoryMatch = activeCategory === "all" ||
+        const categoryMatch = normalizedSearch || activeCategory === "all" ||
           (activeCategory === "other"
             ? !menuCategories.some(category => category.id === item.category_id)
             : item.category_id === activeCategory);
@@ -588,8 +660,16 @@ let stallOrderingPaused = false;
       });
     }
 
+    document.getElementById("categoryBack")?.addEventListener("click", () => {
+      activeCategory = "all";
+      menuSearchTerm = "";
+      document.getElementById("menuSearch").value = "";
+      renderMenuItems();
+    });
+
     document.getElementById("menuSearch")?.addEventListener("input", event => {
       menuSearchTerm = event.target.value || "";
+      activeCategory = "all";
       renderMenuItems();
     });
 
