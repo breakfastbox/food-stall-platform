@@ -1872,6 +1872,8 @@ async function loadCategoriesForEditing() {
 
 let categoryOrderDragState = null;
 
+let categoryOrderDragState = null;
+
 function renderCategoryOrderControls(categories, stallId) {
   const list = document.getElementById("categoryOrderList");
   if (!list) return;
@@ -1888,58 +1890,23 @@ function renderCategoryOrderControls(categories, stallId) {
     row.dataset.categoryId = category.id;
     row.dataset.stallId = stallId;
     row.setAttribute("data-category-row", "");
-    row.setAttribute("aria-grabbed", "false");
 
     const handle = document.createElement("button");
     handle.type = "button";
     handle.className = "category-order-handle";
     handle.textContent = "☰";
+    handle.draggable = true;
     handle.title = "Drag to rearrange " + category.name;
     handle.setAttribute("aria-label", "Drag to rearrange " + category.name);
-    handle.addEventListener("pointerdown", event => {
-      if (event.button !== undefined && event.button !== 0) return;
-      categoryOrderDragState = { row, pointerId: event.pointerId, moved: false };
+    handle.addEventListener("dragstart", event => {
+      categoryOrderDragState = { row, stallId };
       row.classList.add("dragging");
-      row.setAttribute("aria-grabbed", "true");
-      event.preventDefault();
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", category.id);
     });
-
-    // Listen on the document so dragging continues even when the pointer
-    // leaves the small handle button. This works with mouse, pen and touch.
-    const moveCategoryRow = event => {
-      if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
-      if (categoryOrderDragState.pointerId !== event.pointerId) return;
-      const target = document.elementFromPoint(event.clientX, event.clientY);
-      const targetRow = target?.closest?.("[data-category-row]");
-      if (!targetRow || targetRow === row || targetRow.parentElement !== list) return;
-      categoryOrderDragState.moved = true;
-      const rect = targetRow.getBoundingClientRect();
-      const insertAfter = event.clientY > rect.top + rect.height / 2;
-      list.insertBefore(row, insertAfter ? targetRow.nextSibling : targetRow);
-      list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
-      targetRow.classList.add("drop-target");
-    };
-
-    const finishCategoryRowDrag = async event => {
-      if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
-      if (event && categoryOrderDragState.pointerId !== event.pointerId) return;
-      const moved = categoryOrderDragState.moved;
-      categoryOrderDragState = null;
+    handle.addEventListener("dragend", () => {
       row.classList.remove("dragging");
-      row.setAttribute("aria-grabbed", "false");
-      list.querySelectorAll(".category-order-row").forEach(item => {
-        item.classList.remove("drop-target");
-      });
-      document.removeEventListener("pointermove", moveCategoryRow);
-      document.removeEventListener("pointerup", finishCategoryRowDrag);
-      document.removeEventListener("pointercancel", finishCategoryRowDrag);
-      if (moved) await saveCategoryDisplayOrder(stallId);
-    };
-
-    handle.addEventListener("pointerdown", () => {
-      document.addEventListener("pointermove", moveCategoryRow);
-      document.addEventListener("pointerup", finishCategoryRowDrag);
-      document.addEventListener("pointercancel", finishCategoryRowDrag);
+      list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
     });
 
     const name = document.createElement("span");
@@ -1976,6 +1943,32 @@ function renderCategoryOrderControls(categories, stallId) {
     row.append(handle, name, actions);
     list.append(row);
   });
+
+  if (!list.dataset.nativeDragBound) {
+    list.addEventListener("dragover", event => {
+      if (!categoryOrderDragState) return;
+      const targetRow = event.target.closest?.("[data-category-row]");
+      if (!targetRow || targetRow === categoryOrderDragState.row || targetRow.parentElement !== list) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const rect = targetRow.getBoundingClientRect();
+      const after = event.clientY > rect.top + rect.height / 2;
+      list.insertBefore(categoryOrderDragState.row, after ? targetRow.nextSibling : targetRow);
+      list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
+      targetRow.classList.add("drop-target");
+    });
+    list.addEventListener("drop", async event => {
+      if (!categoryOrderDragState) return;
+      event.preventDefault();
+      const stallIdToSave = categoryOrderDragState.stallId;
+      categoryOrderDragState = null;
+      list.querySelectorAll(".category-order-row").forEach(item => {
+        item.classList.remove("dragging", "drop-target");
+      });
+      await saveCategoryDisplayOrder(stallIdToSave);
+    });
+    list.dataset.nativeDragBound = "true";
+  }
 }
 
 async function saveCategoryDisplayOrder(stallId) {
@@ -1985,8 +1978,7 @@ async function saveCategoryDisplayOrder(stallId) {
 
   const rows = [...list.querySelectorAll("[data-category-row]")];
   message.textContent = "Saving category order...";
-  const saveButton = list.querySelectorAll("button");
-  saveButton.forEach(button => { button.disabled = true; });
+  list.querySelectorAll("button").forEach(button => { button.disabled = true; });
 
   try {
     for (let index = 0; index < rows.length; index++) {
@@ -1998,9 +1990,7 @@ async function saveCategoryDisplayOrder(stallId) {
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      if (!updatedCategory) {
-        throw new Error("A category position was not saved. Please sign in with the stall-owner account and try again.");
-      }
+      if (!updatedCategory) throw new Error("A category position was not saved. Please sign in with the stall-owner account and try again.");
     }
     message.textContent = "Category order saved. Customers will see this order.";
     await loadCategoriesForEditing();
@@ -2010,7 +2000,6 @@ async function saveCategoryDisplayOrder(stallId) {
     await loadCategoriesForEditing();
   }
 }
-
 
 let menuItemOrderDragState = null;
 
@@ -2038,41 +2027,19 @@ function renderMenuItemOrderControls(menuItems, stallId) {
       handle.type = "button";
       handle.className = "menu-item-order-handle";
       handle.textContent = "☰";
+      handle.draggable = true;
       handle.title = "Drag to rearrange " + item.name;
       handle.setAttribute("aria-label", "Drag to rearrange " + item.name);
-      handle.addEventListener("pointerdown", event => {
-        if (event.button !== undefined && event.button !== 0) return;
-        menuItemOrderDragState = { row, section, moved: false };
+      handle.addEventListener("dragstart", event => {
+        menuItemOrderDragState = { row, section, stallId };
         row.classList.add("dragging");
-        try { handle.setPointerCapture(event.pointerId); } catch (_) {}
-        event.preventDefault();
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", itemId);
       });
-      handle.addEventListener("pointermove", event => {
-        if (!menuItemOrderDragState || menuItemOrderDragState.row !== row) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY);
-        const targetRow = target?.closest?.("[data-menu-item-row]");
-        if (!targetRow || targetRow === row || targetRow.parentElement !== section) return;
-        menuItemOrderDragState.moved = true;
-        const rect = targetRow.getBoundingClientRect();
-        const insertAfter = event.clientY > rect.top + rect.height / 2;
-        section.insertBefore(row, insertAfter ? targetRow.nextSibling : targetRow);
-        section.querySelectorAll(".menu-item-order-controls").forEach(control => {
-          control.classList.remove("drop-target");
-        });
-        targetRow.querySelector(".menu-item-order-controls")?.classList.add("drop-target");
-      });
-      const finishDrag = async () => {
-        if (!menuItemOrderDragState || menuItemOrderDragState.row !== row) return;
-        const moved = menuItemOrderDragState.moved;
-        menuItemOrderDragState = null;
+      handle.addEventListener("dragend", () => {
         row.classList.remove("dragging");
-        section.querySelectorAll(".menu-item-order-controls").forEach(control => {
-          control.classList.remove("drop-target");
-        });
-        if (moved) await saveMenuItemDisplayOrder(stallId, section);
-      };
-      handle.addEventListener("pointerup", finishDrag);
-      handle.addEventListener("pointercancel", finishDrag);
+        section.querySelectorAll(".menu-item-order-controls").forEach(control => control.classList.remove("drop-target"));
+      });
 
       const name = document.createElement("span");
       name.className = "menu-item-order-label";
@@ -2108,6 +2075,30 @@ function renderMenuItemOrderControls(menuItems, stallId) {
       controls.append(handle, name, actions);
       row.insertBefore(controls, row.firstChild);
     });
+
+    if (!section.dataset.nativeDragBound) {
+      section.addEventListener("dragover", event => {
+        if (!menuItemOrderDragState || menuItemOrderDragState.section !== section) return;
+        const targetRow = event.target.closest?.("[data-menu-item-row]");
+        if (!targetRow || targetRow === menuItemOrderDragState.row || targetRow.parentElement !== section) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        const rect = targetRow.getBoundingClientRect();
+        const after = event.clientY > rect.top + rect.height / 2;
+        section.insertBefore(menuItemOrderDragState.row, after ? targetRow.nextSibling : targetRow);
+        section.querySelectorAll(".menu-item-order-controls").forEach(control => control.classList.remove("drop-target"));
+        targetRow.querySelector(".menu-item-order-controls")?.classList.add("drop-target");
+      });
+      section.addEventListener("drop", async event => {
+        if (!menuItemOrderDragState || menuItemOrderDragState.section !== section) return;
+        event.preventDefault();
+        const drag = menuItemOrderDragState;
+        menuItemOrderDragState = null;
+        section.querySelectorAll(".menu-item-order-controls").forEach(control => control.classList.remove("drop-target"));
+        await saveMenuItemDisplayOrder(drag.stallId, section);
+      });
+      section.dataset.nativeDragBound = "true";
+    }
   });
 }
 
