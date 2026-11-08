@@ -50,7 +50,8 @@
       pointer-events: none;
     }
     .hero-inner { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; }
-    #customerStallLogo {
+    #customerStallLogo[hidden] { display: none; }
+    #customerStallLogo:not([hidden]) {
       display: block;
       max-width: 116px;
       max-height: 92px;
