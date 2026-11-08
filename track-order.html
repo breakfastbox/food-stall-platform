@@ -221,8 +221,33 @@ function displayOrder(order) {
   footer.textContent = "Your order status updates automatically.";
   result.appendChild(footer);
 
+  const existingPanel = message.querySelector(".change-panel");
   message.replaceChildren(result);
-  renderOrderChangePanel(order, result);
+
+  if (existingPanel) {
+    // Keep the existing form in place while the 15-second status poll refreshes.
+    // This prevents customer-entered quantities and notes from being erased.
+    result.appendChild(existingPanel);
+    const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
+    const locked = order.order_status !== "pending" ||
+      Boolean(order.stock_deducted_at) || Date.now() >= deadline;
+
+    if (locked) {
+      const info = existingPanel.querySelector(".change-muted");
+      if (info) {
+        info.textContent = order.order_status !== "pending"
+          ? "Changes are locked because the stall has updated your order status to " + order.order_status + "."
+          : order.stock_deducted_at
+            ? "Changes are locked because preparation has started."
+            : "The 5-minute change window has ended. Please contact the stall for help.";
+      }
+      existingPanel.querySelectorAll("input, textarea, button").forEach(control => {
+        control.disabled = true;
+      });
+    }
+  } else {
+    renderOrderChangePanel(order, result);
+  }
 }
 
 const CHANGE_REQUEST_URL = SUPABASE_URL + "/functions/v1/order-change-requests";
