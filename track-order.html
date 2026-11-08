@@ -125,7 +125,7 @@
         name="token"
         type="text"
         inputmode="numeric"
-        pattern="[0-9]{1,6}"
+        pattern="[0-9]{4,6}"
         maxlength="6"
         placeholder="e.g. 0007"
         required
@@ -438,8 +438,9 @@ async function checkOrderByCode(code) {
 }
 
 // New secure tracking link.
-const trackingCode =
-  new URLSearchParams(window.location.search).get("code");
+const trackingParams = new URLSearchParams(window.location.search);
+const trackingCode = trackingParams.get("code");
+const requestedStallId = trackingParams.get("stall_id") || "";
 
 if (trackingCode) {
   const uuidPattern =
@@ -474,7 +475,7 @@ async function checkOrderStatus(token, phone, button = null) {
     const { data, error } = await supabaseClient.functions.invoke(
       "check-order-status",
       {
-        body: { token, phone }
+        body: { token, phone, stall_id: requestedStallId || undefined }
       }
     );
 
