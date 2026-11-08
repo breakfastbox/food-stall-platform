@@ -1194,7 +1194,7 @@ async function loadOrdersInternal() {
   const { data: orders, error } = await supabaseClient
     .from("orders")
     .select(
-      "id, token_number, order_status, payment_status, subtotal, total_amount, created_at, special_instructions"
+      "*"
     )
     .eq("stall_id", stallId)
     .order("created_at", { ascending: false });
@@ -1360,11 +1360,11 @@ async function loadOrdersInternal() {
         <h3>Order Token: ${escapeHTML(order.token_number ?? "Not assigned")}</h3>
 
         <h4>Food Items</h4>
-        ${order.special_instructions
-          ? `<div style="margin:12px 0;padding:13px 14px;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:9px;background:#fef2f2;color:#b91c1c;"><strong style="display:block;color:#b91c1c;font-size:14px;">⚠ CUSTOMER INSTRUCTIONS</strong><p style="margin:7px 0 0;white-space:pre-wrap;color:#b91c1c;font-weight:750;font-size:14px;">${escapeHTML(order.special_instructions)}</p></div>`
-          : '<p style="color:#777;">No special instructions.</p>'}
-        
         ${foodItemsHTML}
+
+        ${String(order.special_instructions || "").trim()
+          ? `<div style="display:block!important;visibility:visible!important;margin:14px 0;padding:14px 16px;border:2px solid #fca5a5;border-left:7px solid #dc2626;border-radius:10px;background:#fff1f2;color:#991b1b;"><strong style="display:block;color:#991b1b;font-size:15px;font-weight:800;">⚠ CUSTOMER INSTRUCTIONS</strong><p style="display:block;margin:8px 0 0;white-space:pre-wrap;color:#991b1b;font-weight:800;font-size:15px;">${escapeHTML(String(order.special_instructions).trim())}</p></div>`
+          : '<p style="margin:10px 0;color:#777;">No special instructions.</p>'}
 
         <hr>
 
