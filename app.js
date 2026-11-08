@@ -1194,7 +1194,7 @@ async function loadOrdersInternal() {
   const { data: orders, error } = await supabaseClient
     .from("orders")
     .select(
-      "id, token_number, order_status, payment_status, subtotal, total_amount, created_at"
+      "id, token_number, order_status, payment_status, subtotal, total_amount, created_at, special_instructions"
     )
     .eq("stall_id", stallId)
     .order("created_at", { ascending: false });
