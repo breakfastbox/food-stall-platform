@@ -441,7 +441,7 @@ let stallOrderingPaused = false;
           ? await requestedMenuPromise
           : await client
               .from("menu_items")
-              .select("id, name, description, price, image_url, is_available")
+              .select("id, name, description, price, image_url, is_available, category_id")
               .eq("stall_id", stallId)
               .eq("is_available", true)
               .gt("price", 0)
