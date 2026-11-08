@@ -1361,7 +1361,7 @@ async function loadOrdersInternal() {
 
         <h4>Food Items</h4>
         ${order.special_instructions
-          ? `<div style="margin:12px 0;padding:12px;border-left:4px solid #b77945;border-radius:8px;background:#fff7ed;"><strong>Customer instructions</strong><p style="margin:6px 0 0;white-space:pre-wrap;">${escapeHTML(order.special_instructions)}</p></div>`
+          ? `<div style="margin:12px 0;padding:13px 14px;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:9px;background:#fef2f2;color:#b91c1c;"><strong style="display:block;color:#b91c1c;font-size:14px;">⚠ CUSTOMER INSTRUCTIONS</strong><p style="margin:7px 0 0;white-space:pre-wrap;color:#b91c1c;font-weight:750;font-size:14px;">${escapeHTML(order.special_instructions)}</p></div>`
           : '<p style="color:#777;">No special instructions.</p>'}
         
         ${foodItemsHTML}
