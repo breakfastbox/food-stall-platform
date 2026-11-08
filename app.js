@@ -1978,8 +1978,21 @@ async function saveCategoryDisplayOrder(stallId) {
   list.querySelectorAll("button").forEach(button => { button.disabled = true; });
 
   try {
+    // Move all rows to temporary negative positions first, then assign the final
+    // sequence. This prevents collisions if a database has a unique sort index.
     for (let index = 0; index < rows.length; index++) {
-      const { data: updatedCategory, error } = await supabaseClient
+      const { data, error } = await supabaseClient
+        .from("menu_categories")
+        .update({ sort_order: -(index + 1) })
+        .eq("id", rows[index].dataset.categoryId)
+        .eq("stall_id", stallId)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Your account cannot update this category. Please sign in using the correct stall-owner account.");
+    }
+    for (let index = 0; index < rows.length; index++) {
+      const { data, error } = await supabaseClient
         .from("menu_categories")
         .update({ sort_order: index + 1 })
         .eq("id", rows[index].dataset.categoryId)
@@ -1987,9 +2000,9 @@ async function saveCategoryDisplayOrder(stallId) {
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      if (!updatedCategory) throw new Error("A category position was not saved. Please sign in with the stall-owner account and try again.");
+      if (!data) throw new Error("The final category order could not be confirmed. Please retry.");
     }
-    message.textContent = "Category order saved. Customers will see this order.";
+    message.textContent = "✓ Category order saved. Refresh the customer page to see the new order.";
     await loadCategoriesForEditing();
   } catch (error) {
     console.error("Could not save category display order:", error);
@@ -2106,6 +2119,19 @@ async function saveMenuItemDisplayOrder(stallId, section) {
   section.querySelectorAll("button").forEach(button => { button.disabled = true; });
 
   try {
+    // Temporary positions make the reorder safe even if a unique ordering
+    // constraint is added later. Confirm every row update through RETURNING.
+    for (let index = 0; index < rows.length; index++) {
+      let query = supabaseClient
+        .from("menu_items")
+        .update({ sort_order: -(index + 1) })
+        .eq("id", rows[index].id.replace("menu-item-", ""))
+        .eq("stall_id", stallId);
+      query = categoryId ? query.eq("category_id", categoryId) : query.is("category_id", null);
+      const { data, error } = await query.select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Your account cannot update this dish. Please sign in using the correct stall-owner account.");
+    }
     for (let index = 0; index < rows.length; index++) {
       let query = supabaseClient
         .from("menu_items")
@@ -2113,10 +2139,11 @@ async function saveMenuItemDisplayOrder(stallId, section) {
         .eq("id", rows[index].id.replace("menu-item-", ""))
         .eq("stall_id", stallId);
       query = categoryId ? query.eq("category_id", categoryId) : query.is("category_id", null);
-      const { error } = await query;
+      const { data, error } = await query.select("id").maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("The final dish order could not be confirmed. Please retry.");
     }
-    if (message) message.textContent = "Dish order saved. Customers will see this order within the category.";
+    if (message) message.textContent = "✓ Dish order saved. Refresh the customer page to see the new order.";
     await loadStallDashboard();
   } catch (error) {
     console.error("Could not save menu item order:", error);
