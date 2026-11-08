@@ -198,7 +198,7 @@
     .category-card { display:flex; flex-direction:column; overflow:hidden; padding:0; border:1px solid #eadfd5; border-radius:17px; background:#fff; color:var(--coffee); text-align:left; box-shadow:0 7px 22px #4a2b1708; transition:transform .15s ease, box-shadow .15s ease; }
     .category-card:hover { transform:translateY(-2px); box-shadow:0 11px 26px #4a2b1714; }
     .category-thumb { display:block; width:100%; aspect-ratio:16/10; object-fit:cover; background:linear-gradient(145deg,#f7eee4,#e8d5c1); }
-    .category-thumb-fallback { display:flex; align-items:center; justify-content:center; color:#8b6244; font-family:Georgia,serif; font-size:34px; font-weight:700; }
+    .category-thumb-fallback { display:flex; align-items:center; justify-content:center; padding:14px; color:#68452f; font-family:Georgia,serif; font-size:clamp(16px,2.2vw,23px); font-weight:700; line-height:1.2; text-align:center; overflow-wrap:anywhere; background:radial-gradient(circle at 20% 15%,#fff8ef 0,#f7eee4 48%,#e8d5c1 100%); }
     .category-card-copy { display:flex; flex-direction:column; gap:3px; padding:11px 12px 13px; }
     .category-card-name { font-size:14px; font-weight:800; line-height:1.25; }
     .category-card-count { color:var(--muted); font-size:11px; }
@@ -477,10 +477,10 @@ let stallOrderingPaused = false;
       const groups = menuCategories.map(category => ({
         id: category.id,
         name: category.name,
-        items: menuItems.filter(item => item.category_id === category.id)
+        items: menuItems.filter(item => String(item.category_id) === String(category.id))
       })).filter(group => group.items.length);
       const uncategorized = menuItems.filter(item =>
-        !menuCategories.some(category => category.id === item.category_id)
+        !menuCategories.some(category => String(category.id) === String(item.category_id))
       );
       if (uncategorized.length) groups.push({ id:"other", name:"More items", items:uncategorized });
       return groups;
@@ -491,6 +491,8 @@ let stallOrderingPaused = false;
       if (!container) return;
       container.replaceChildren();
       const groups = getMenuGroups();
+      const browsingCategory = activeCategory !== "all" || Boolean(menuSearchTerm.trim());
+      container.hidden = browsingCategory;
       groups.forEach(category => {
         const card = document.createElement("button");
         card.type = "button";
@@ -508,14 +510,14 @@ let stallOrderingPaused = false;
           image.onerror = () => {
             const fallback = document.createElement("div");
             fallback.className = "category-thumb category-thumb-fallback";
-            fallback.textContent = category.name.trim().charAt(0).toUpperCase() || "食";
+            fallback.textContent = category.name;
             image.replaceWith(fallback);
           };
           card.append(image);
         } else {
           const fallback = document.createElement("div");
           fallback.className = "category-thumb category-thumb-fallback";
-          fallback.textContent = category.name.trim().charAt(0).toUpperCase() || "食";
+          fallback.textContent = category.name;
           card.append(fallback);
         }
 
@@ -530,7 +532,7 @@ let stallOrderingPaused = false;
         copy.append(name, count);
         card.append(copy);
         card.addEventListener("click", () => {
-          activeCategory = category.id;
+          activeCategory = String(category.id);
           menuSearchTerm = "";
           document.getElementById("menuSearch").value = "";
           renderCategoryFilters();
@@ -567,7 +569,7 @@ let stallOrderingPaused = false;
         const categoryMatch = normalizedSearch || activeCategory === "all" ||
           (activeCategory === "other"
             ? !menuCategories.some(category => category.id === item.category_id)
-            : item.category_id === activeCategory);
+            : String(item.category_id) === String(activeCategory));
         const searchMatch = !normalizedSearch ||
           (item.name + " " + (item.description || "")).toLowerCase().includes(normalizedSearch);
         return categoryMatch && searchMatch;
