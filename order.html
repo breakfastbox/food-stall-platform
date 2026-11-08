@@ -389,11 +389,12 @@ let stallOrderingPaused = false;
         const requestedMenuPromise = requestedStallId
           ? client
               .from("menu_items")
-              .select("id, name, description, price, image_url, is_available, category_id")
+              .select("id, name, description, price, image_url, is_available, category_id, sort_order")
               .eq("stall_id", requestedStallId)
               .eq("is_available", true)
               .gt("price", 0)
-              .order("name")
+              .order("sort_order", { ascending: true })
+              .order("created_at", { ascending: true })
           : null;
 
         let stallQuery = client
@@ -442,11 +443,12 @@ let stallOrderingPaused = false;
           ? await requestedMenuPromise
           : await client
               .from("menu_items")
-              .select("id, name, description, price, image_url, is_available, category_id")
+              .select("id, name, description, price, image_url, is_available, category_id, sort_order")
               .eq("stall_id", stallId)
               .eq("is_available", true)
               .gt("price", 0)
-              .order("name");
+              .order("sort_order", { ascending: true })
+              .order("created_at", { ascending: true });
 
         const { data, error } = menuResult;
         if (error) throw error;
