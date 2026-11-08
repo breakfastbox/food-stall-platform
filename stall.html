@@ -16,14 +16,14 @@
     .category-order-row.dragging { opacity:.4; border:2px dashed #b77945; }
     .category-order-row.drop-target { border-color:#b77945; background:#fbf1e7; }
     .category-order-name { flex:1; min-width:0; font-weight:700; overflow-wrap:anywhere; }
-    .category-order-handle { min-width:40px; padding:8px; cursor:grab; touch-action:none; background:#f5ece3; color:#553722; font-size:19px; }
+    .category-order-handle { display:inline-flex; align-items:center; justify-content:center; min-width:76px; padding:9px 12px; border-radius:9px; cursor:grab; user-select:none; background:#f5ece3; color:#553722; font-size:14px; font-weight:800; letter-spacing:.2px; border:1px dashed #b77945; }
     .category-order-actions { display:flex; gap:5px; }
     .category-order-actions button { min-width:36px; padding:7px; background:#f5ece3; color:#553722; }
     .category-order-row[aria-grabbed="true"] { outline:2px solid #b77945; }
   
     .menu-item-order-hint { color:#667085; font-size:13px; margin:8px 0 12px; }
     .menu-item-order-controls { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-    .menu-item-order-handle { cursor:grab; touch-action:none; padding:7px 12px; font-size:18px; }
+    .menu-item-order-handle { display:inline-flex; align-items:center; justify-content:center; min-width:76px; padding:8px 12px; border-radius:8px; cursor:grab; user-select:none; background:#f5ece3; color:#553722; font-size:13px; font-weight:800; border:1px dashed #b77945; }
     .menu-item-order-handle:active { cursor:grabbing; }
     .menu-item-order-label { color:#667085; font-size:13px; }
     .menu-item-order-actions { display:inline-flex; gap:5px; margin-left:auto; }
@@ -210,7 +210,7 @@
 
         <div class="category-order-panel">
           <h3>Customer Page Category Order</h3>
-          <p>Drag categories into the order you want customers to see. This order is saved automatically. On phones, use the up/down arrows or drag the handle.</p>
+          <p>The ☰ DRAG handle is on the LEFT of every category below. Drag it up or down; the order saves automatically. You can also use ↑ and ↓.</p>
           <div id="categoryOrderList" class="category-order-list">
             <p>Loading categories...</p>
           </div>
