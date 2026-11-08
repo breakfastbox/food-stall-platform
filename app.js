@@ -1016,8 +1016,9 @@ async function loadStallDashboard() {
 
   const { data: menuItems, error: menuError } = await supabaseClient
     .from("menu_items")
-    .select("id, name, description, price, is_available, category_id, image_url")
+    .select("id, name, description, price, is_available, category_id, image_url, sort_order")
     .eq("stall_id", stall.id)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (menuError) {
@@ -1040,8 +1041,8 @@ async function loadStallDashboard() {
     );
 
     return `
-      <section class="menu-category">
-        <h2>${category.name}</h2>
+      <section class="menu-category" data-menu-category-id="${category.id}">
+        <h2>${escapeHtml(category.name)}</h2>
         ${items.map(item => `
           <div class="stall" id="menu-item-${item.id}">
             ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" style="width:100%;max-width:220px;max-height:160px;object-fit:cover;border-radius:10px;">` : ""}
@@ -1076,7 +1077,7 @@ async function loadStallDashboard() {
 
   if (uncategorizedItems.length > 0) {
     categoryGroups.push(`
-      <section class="menu-category">
+      <section class="menu-category" data-menu-category-id="">
         <h2>Uncategorized</h2>
         ${uncategorizedItems.map(item => `
           <div class="stall" id="menu-item-${item.id}">
@@ -1106,6 +1107,7 @@ async function loadStallDashboard() {
   }
 
   menuList.innerHTML = categoryGroups.join("");
+  renderMenuItemOrderControls(menuItems, stall.id);
 }
 
 
@@ -1991,6 +1993,133 @@ async function saveCategoryDisplayOrder(stallId) {
   }
 }
 
+
+let menuItemOrderDragState = null;
+
+function renderMenuItemOrderControls(menuItems, stallId) {
+  const sections = document.querySelectorAll("#menuList .menu-category");
+  sections.forEach(section => {
+    const rows = [...section.querySelectorAll('[id^="menu-item-"]')];
+    if (!rows.length) return;
+
+    const hint = document.createElement("p");
+    hint.className = "menu-item-order-hint";
+    hint.textContent = "Arrange dishes in this category. Drag ☰ or use the arrows; changes save automatically.";
+    section.insertBefore(hint, rows[0]);
+
+    rows.forEach((row, index) => {
+      row.dataset.menuItemRow = "";
+      const itemId = row.id.replace("menu-item-", "");
+      const item = menuItems.find(entry => String(entry.id) === itemId);
+      if (!item) return;
+
+      const controls = document.createElement("div");
+      controls.className = "menu-item-order-controls";
+
+      const handle = document.createElement("button");
+      handle.type = "button";
+      handle.className = "menu-item-order-handle";
+      handle.textContent = "☰";
+      handle.title = "Drag to rearrange " + item.name;
+      handle.setAttribute("aria-label", "Drag to rearrange " + item.name);
+      handle.addEventListener("pointerdown", event => {
+        if (event.button !== undefined && event.button !== 0) return;
+        menuItemOrderDragState = { row, section, moved: false };
+        row.classList.add("dragging");
+        try { handle.setPointerCapture(event.pointerId); } catch (_) {}
+        event.preventDefault();
+      });
+      handle.addEventListener("pointermove", event => {
+        if (!menuItemOrderDragState || menuItemOrderDragState.row !== row) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        const targetRow = target?.closest?.("[data-menu-item-row]");
+        if (!targetRow || targetRow === row || targetRow.parentElement !== section) return;
+        menuItemOrderDragState.moved = true;
+        const rect = targetRow.getBoundingClientRect();
+        const insertAfter = event.clientY > rect.top + rect.height / 2;
+        section.insertBefore(row, insertAfter ? targetRow.nextSibling : targetRow);
+        section.querySelectorAll(".menu-item-order-controls").forEach(control => {
+          control.classList.remove("drop-target");
+        });
+        targetRow.querySelector(".menu-item-order-controls")?.classList.add("drop-target");
+      });
+      const finishDrag = async () => {
+        if (!menuItemOrderDragState || menuItemOrderDragState.row !== row) return;
+        const moved = menuItemOrderDragState.moved;
+        menuItemOrderDragState = null;
+        row.classList.remove("dragging");
+        section.querySelectorAll(".menu-item-order-controls").forEach(control => {
+          control.classList.remove("drop-target");
+        });
+        if (moved) await saveMenuItemDisplayOrder(stallId, section);
+      };
+      handle.addEventListener("pointerup", finishDrag);
+      handle.addEventListener("pointercancel", finishDrag);
+
+      const name = document.createElement("span");
+      name.className = "menu-item-order-label";
+      name.textContent = "Reorder";
+
+      const actions = document.createElement("span");
+      actions.className = "menu-item-order-actions";
+      const up = document.createElement("button");
+      up.type = "button";
+      up.textContent = "↑";
+      up.title = "Move " + item.name + " up";
+      up.disabled = index === 0;
+      up.addEventListener("click", async () => {
+        const previous = row.previousElementSibling;
+        if (previous?.hasAttribute("data-menu-item-row")) {
+          section.insertBefore(row, previous);
+          await saveMenuItemDisplayOrder(stallId, section);
+        }
+      });
+      const down = document.createElement("button");
+      down.type = "button";
+      down.textContent = "↓";
+      down.title = "Move " + item.name + " down";
+      down.disabled = index === rows.length - 1;
+      down.addEventListener("click", async () => {
+        const next = row.nextElementSibling;
+        if (next?.hasAttribute("data-menu-item-row")) {
+          section.insertBefore(next, row);
+          await saveMenuItemDisplayOrder(stallId, section);
+        }
+      });
+      actions.append(up, down);
+      controls.append(handle, name, actions);
+      row.insertBefore(controls, row.firstChild);
+    });
+  });
+}
+
+async function saveMenuItemDisplayOrder(stallId, section) {
+  const message = document.getElementById("menuMessage");
+  const rows = [...section.querySelectorAll("[data-menu-item-row]")];
+  const categoryId = section.dataset.menuCategoryId || null;
+  if (message) message.textContent = "Saving dish order...";
+  section.querySelectorAll("button").forEach(button => { button.disabled = true; });
+
+  try {
+    for (let index = 0; index < rows.length; index++) {
+      let query = supabaseClient
+        .from("menu_items")
+        .update({ sort_order: index + 1 })
+        .eq("id", rows[index].id.replace("menu-item-", ""))
+        .eq("stall_id", stallId);
+      query = categoryId ? query.eq("category_id", categoryId) : query.is("category_id", null);
+      const { error } = await query;
+      if (error) throw error;
+    }
+    if (message) message.textContent = "Dish order saved. Customers will see this order within the category.";
+    await loadStallDashboard();
+  } catch (error) {
+    console.error("Could not save menu item order:", error);
+    if (message) message.textContent = "Could not save dish order: " + error.message;
+    await loadStallDashboard();
+  }
+}
+
 async function updateMenuCategory() {
   const select = document.getElementById("editCategorySelect");
   const nameInput = document.getElementById("editCategoryName");
@@ -2191,11 +2320,25 @@ async function addMenuItem() {
     imageUrl = publicData.publicUrl;
   }
 
+  const { data: existingItems, error: orderLookupError } = await supabaseClient
+    .from("menu_items")
+    .select("sort_order")
+    .eq("stall_id", stallId)
+    .is("category_id", categoryId || null);
+  if (orderLookupError) {
+    message.textContent = "Could not prepare the new item's display position: " + orderLookupError.message;
+    return;
+  }
+  const nextSortOrder = (existingItems || []).reduce(
+    (highest, item) => Math.max(highest, Number(item.sort_order) || 0), 0
+  ) + 1;
+
   const { error } = await supabaseClient
     .from("menu_items")
     .insert({
       stall_id: stallId,
       category_id: categoryId || null,
+      sort_order: nextSortOrder,
       name,
       description: description || null,
       price,
