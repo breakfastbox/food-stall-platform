@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="love-coffee-customer-live-20261108">
+  <meta name="app-version" content="order-instructions-20261108">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -126,6 +126,14 @@
       font-weight: 700;
     }
     input:focus { outline: 3px solid #b7794529; border-color: var(--caramel); }
+    .instruction-panel { margin:16px 0 18px; padding:15px; border:1px solid #eadfd5; border-radius:14px; background:#fffaf5; }
+    .instruction-panel h3 { margin:0 0 5px; color:var(--coffee); font-size:16px; }
+    .instruction-panel p { margin:0 0 12px; color:var(--muted); font-size:12px; }
+    .instruction-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .instruction-chip { padding:9px 12px; border:1px solid #dfd0c2; border-radius:999px; background:#fff; color:var(--coffee); font-size:12px; font-weight:700; }
+    .instruction-chip[aria-pressed="true"] { border-color:var(--green); background:#eaf5ee; color:#176b45; }
+    .instruction-panel textarea { display:block; width:100%; min-height:76px; resize:vertical; padding:11px 12px; border:1px solid #ded2c8; border-radius:11px; font:inherit; font-size:13px; }
+    .instruction-panel textarea:focus { outline:3px solid #b7794529; border-color:var(--caramel); }
     .field { margin-bottom: 15px; }
     .field label { display: block; color: var(--coffee); font-size: 13px; font-weight: 750; margin-bottom: 7px; }
     .field input {
@@ -322,6 +330,23 @@
                  autocomplete="email">
         </div>
 
+        <div class="instruction-panel">
+          <h3>Special instructions <span style="font-weight:500;color:var(--muted);font-size:12px;">(optional)</span></h3>
+          <p>Tell the kitchen how you would like your food prepared.</p>
+          <div class="instruction-chips" aria-label="Quick order instructions">
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No sugar">No sugar</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less spicy">Less spicy</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Extra spicy">Extra spicy</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No onion">No onion</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No garlic">No garlic</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less oil">Less oil</button>
+            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No ice">No ice</button>
+          </div>
+          <label for="specialInstructions" style="display:block;margin-bottom:7px;color:var(--coffee);font-size:13px;font-weight:750;">Anything else?</label>
+          <textarea id="specialInstructions" maxlength="500" placeholder="Example: Please pack chutney separately..."></textarea>
+          <p style="margin:8px 0 0;">We’ll pass your request to the stall. Some requests may not be possible.</p>
+        </div>
+
         <div class="total">
           <span>Your order total</span>
           <span>₹<span id="orderTotal">0.00</span></span>
@@ -377,6 +402,26 @@ let stallOrderingPaused = false;
     function showMessage(text, type = "") {
       message.textContent = text;
       message.className = type;
+    }
+
+    const selectedOrderInstructions = new Set();
+    document.querySelectorAll("[data-instruction]").forEach(button => {
+      button.addEventListener("click", () => {
+        const instruction = button.dataset.instruction;
+        if (selectedOrderInstructions.has(instruction)) {
+          selectedOrderInstructions.delete(instruction);
+          button.setAttribute("aria-pressed", "false");
+        } else {
+          selectedOrderInstructions.add(instruction);
+          button.setAttribute("aria-pressed", "true");
+        }
+      });
+    });
+
+    function buildSpecialInstructions() {
+      const selected = [...selectedOrderInstructions];
+      const custom = document.getElementById("specialInstructions")?.value.trim() || "";
+      return [selected.join(", "), custom].filter(Boolean).join(". ").slice(0, 500);
     }
 
     function money(value) {
@@ -789,6 +834,7 @@ if (!validPhone) {
             name,
             phone: normalizedPhone,
             email,
+            special_instructions: buildSpecialInstructions(),
             stall_id: stallId,
             items,
             turnstile_token: turnstileToken
