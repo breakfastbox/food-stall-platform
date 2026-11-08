@@ -1839,7 +1839,7 @@ async function loadCategoriesForEditing() {
 
   const { data: categories, error } = await supabaseClient
     .from("menu_categories")
-    .select("id, name")
+    .select("id, name, sort_order")
     .eq("stall_id", stall.id)
     .order("sort_order", { ascending: true });
 
@@ -1847,6 +1847,8 @@ async function loadCategoriesForEditing() {
     console.error("Could not load categories:", error);
     return;
   }
+
+  renderCategoryOrderControls(categories || [], stall.id);
 
   (categories || []).forEach(category => {
     const option = document.createElement("option");
@@ -1863,6 +1865,130 @@ async function loadCategoriesForEditing() {
     document.getElementById("editCategoryName").value =
       selected ? selected.name : "";
   };
+}
+
+let categoryOrderDragState = null;
+
+function renderCategoryOrderControls(categories, stallId) {
+  const list = document.getElementById("categoryOrderList");
+  if (!list) return;
+  list.replaceChildren();
+
+  if (!categories.length) {
+    list.textContent = "Add a category first. Your customer page will follow this order.";
+    return;
+  }
+
+  categories.forEach((category, index) => {
+    const row = document.createElement("div");
+    row.className = "category-order-row";
+    row.dataset.categoryId = category.id;
+    row.dataset.stallId = stallId;
+    row.setAttribute("data-category-row", "");
+    row.setAttribute("aria-grabbed", "false");
+
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "category-order-handle";
+    handle.textContent = "☰";
+    handle.title = "Drag to rearrange " + category.name;
+    handle.setAttribute("aria-label", "Drag to rearrange " + category.name);
+    handle.addEventListener("pointerdown", event => {
+      if (event.button !== undefined && event.button !== 0) return;
+      categoryOrderDragState = { row, pointerId: event.pointerId, moved: false };
+      row.classList.add("dragging");
+      row.setAttribute("aria-grabbed", "true");
+      try { handle.setPointerCapture(event.pointerId); } catch (_) {}
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", event => {
+      if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const targetRow = target?.closest?.("[data-category-row]");
+      if (!targetRow || targetRow === row || targetRow.parentElement !== list) return;
+      categoryOrderDragState.moved = true;
+      const rect = targetRow.getBoundingClientRect();
+      const insertAfter = event.clientY > rect.top + rect.height / 2;
+      list.insertBefore(row, insertAfter ? targetRow.nextSibling : targetRow);
+      list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
+      targetRow.classList.add("drop-target");
+    });
+    const finishDrag = async () => {
+      if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
+      const moved = categoryOrderDragState.moved;
+      categoryOrderDragState = null;
+      row.classList.remove("dragging");
+      row.setAttribute("aria-grabbed", "false");
+      list.querySelectorAll(".category-order-row").forEach(item => {
+        item.classList.remove("drop-target");
+      });
+      if (moved) await saveCategoryDisplayOrder(stallId);
+    };
+    handle.addEventListener("pointerup", finishDrag);
+    handle.addEventListener("pointercancel", finishDrag);
+
+    const name = document.createElement("span");
+    name.className = "category-order-name";
+    name.textContent = category.name;
+
+    const actions = document.createElement("span");
+    actions.className = "category-order-actions";
+    const up = document.createElement("button");
+    up.type = "button";
+    up.textContent = "↑";
+    up.title = "Move " + category.name + " up";
+    up.disabled = index === 0;
+    up.addEventListener("click", async () => {
+      const previous = row.previousElementSibling;
+      if (previous) {
+        list.insertBefore(row, previous);
+        await saveCategoryDisplayOrder(stallId);
+      }
+    });
+    const down = document.createElement("button");
+    down.type = "button";
+    down.textContent = "↓";
+    down.title = "Move " + category.name + " down";
+    down.disabled = index === categories.length - 1;
+    down.addEventListener("click", async () => {
+      const next = row.nextElementSibling;
+      if (next) {
+        list.insertBefore(next, row);
+        await saveCategoryDisplayOrder(stallId);
+      }
+    });
+    actions.append(up, down);
+    row.append(handle, name, actions);
+    list.append(row);
+  });
+}
+
+async function saveCategoryDisplayOrder(stallId) {
+  const list = document.getElementById("categoryOrderList");
+  const message = document.getElementById("categoryOrderMessage");
+  if (!list || !message) return;
+
+  const rows = [...list.querySelectorAll("[data-category-row]")];
+  message.textContent = "Saving category order...";
+  const saveButton = list.querySelectorAll("button");
+  saveButton.forEach(button => { button.disabled = true; });
+
+  try {
+    for (let index = 0; index < rows.length; index++) {
+      const { error } = await supabaseClient
+        .from("menu_categories")
+        .update({ sort_order: index + 1 })
+        .eq("id", rows[index].dataset.categoryId)
+        .eq("stall_id", stallId);
+      if (error) throw error;
+    }
+    message.textContent = "Category order saved. Customers will see this order.";
+    await loadCategoriesForEditing();
+  } catch (error) {
+    console.error("Could not save category display order:", error);
+    message.textContent = "Could not save the order: " + error.message;
+    await loadCategoriesForEditing();
+  }
 }
 
 async function updateMenuCategory() {
