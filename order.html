@@ -351,6 +351,7 @@
     let stallPhone = "";
     let menuItems = [];
     let menuCategories = [];
+    const cartQuantities = new Map();
     let activeCategory = "all";
     let menuSearchTerm = "";
 let stallOrderingPaused = false;
@@ -562,7 +563,7 @@ let stallOrderingPaused = false;
         quantity.min = "0";
         quantity.max = "50";
         quantity.step = "1";
-        quantity.value = "0";
+        quantity.value = String(cartQuantities.get(item.id) || 0);
         quantity.disabled = stallOrderingPaused;
         quantity.setAttribute("aria-label", "Quantity of " + item.name);
         quantity.dataset.itemId = item.id;
@@ -596,33 +597,31 @@ let stallOrderingPaused = false;
     });
 
     function getSelectedItems() {
-      return Array.from(menuList.querySelectorAll("input[data-item-id]"))
-        .map(input => ({
-          menu_item_id: input.dataset.itemId,
-          quantity: Number(input.value)
+      return menuItems
+        .map(item => ({
+          menu_item_id: item.id,
+          quantity: Number(cartQuantities.get(item.id) || 0)
         }))
         .filter(item => item.quantity > 0);
     }
 
     function updateTotal() {
-      let total = 0;
-
-      document.querySelectorAll("input[data-item-id]").forEach(input => {
+      menuList.querySelectorAll("input[data-item-id]").forEach(input => {
         let quantity = Number(input.value);
-
         if (!Number.isInteger(quantity) || quantity < 0) quantity = 0;
         if (quantity > 50) quantity = 50;
         if (input.value !== String(quantity)) input.value = String(quantity);
-
-        const item = menuItems.find(
-          entry => entry.id === input.dataset.itemId
-        );
-
-        if (item) total += Number(item.price) * quantity;
+        cartQuantities.set(input.dataset.itemId, quantity);
       });
 
+      let total = 0;
+      let selectedCount = 0;
+      menuItems.forEach(item => {
+        const quantity = Number(cartQuantities.get(item.id) || 0);
+        total += Number(item.price) * quantity;
+        selectedCount += quantity;
+      });
       document.getElementById("orderTotal").textContent = money(total);
-      const selectedCount = getSelectedItems().reduce((sum, item) => sum + item.quantity, 0);
       const mobileCount = document.getElementById("mobileOrderCount");
       const mobileTotal = document.getElementById("mobileOrderTotal");
       if (mobileCount) mobileCount.textContent = selectedCount + (selectedCount === 1 ? " item" : " items");
@@ -820,6 +819,8 @@ try {
         }
 
         document.getElementById("orderForm").reset();
+        cartQuantities.clear();
+        renderMenuItems();
         updateTotal();
       } catch (error) {
         console.error(error);
