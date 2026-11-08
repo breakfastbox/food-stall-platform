@@ -69,6 +69,8 @@
     #historyMessage {
       text-align: center;
     }
+    .history-stall-name { color:#796d65; font-size:13px; font-weight:700; margin:0 0 8px; }
+    .history-footer { text-align:center; margin-top:22px; }
   </style>
 </head>
 
@@ -76,8 +78,8 @@
   <div class="container">
 
     <h1>📦 My Order History</h1>
-    <p style="text-align:center">
-      Breakfast Box — Your previous orders
+    <p id="historySubtitle" style="text-align:center">
+      Your previous orders from food stalls
     </p>
 
     <p id="historyMessage">Loading your orders...</p>
@@ -85,8 +87,8 @@
     <div id="historyList"></div>
 
     <div style="text-align:center">
-      <a class="button secondary" href="order.html">
-        Order Breakfast
+      <a class="button secondary" id="browseMenuLink" href="order.html">
+        Browse Menu
       </a>
     </div>
 
@@ -107,6 +109,10 @@
     );
 
     const HISTORY_KEY = "breakfastBoxOrderHistory";
+    const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
+    const browseMenuLink = document.getElementById("browseMenuLink");
+    const historySubtitle = document.getElementById("historySubtitle");
+    if (requestedStallId) browseMenuLink.href = "order.html?stall_id=" + encodeURIComponent(requestedStallId);
 
     const historyList = document.getElementById("historyList");
     const historyMessage = document.getElementById("historyMessage");
@@ -202,6 +208,8 @@
               ? "Not assigned"
               : String(order.token_number).padStart(4, "0");
 
+            const orderStallName = order.stall_name || saved.stall_name || "Food Stall";
+            card.appendChild(createTextElement("p", orderStallName, "history-stall-name"));
             card.appendChild(
               createTextElement("h2", "Order #" + token)
             );
@@ -356,6 +364,13 @@
 
         historyMessage.textContent =
           results.length + " saved order(s) found.";
+        const latestSaved = savedOrders[0];
+        const latestOrder = results[0]?.order;
+        const preferredStallId = requestedStallId || latestSaved?.stall_id || latestOrder?.stall_id;
+        if (preferredStallId) browseMenuLink.href = "order.html?stall_id=" + encodeURIComponent(preferredStallId);
+        const names = [...new Set(results.map(entry => entry.order?.stall_name || entry.saved?.stall_name).filter(Boolean))];
+        if (names.length === 1) historySubtitle.textContent = "Your previous orders from " + names[0];
+        else if (names.length > 1) historySubtitle.textContent = "Your previous orders from " + names.length + " food stalls";
 
         // Update change-request messages in the background after orders are visible.
         Promise.all(results.map(async ({ saved, order }) => {
