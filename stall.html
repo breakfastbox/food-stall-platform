@@ -7,6 +7,20 @@
   <title>Stall Dashboard - Food Stall Platform</title>
 
   <link rel="stylesheet" href="style.css">
+  <style>
+    .category-order-panel { margin-top:22px; padding:16px; border:1px solid #e7ddd3; border-radius:14px; background:#fffdfb; }
+    .category-order-panel h3 { margin:0 0 5px; }
+    .category-order-panel > p { color:#75685f; font-size:13px; }
+    .category-order-list { display:grid; gap:8px; margin-top:12px; }
+    .category-order-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e8ded5; border-radius:11px; background:#fff; }
+    .category-order-row.dragging { opacity:.4; border:2px dashed #b77945; }
+    .category-order-row.drop-target { border-color:#b77945; background:#fbf1e7; }
+    .category-order-name { flex:1; min-width:0; font-weight:700; overflow-wrap:anywhere; }
+    .category-order-handle { min-width:40px; padding:8px; cursor:grab; touch-action:none; background:#f5ece3; color:#553722; font-size:19px; }
+    .category-order-actions { display:flex; gap:5px; }
+    .category-order-actions button { min-width:36px; padding:7px; background:#f5ece3; color:#553722; }
+    .category-order-row[aria-grabbed="true"] { outline:2px solid #b77945; }
+  </style>
 </head>
 
 <body>
@@ -182,7 +196,16 @@
           Add Category
         </button>
 
-        <p id="categoryMessage"></p>
+        <p id="categoryMessage" aria-live="polite"></p>
+
+        <div class="category-order-panel">
+          <h3>Customer Page Category Order</h3>
+          <p>Drag categories into the order you want customers to see. This order is saved automatically. On phones, use the up/down arrows or drag the handle.</p>
+          <div id="categoryOrderList" class="category-order-list">
+            <p>Loading categories...</p>
+          </div>
+          <p id="categoryOrderMessage" aria-live="polite"></p>
+        </div>
 
         <hr>
 
