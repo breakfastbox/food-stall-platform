@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <meta name="app-version" content="love-coffee-customer-live-20261108">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -159,7 +159,7 @@
       <form id="orderForm">
         <div class="field">
           <label for="customerName">Full name *</label>
-          <input id="customerName" maxlength="100" required>
+          <input id="customerName" maxlength="100" autocomplete="name" required>
         </div>
 
         
@@ -188,7 +188,7 @@
         </div>
 
         <button class="order-button" id="placeOrderButton" type="submit">
-          Place Test Order
+          Place Order
         </button>
         
 <div class="cf-turnstile"
@@ -471,7 +471,7 @@ if (!validPhone) {
 
       placeOrderButton.disabled = true;
       placeOrderButton.textContent = "Submitting...";
-      showMessage("Submitting your test order...");
+      showMessage("Submitting your order...");
 
       try {
 
@@ -519,7 +519,7 @@ if (!validPhone) {
           : null;
 
         showMessage(
-          "Test order placed successfully!\n" +
+          "Order placed successfully!\n" +
           "Token: " + order.token_number + "\n" +
           "Status: " + order.order_status + "\n" +
           "Total: ₹" + money(order.total_amount) +
@@ -612,7 +612,7 @@ try {
         showMessage(error.message || "Something went wrong.", "error");
       } finally {
   placeOrderButton.disabled = stallOrderingPaused;
-  placeOrderButton.textContent = "Place Test Order";
+  placeOrderButton.textContent = "Place Order";
 }
     });
 
