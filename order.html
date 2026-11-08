@@ -930,7 +930,8 @@ try {
 
           trackingLink.href =
             "https://breakfastbox.github.io/food-stall-platform/track-order.html?code=" +
-            encodeURIComponent(order.tracking_code);
+            encodeURIComponent(order.tracking_code) +
+            "&stall_id=" + encodeURIComponent(stallId);
 
           trackingLink.textContent = "Track My Order";
           trackingLink.target = "_blank";
