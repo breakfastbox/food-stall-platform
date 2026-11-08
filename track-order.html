@@ -230,14 +230,15 @@ function displayOrder(order) {
     // This prevents customer-entered quantities and notes from being erased.
     result.appendChild(existingPanel);
     const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
-    const locked = order.order_status !== "pending" ||
+    const canChangeBeforePreparation = ["pending", "accepted"].includes(order.order_status);
+    const locked = !canChangeBeforePreparation ||
       Boolean(order.stock_deducted_at) || Date.now() >= deadline;
 
     if (locked) {
       const info = existingPanel.querySelector(".change-muted");
       if (info) {
-        info.textContent = order.order_status !== "pending"
-          ? "Changes are locked because the stall has updated your order status to " + order.order_status + "."
+        info.textContent = !canChangeBeforePreparation
+          ? "Changes are locked because the stall has started preparation or closed this order."
           : order.stock_deducted_at
             ? "Changes are locked because preparation has started."
             : "The 5-minute change window has ended. Please contact the stall for help.";
@@ -267,7 +268,7 @@ async function renderOrderChangePanel(order, parent) {
   parent.appendChild(panel);
 
   const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
-  const stillEligible = order.order_status === "pending" &&
+  const stillEligible = ["pending", "accepted"].includes(order.order_status) &&
     !order.stock_deducted_at && Date.now() < deadline;
 
   try {
@@ -292,9 +293,11 @@ async function renderOrderChangePanel(order, parent) {
         ? "Last change request: " + existing.request_status + ". "
         : "";
     if (!stillEligible) {
-      info.textContent = previousRequestMessage + (order.order_status !== "pending"
-        ? "Changes are locked because the stall has updated your order status to " + order.order_status + "."
-        : "The 5-minute change window has ended. Please contact the stall for help.");
+      info.textContent = previousRequestMessage + (!["pending", "accepted"].includes(order.order_status)
+        ? "Changes are locked because the stall has started preparation or closed this order."
+        : order.stock_deducted_at
+          ? "Changes are locked because stock has already been deducted."
+          : "The 5-minute change window has ended. Please contact the stall for help.");
       return;
     }
 
