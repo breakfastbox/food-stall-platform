@@ -1901,11 +1901,14 @@ function renderCategoryOrderControls(categories, stallId) {
       categoryOrderDragState = { row, pointerId: event.pointerId, moved: false };
       row.classList.add("dragging");
       row.setAttribute("aria-grabbed", "true");
-      try { handle.setPointerCapture(event.pointerId); } catch (_) {}
       event.preventDefault();
     });
-    handle.addEventListener("pointermove", event => {
+
+    // Listen on the document so dragging continues even when the pointer
+    // leaves the small handle button. This works with mouse, pen and touch.
+    const moveCategoryRow = event => {
       if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
+      if (categoryOrderDragState.pointerId !== event.pointerId) return;
       const target = document.elementFromPoint(event.clientX, event.clientY);
       const targetRow = target?.closest?.("[data-category-row]");
       if (!targetRow || targetRow === row || targetRow.parentElement !== list) return;
@@ -1915,9 +1918,11 @@ function renderCategoryOrderControls(categories, stallId) {
       list.insertBefore(row, insertAfter ? targetRow.nextSibling : targetRow);
       list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
       targetRow.classList.add("drop-target");
-    });
-    const finishDrag = async () => {
+    };
+
+    const finishCategoryRowDrag = async event => {
       if (!categoryOrderDragState || categoryOrderDragState.row !== row) return;
+      if (event && categoryOrderDragState.pointerId !== event.pointerId) return;
       const moved = categoryOrderDragState.moved;
       categoryOrderDragState = null;
       row.classList.remove("dragging");
@@ -1925,10 +1930,17 @@ function renderCategoryOrderControls(categories, stallId) {
       list.querySelectorAll(".category-order-row").forEach(item => {
         item.classList.remove("drop-target");
       });
+      document.removeEventListener("pointermove", moveCategoryRow);
+      document.removeEventListener("pointerup", finishCategoryRowDrag);
+      document.removeEventListener("pointercancel", finishCategoryRowDrag);
       if (moved) await saveCategoryDisplayOrder(stallId);
     };
-    handle.addEventListener("pointerup", finishDrag);
-    handle.addEventListener("pointercancel", finishDrag);
+
+    handle.addEventListener("pointerdown", () => {
+      document.addEventListener("pointermove", moveCategoryRow);
+      document.addEventListener("pointerup", finishCategoryRowDrag);
+      document.addEventListener("pointercancel", finishCategoryRowDrag);
+    });
 
     const name = document.createElement("span");
     name.className = "category-order-name";
