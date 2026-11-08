@@ -1872,8 +1872,6 @@ async function loadCategoriesForEditing() {
 
 let categoryOrderDragState = null;
 
-let categoryOrderDragState = null;
-
 function renderCategoryOrderControls(categories, stallId) {
   const list = document.getElementById("categoryOrderList");
   if (!list) return;
