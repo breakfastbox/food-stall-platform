@@ -1889,10 +1889,9 @@ function renderCategoryOrderControls(categories, stallId) {
     row.dataset.stallId = stallId;
     row.setAttribute("data-category-row", "");
 
-    const handle = document.createElement("button");
-    handle.type = "button";
+    const handle = document.createElement("span");
     handle.className = "category-order-handle";
-    handle.textContent = "☰";
+    handle.textContent = "☰ Drag";
     handle.draggable = true;
     handle.title = "Drag to rearrange " + category.name;
     handle.setAttribute("aria-label", "Drag to rearrange " + category.name);
@@ -2021,10 +2020,9 @@ function renderMenuItemOrderControls(menuItems, stallId) {
       const controls = document.createElement("div");
       controls.className = "menu-item-order-controls";
 
-      const handle = document.createElement("button");
-      handle.type = "button";
+      const handle = document.createElement("span");
       handle.className = "menu-item-order-handle";
-      handle.textContent = "☰";
+      handle.textContent = "☰ Drag";
       handle.draggable = true;
       handle.title = "Drag to rearrange " + item.name;
       handle.setAttribute("aria-label", "Drag to rearrange " + item.name);
