@@ -249,6 +249,7 @@ let stallOrderingPaused = false;
               .select("id, name, description, price, image_url, is_available")
               .eq("stall_id", requestedStallId)
               .eq("is_available", true)
+              .gt("price", 0)
               .order("name")
           : null;
 
@@ -301,6 +302,7 @@ let stallOrderingPaused = false;
               .select("id, name, description, price, image_url, is_available")
               .eq("stall_id", stallId)
               .eq("is_available", true)
+              .gt("price", 0)
               .order("name");
 
         const { data, error } = menuResult;
@@ -404,6 +406,7 @@ let stallOrderingPaused = false;
 
         if (!Number.isInteger(quantity) || quantity < 0) quantity = 0;
         if (quantity > 50) quantity = 50;
+        if (input.value !== String(quantity)) input.value = String(quantity);
 
         const item = menuItems.find(
           entry => entry.id === input.dataset.itemId
@@ -483,7 +486,7 @@ if (!validPhone) {
           },
           body: JSON.stringify({
             name,
-            phone,
+            phone: normalizedPhone,
             email,
             stall_id: stallId,
             items,
@@ -611,6 +614,7 @@ try {
         console.error(error);
         showMessage(error.message || "Something went wrong.", "error");
       } finally {
+  window.turnstile?.reset();
   placeOrderButton.disabled = stallOrderingPaused;
   placeOrderButton.textContent = "Place Order";
 }
