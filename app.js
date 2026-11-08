@@ -1360,6 +1360,10 @@ async function loadOrdersInternal() {
         <h3>Order Token: ${escapeHTML(order.token_number ?? "Not assigned")}</h3>
 
         <h4>Food Items</h4>
+        ${order.special_instructions
+          ? `<div style="margin:12px 0;padding:12px;border-left:4px solid #b77945;border-radius:8px;background:#fff7ed;"><strong>Customer instructions</strong><p style="margin:6px 0 0;white-space:pre-wrap;">${escapeHTML(order.special_instructions)}</p></div>`
+          : '<p style="color:#777;">No special instructions.</p>'}
+        
         ${foodItemsHTML}
 
         <hr>
@@ -1464,7 +1468,7 @@ async function loadOrders() {
 
     const { data: orders, error } = await supabaseClient
       .from("orders")
-      .select("id, token_number, order_status, payment_status, subtotal, total_amount, created_at")
+      .select("id, token_number, order_status, payment_status, subtotal, total_amount, special_instructions, created_at")
       .eq("stall_id", assignedStall.id)
       .order("created_at", { ascending: false });
 
