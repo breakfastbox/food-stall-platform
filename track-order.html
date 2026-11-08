@@ -119,14 +119,15 @@
 
     <form id="trackOrderForm">
       <label for="token">Enter your order token</label>
+      <p class="change-muted" style="margin:0 0 8px;">Use the token shown after checkout (for example, 0007).</p>
       <input
         id="token"
         name="token"
         type="text"
         inputmode="numeric"
-        pattern="[0-9]{6}"
+        pattern="[0-9]{1,6}"
         maxlength="6"
-        placeholder="e.g. 741392"
+        placeholder="e.g. 0007"
         required
       >
 
