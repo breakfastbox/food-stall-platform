@@ -1756,10 +1756,28 @@ async function quickSetOrderStatus(orderId, status) {
 }
 
 async function quickSetPaymentStatus(orderId, status) {
-  const select = document.getElementById("payment-status-" + orderId);
-  if (!select) return;
-  select.value = status;
-  await updatePaymentStatus(orderId);
+  const message = document.getElementById("ordersMessage");
+  if (!["pending", "paid"].includes(status) || !message) return;
+  let stallId;
+  try {
+    stallId = (await getCurrentStallContext()).stall.id;
+  } catch (error) {
+    message.textContent = "Could not verify your stall: " + error.message;
+    return;
+  }
+  message.textContent = status === "paid" ? "Recording payment..." : "Restoring pending payment status...";
+  const { data, error } = await supabaseClient
+    .from("orders")
+    .update({ payment_status: status })
+    .eq("id", orderId)
+    .eq("stall_id", stallId)
+    .select("id");
+  if (error || !data || data.length === 0) {
+    message.textContent = "Payment was not updated: " + (error?.message || "Please check permissions.");
+    return;
+  }
+  message.textContent = status === "paid" ? "Payment marked as received." : "Payment status set to pending.";
+  await loadOrders({ force: true });
 }
 
 async function updatePaymentStatus(orderId) {
