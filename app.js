@@ -1684,17 +1684,6 @@ if (knownOrderIdsForAlerts === null) {
             ${order.payment_status === "paid" ? `<button class='quick-action paid' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;pending&quot;)'>✓ Paid · Undo</button>` : `<button class='quick-action payment-due' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;paid&quot;)'>Mark payment received</button>`}
           </div>
 
-          <label for="payment-status-${escapeHtml(order.id)}">
-            Update payment status:
-          </label>
-          <select id="payment-status-${escapeHtml(order.id)}">
-            <option value="pending" ${order.payment_status === "pending" ? "selected" : ""}>Pending</option>
-            <option value="paid" ${order.payment_status === "paid" ? "selected" : ""}>Paid</option>
-          </select>
-          <button onclick="updatePaymentStatus('${escapeHtml(order.id)}')">
-            Save Payment Status
-          </button>
-
           <p><strong>Subtotal:</strong> ₹${formatRupees(order.subtotal)}</p>
           <p><strong>Total:</strong> ₹${formatRupees(order.total_amount)}</p>
           <p><strong>Placed:</strong> ${escapeHtml(
@@ -1703,22 +1692,25 @@ if (knownOrderIdsForAlerts === null) {
               : "Unknown"
           )}</p>
 
-          <label for="status-${escapeHtml(order.id)}">
-            Update order status:
-          </label>
+          <details class="order-more-controls">
+            <summary>More options</summary>
+            <label for="status-${escapeHtml(order.id)}">
+              Update order status:
+            </label>
 
-          <select id="status-${escapeHtml(order.id)}">
-            <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
-            <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>Accepted</option>
-            <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
-            <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
-            <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
-            <option value="cancelled" ${order.order_status === "cancelled" ? "selected" : ""}>Cancelled</option>
-          </select>
+            <select id="status-${escapeHtml(order.id)}">
+              <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
+              <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>Accepted</option>
+              <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
+              <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
+              <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
+              <option value="cancelled" ${order.order_status === "cancelled" ? "selected" : ""}>Cancelled</option>
+            </select>
 
-          <button onclick="updateOrderStatus('${escapeHtml(order.id)}')">
-            Save Status
-          </button>
+            <button onclick="updateOrderStatus('${escapeHtml(order.id)}')">
+              Save Status
+            </button>
+            </details>
         </div>
       `;
     }).join("");
