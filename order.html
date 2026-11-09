@@ -145,6 +145,9 @@
       background: #fffdfb;
       color: var(--ink);
     }
+    .optional-order-details { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid #eadfd5; border-radius: 12px; background: #fffaf5; }
+    .optional-order-details summary { cursor: pointer; color: var(--coffee); font-size: 13px; font-weight: 750; }
+    .optional-order-details[open] summary { margin-bottom: 12px; }
     .total {
       display: flex;
       justify-content: space-between;
@@ -300,12 +303,12 @@
     </section>
 
     <section class="panel">
-      <h2>Where should we reach you?</h2>
-      <p class="section-hint">Share your details so the stall can confirm your order.</p>
+      <h2>Quick checkout</h2>
+      <p class="section-hint">Just your name and phone number. You can add optional details if needed.</p>
 
       <form id="orderForm">
         <div class="field">
-          <label for="customerName">Full name *</label>
+          <label for="customerName">Your name *</label>
           <input id="customerName" maxlength="100" autocomplete="name" required>
         </div>
 
@@ -324,7 +327,9 @@
   >
 </div>
 
-        <div class="field">
+        <details class="optional-order-details">
+          <summary>Add email or special requests (optional)</summary>
+          <div class="field">
           <label for="customerEmail">Email (optional)</label>
           <input id="customerEmail" type="email" maxlength="254"
                  autocomplete="email">
@@ -345,7 +350,8 @@
           <label for="specialInstructions" style="display:block;margin-bottom:7px;color:var(--coffee);font-size:13px;font-weight:750;">Anything else?</label>
           <textarea id="specialInstructions" maxlength="500" placeholder="Example: Please pack chutney separately..."></textarea>
           <p style="margin:8px 0 0;">We’ll pass your request to the stall. Some requests may not be possible.</p>
-        </div>
+          </div>
+        </details>
 
         <div class="total">
           <span>Your order total</span>
