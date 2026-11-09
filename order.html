@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="order-instructions-20261108">
+  <meta name="app-version" content="cash-checkout-20261109">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -352,6 +352,16 @@
           <p style="margin:8px 0 0;">We’ll pass your request to the stall. Some requests may not be possible.</p>
           </div>
         </details>
+
+
+        <div class="payment-choice" style="margin:16px 0;padding:15px;border:1px solid #eadfd5;border-radius:14px;background:#fffaf5;">
+          <h3 style="margin:0 0 6px;color:var(--coffee);font-size:16px;">Payment method</h3>
+          <label for="paymentCash" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #b9dfc4;border-radius:11px;background:#f0fdf4;color:var(--coffee);font-weight:750;cursor:pointer;">
+            <input id="paymentCash" type="radio" name="paymentMethod" value="cash" checked style="margin-top:4px;">
+            <span>Cash at the stall <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Place your order now and pay when you collect it.</small></span>
+          </label>
+          <p style="margin:9px 0 0;color:var(--muted);font-size:12px;">Online UPI payment will be added after the payment gateway is connected.</p>
+        </div>
 
         <div class="total">
           <span>Your order total</span>
@@ -841,6 +851,7 @@ if (!validPhone) {
             phone: normalizedPhone,
             email,
             special_instructions: buildSpecialInstructions(),
+            payment_method: document.querySelector('input[name="paymentMethod"]:checked')?.value || "cash",
             stall_id: stallId,
             items,
             turnstile_token: turnstileToken
@@ -867,6 +878,7 @@ if (!validPhone) {
   ? "Pending — awaiting stall confirmation"
   : order.order_status) + "\n" +
           "Total: ₹" + money(order.total_amount) + "\n" +
+          "Payment: Cash at the stall (pending)\n" +
           "Thank you!";
 
         const whatsappNumber = stallPhone.replace(/[^0-9]/g, "");
@@ -879,7 +891,7 @@ if (!validPhone) {
           "Token: " + order.token_number + "\n" +
           "Status: " + order.order_status + "\n" +
           "Total: ₹" + money(order.total_amount) +
-          "\n\nOpen WhatsApp to send your confirmation:",
+          "\nPayment: Cash at the stall — pay when you collect.\n\nOpen WhatsApp to send your confirmation:",
           "success"
         );
 
