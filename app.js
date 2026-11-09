@@ -1397,6 +1397,10 @@ async function loadOrdersInternal() {
           ${escapeHTML(order.payment_status || "Unknown")}
         </p>
 
+        <p><strong>Payment Method:</strong>
+          ${escapeHTML(order.payment_method === "cash" || !order.payment_method ? "Cash at the stall" : order.payment_method)}
+        </p>
+
         <p><strong>Subtotal:</strong>
           ₹${Number(order.subtotal) || 0}
         </p>
