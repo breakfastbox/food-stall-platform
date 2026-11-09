@@ -1676,6 +1676,14 @@ if (knownOrderIdsForAlerts === null) {
           <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
 
+          <div class="order-quick-actions">
+            ${order.order_status === "pending" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;accepted&quot;)'>Accept order</button>` : ""}
+            ${order.order_status === "accepted" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;preparing&quot;)'>Start preparing</button>` : ""}
+            ${order.order_status === "preparing" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;ready&quot;)'>Mark ready</button>` : ""}
+            ${order.order_status === "ready" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;completed&quot;)'>Complete order</button>` : ""}
+            ${order.payment_status === "paid" ? `<button class='quick-action paid' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;pending&quot;)'>✓ Paid · Undo</button>` : `<button class='quick-action payment-due' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;paid&quot;)'>Mark payment received</button>`}
+          </div>
+
           <label for="payment-status-${escapeHtml(order.id)}">
             Update payment status:
           </label>
