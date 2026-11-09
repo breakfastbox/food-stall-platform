@@ -1502,6 +1502,7 @@ async function loadOrders(options = {}) {
 
     if (error) throw error;
 
+       window.foodStallNewOrderIds = window.foodStallNewOrderIds || new Set();
        const currentOrderIds = new Set(
   (orders || []).map(order => order.id)
 );
@@ -1515,6 +1516,7 @@ if (knownOrderIdsForAlerts === null) {
     if (!knownOrderIdsForAlerts.has(order.id)) {
       newOrders.push(order);
       knownOrderIdsForAlerts.add(order.id);
+      window.foodStallNewOrderIds.add(order.id);
     }
   });
 
@@ -1664,9 +1666,11 @@ if (knownOrderIdsForAlerts === null) {
       const token = order.token_number == null
         ? "Not assigned"
         : String(order.token_number).padStart(4, "0");
+      const isNewOrder = order.order_status === "pending" && window.foodStallNewOrderIds.has(order.id);
 
       return `
-        <div class="card order-card" data-order-id="${escapeHtml(order.id)}">
+        <div class="card order-card ${isNewOrder ? "new-order-card" : ""}" data-order-id="${escapeHtml(order.id)}">
+          ${isNewOrder ? '<span class="new-order-label">NEW ORDER</span>' : ""}
           <h3>Order Token: ${escapeHtml(token)}</h3>
 
           <p><strong>Food Items:</strong></p>
