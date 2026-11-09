@@ -119,7 +119,7 @@ async function getCurrentStallContext() {
 
   let stallQuery = supabaseClient
     .from("stalls")
-    .select("id, name, status, ordering_enabled, logo_url")
+    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name")
     .limit(1);
 
   if (profile.role === "admin") {
@@ -982,6 +982,23 @@ async function saveStallBranding() {
   }
 }
 
+async function saveStallUpiSettings() {
+  const button = document.getElementById("saveStallUpiButton"), message = document.getElementById("stallUpiMessage");
+  const upiId = document.getElementById("stallUpiId")?.value.trim() || "";
+  const accountName = document.getElementById("stallUpiAccountName")?.value.trim() || "";
+  if (!button || !message) return;
+  if (upiId && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z0-9.-]{2,64}$/.test(upiId)) { message.textContent = "Enter a valid UPI ID, for example name@bank."; return; }
+  if (accountName.length > 100) { message.textContent = "Account name must be 100 characters or fewer."; return; }
+  button.disabled = true; message.textContent = "Saving UPI settings...";
+  try {
+    const stall = (await getCurrentStallContext()).stall;
+    const { data, error } = await supabaseClient.from("stalls").update({ upi_id: upiId || null, upi_account_name: accountName || null }).eq("id", stall.id).select("id, upi_id, upi_account_name").single();
+    if (error) throw error;
+    message.textContent = data.upi_id ? "UPI settings saved. Customers can now choose UPI at checkout." : "UPI details cleared. Customers will only see Cash at the stall.";
+  } catch (error) { console.error(error); message.textContent = "Could not save UPI settings: " + (error.message || "Please try again."); }
+  finally { button.disabled = false; }
+}
+
 async function loadStallDashboard() {
   let stall;
   try {
@@ -995,6 +1012,10 @@ async function loadStallDashboard() {
   }
 
   document.getElementById("stallName").textContent = stall.name;
+  const upiIdInput = document.getElementById("stallUpiId");
+  const upiNameInput = document.getElementById("stallUpiAccountName");
+  if (upiIdInput) upiIdInput.value = stall.upi_id || "";
+  if (upiNameInput) upiNameInput.value = stall.upi_account_name || "";
   const brandingName = document.getElementById("brandingStallName");
   if (brandingName) brandingName.value = stall.name || "";
   const stallLogo = document.getElementById("stallLogo");
@@ -1397,9 +1418,8 @@ async function loadOrdersInternal() {
           ${escapeHTML(order.payment_status || "Unknown")}
         </p>
 
-        <p><strong>Payment Method:</strong>
-          ${escapeHTML(order.payment_method === "cash" || !order.payment_method ? "Cash at the stall" : order.payment_method)}
-        </p>
+        <p><strong>Payment Method:</strong> ${escapeHTML(order.payment_method === "upi_manual" ? "UPI (manual verification)" : "Cash at the stall")}</p>
+        ${order.upi_transaction_reference ? `<p><strong>UPI reference:</strong> ${escapeHTML(order.upi_transaction_reference)}</p>` : ""}
 
         <p><strong>Subtotal:</strong>
           ₹${Number(order.subtotal) || 0}
@@ -1500,7 +1520,7 @@ async function loadOrders(options = {}) {
 
     const { data: orders, error } = await supabaseClient
       .from("orders")
-      .select("id, token_number, order_status, payment_status, subtotal, total_amount, special_instructions, created_at")
+      .select("id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, created_at")
       .eq("stall_id", assignedStall.id)
       .order("created_at", { ascending: false });
 
@@ -1683,6 +1703,8 @@ if (knownOrderIdsForAlerts === null) {
 
           <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
+          <p><strong>Payment method:</strong> ${escapeHtml(order.payment_method === "upi_manual" ? "UPI (manual verification)" : "Cash at the stall")}</p>
+          ${order.upi_transaction_reference ? `<p><strong>UPI reference:</strong> ${escapeHtml(order.upi_transaction_reference)}</p>` : ""}
 
           <div class="order-quick-actions">
             ${order.order_status === "pending" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;accepted&quot;)'>Accept order</button>` : ""}
