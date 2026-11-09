@@ -1450,14 +1450,21 @@ async function loadOrdersInternal() {
 
 
 
-async function loadOrders() {
+async function loadOrders(options = {}) {
   const message = document.getElementById("ordersMessage");
   const list = document.getElementById("ordersList");
 
   if (!message || !list) return;
-
-  message.textContent = "Loading orders...";
-  list.innerHTML = "";
+  if (!options.force && list.contains(document.activeElement)) return;
+  if (window.foodStallOrderRefreshInProgress) return;
+  window.foodStallOrderRefreshInProgress = true;
+  const previousScrollY = window.scrollY;
+  const visibleAnchor = [...list.querySelectorAll("[data-order-id]")].find(card => {
+    const rect = card.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < window.innerHeight;
+  });
+  const anchorOrderId = visibleAnchor?.dataset.orderId || null;
+  const anchorTop = visibleAnchor?.getBoundingClientRect().top ?? null;
 
   const escapeHtml = value =>
     String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -1659,7 +1666,7 @@ if (knownOrderIdsForAlerts === null) {
         : String(order.token_number).padStart(4, "0");
 
       return `
-        <div class="card">
+        <div class="card order-card" data-order-id="${escapeHtml(order.id)}">
           <h3>Order Token: ${escapeHtml(token)}</h3>
 
           <p><strong>Food Items:</strong></p>
@@ -1711,6 +1718,15 @@ if (knownOrderIdsForAlerts === null) {
   } catch (error) {
     console.error("Could not load orders:", error);
     message.textContent = "Unable to load orders: " + error.message;
+  } finally {
+    requestAnimationFrame(() => {
+      if (anchorOrderId && anchorTop !== null) {
+        const anchor = list.querySelector('[data-order-id="' + anchorOrderId + '"]');
+        if (anchor) window.scrollBy(0, anchor.getBoundingClientRect().top - anchorTop);
+        else window.scrollTo(0, previousScrollY);
+      } else window.scrollTo(0, previousScrollY);
+      window.foodStallOrderRefreshInProgress = false;
+    });
   }
 }
 
@@ -1732,6 +1748,20 @@ function toggleCustomOrderDate() {
   }
 }
 
+async function quickSetOrderStatus(orderId, status) {
+  const select = document.getElementById("status-" + orderId);
+  if (!select) return;
+  select.value = status;
+  await updateOrderStatus(orderId);
+}
+
+async function quickSetPaymentStatus(orderId, status) {
+  const select = document.getElementById("payment-status-" + orderId);
+  if (!select) return;
+  select.value = status;
+  await updatePaymentStatus(orderId);
+}
+
 async function updatePaymentStatus(orderId) {
   const select = document.getElementById("payment-status-" + orderId);
   const message = document.getElementById("ordersMessage");
@@ -1742,16 +1772,6 @@ async function updatePaymentStatus(orderId) {
   if (!["pending", "paid"].includes(newStatus)) {
     message.textContent = "Invalid payment status.";
     return;
-  }
-
-  if (newStatus === "paid") {
-    const confirmed = window.confirm(
-      "This will count the order total as collected sales in Reports. For a designated test order only, you may temporarily set it to Paid and then restore Pending immediately after testing. Continue?"
-    );
-    if (!confirmed) {
-      await loadOrders();
-      return;
-    }
   }
 
   message.textContent = "Updating payment status...";
@@ -1775,7 +1795,7 @@ async function updatePaymentStatus(orderId) {
   }
 
   message.textContent = "Payment status updated successfully!";
-  await loadOrders();
+  await loadOrders({ force: true });
 }
 
 
@@ -1851,7 +1871,7 @@ if (newStatus === "accepted") {
       ? result.data
       : "Order status updated successfully!";
 
-  await loadOrders();
+  await loadOrders({ force: true });
 }
 
 
