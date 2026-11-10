@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stall Order History</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7f5;color:#26352c;margin:0;padding:18px}.container{max-width:900px;margin:auto}h1{color:#176b45}.muted{color:#68756d}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}button{border:0;border-radius:9px;padding:12px 16px;background:#176b45;color:white;font-weight:700;cursor:pointer}.order{background:white;border:1px solid #e3e7e4;border-radius:13px;padding:17px;margin:13px 0}.order h2{margin:0 0 12px;font-size:20px}.items{padding-left:20px;line-height:1.8}.meta{color:#56645b;font-size:14px}.tag{display:inline-block;background:#edf2ee;padding:5px 9px;border-radius:7px;font-size:12px;font-weight:700}
+</style>
+</head>
+<body><main class="container">
+<h1>📚 Order History</h1><p class="muted" id="stallHeading">Loading previous orders…</p>
+<div class="toolbar"><button onclick="window.location.href='orders.html'+window.location.search">← Back to Today's Orders</button><button onclick="loadHistory()">Refresh History</button></div>
+<p id="historyMessage" class="muted">Loading…</p><div id="historyList"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL="https://anlgfcltudysjnsipsmd.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv";
+const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const params=new URLSearchParams(location.search),requestedStallId=params.get("stall_id");
+const message=document.getElementById("historyMessage"),list=document.getElementById("historyList");let loading=false;
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function todayStartIndia(){const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const g=t=>p.find(x=>x.type===t)?.value||"";return new Date(g("year")+"-"+g("month")+"-"+g("day")+"T00:00:00+05:30");}
+async function loadHistory(){if(loading)return;loading=true;message.textContent="Loading previous orders…";try{
+const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user)throw new Error("Please sign in to view stall order history.");
+const {data:profile,error:pe}=await client.from("profiles").select("role,stall_id").eq("id",user.id).maybeSingle();if(pe||!profile)throw new Error("Could not verify your stall account.");
+let sq=client.from("stalls").select("id,name").limit(1);if(profile.role==="admin")sq=requestedStallId?sq.eq("id",requestedStallId):sq.eq("name","Breakfast Box");else if(["stall_owner","staff"].includes(profile.role)&&profile.stall_id)sq=sq.eq("id",profile.stall_id);else throw new Error("This account does not have stall history access.");
+const {data:stall,error:se}=await sq.maybeSingle();if(se||!stall)throw new Error("Could not load your assigned stall.");
+document.getElementById("stallHeading").textContent=stall.name+" — previous orders (before today)";
+const {data:orders,error}=await client.from("orders").select("id,token_number,order_status,payment_status,payment_method,upi_transaction_reference,subtotal,total_amount,created_at").eq("stall_id",stall.id).lt("created_at",todayStartIndia().toISOString()).order("created_at",{ascending:false}).limit(500);if(error)throw error;
+if(!orders?.length){message.textContent="No previous orders. New orders placed today will stay on the Orders page.";list.replaceChildren();return;}
+const {data:items,error:ie}=await client.from("order_items").select("order_id,item_name,quantity,unit_price").in("order_id",orders.map(o=>o.id));if(ie)throw ie;
+const grouped=new Map();(items||[]).forEach(x=>{if(!grouped.has(x.order_id))grouped.set(x.order_id,[]);grouped.get(x.order_id).push(x);});
+list.innerHTML=orders.map(o=>{const token=o.token_number==null?"Not assigned":String(o.token_number).padStart(4,"0");const rows=(grouped.get(o.id)||[]).map(x=>"<li>"+esc(x.item_name)+" × "+esc(x.quantity)+" — ₹"+Number(x.unit_price||0).toFixed(2)+" each</li>").join("");return '<article class="order"><h2>Order Token: '+esc(token)+'</h2><p class="meta">Placed: '+esc(new Date(o.created_at).toLocaleString("en-IN"))+'</p><span class="tag">'+esc(o.order_status||"pending")+'</span> <span class="tag">Payment: '+esc(o.payment_status||"pending")+'</span><p><strong>Payment method:</strong> '+(o.payment_method==="upi_manual"?"UPI":"Cash at the stall")+'</p>'+(o.upi_transaction_reference?'<p><strong>UPI reference:</strong> '+esc(o.upi_transaction_reference)+'</p>':"")+'<h3>Food Items</h3><ul class="items">'+(rows||"<li>Item details unavailable</li>")+'</ul><p><strong>Subtotal:</strong> ₹'+Number(o.subtotal||0).toFixed(2)+'</p><p><strong>Total:</strong> ₹'+Number(o.total_amount||0).toFixed(2)+'</p></article>';}).join("");
+message.textContent=orders.length+" previous order(s) found. Read-only history; no order records were changed.";
+}catch(e){console.error(e);message.textContent=e.message||"Unable to load order history.";}finally{loading=false;}}
+loadHistory();
+</script></body></html>
