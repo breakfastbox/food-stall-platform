@@ -1115,7 +1115,7 @@ async function loadStallDashboard() {
               Change photo
               <input type="file" accept="image/png,image/jpeg,image/webp" onchange="changeMenuItemPhoto('${item.id}', this)" style="display:block;max-width:190px;">
             </label>
-            <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
+            <button onclick="toggleMenuItem('${item.id}')">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
             <button type="button" onclick="window.deleteMenuItem('${item.id}')">
@@ -1151,7 +1151,7 @@ async function loadStallDashboard() {
               Change photo
               <input type="file" accept="image/png,image/jpeg,image/webp" onchange="changeMenuItemPhoto('${item.id}', this)" style="display:block;max-width:190px;">
             </label>
-            <button onclick="toggleMenuItem('${item.id}', ${item.is_available})">
+            <button onclick="toggleMenuItem('${item.id}')">
               ${item.is_available ? "Mark Unavailable" : "Mark Available"}
             </button>
             <button type="button" onclick="window.deleteMenuItem('${item.id}')">
@@ -2489,11 +2489,14 @@ async function addMenuItem() {
     imageUrl = publicData.publicUrl;
   }
 
-  const { data: existingItems, error: orderLookupError } = await supabaseClient
+  let existingItemsQuery = supabaseClient
     .from("menu_items")
     .select("sort_order")
-    .eq("stall_id", stallId)
-    .is("category_id", categoryId || null);
+    .eq("stall_id", stallId);
+  existingItemsQuery = categoryId
+    ? existingItemsQuery.eq("category_id", categoryId)
+    : existingItemsQuery.is("category_id", null);
+  const { data: existingItems, error: orderLookupError } = await existingItemsQuery;
   if (orderLookupError) {
     message.textContent = "Could not prepare the new item's display position: " + orderLookupError.message;
     return;
@@ -2553,20 +2556,32 @@ async function addMenuItem() {
   document.getElementById("itemAvailable").checked = true;
   await loadStallDashboard();
 }
-async function toggleMenuItem(itemId, currentStatus) {
+async function toggleMenuItem(itemId) {
   const message = document.getElementById("menuMessage");
   try {
     const stall = (await getCurrentStallContext()).stall;
+    // Read the current database value so a stale dashboard button cannot reverse
+    // the wrong state after another device has changed the item's availability.
+    const { data: currentItem, error: readError } = await supabaseClient
+      .from("menu_items")
+      .select("id, name, is_available")
+      .eq("id", itemId)
+      .eq("stall_id", stall.id)
+      .maybeSingle();
+    if (readError) throw readError;
+    if (!currentItem) throw new Error("This menu item could not be found for the current stall. Refresh and try again.");
+
+    const nextAvailability = !currentItem.is_available;
     const { data, error } = await supabaseClient
       .from("menu_items")
-      .update({ is_available: !currentStatus })
+      .update({ is_available: nextAvailability })
       .eq("id", itemId)
       .eq("stall_id", stall.id)
       .select("id, name, is_available")
       .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error("No item was updated. Please sign in to the correct stall account and try again.");
+    if (!data) throw new Error("No item was updated. Check the signed-in account's menu permissions and try again.");
 
     if (message) {
       message.textContent = data.name + " is now " + (data.is_available ? "available" : "unavailable") + ".";
