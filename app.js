@@ -148,6 +148,8 @@ async function getCurrentStallContext() {
 let knownOrderIdsForAlerts = null;
 let orderSoundAlertsEnabled = false;
 let orderAlertAudioContext = null;
+let orderAlertRepeatTimer = null;
+let pendingOrderAlerts = new Map();
 let orderBrowserNotificationsEnabled =
   "Notification" in window &&
   Notification.permission === "granted";
@@ -216,27 +218,62 @@ function showNewOrderNotification(order) {
 function playNewOrderSound() {
   if (!orderSoundAlertsEnabled || !orderAlertAudioContext) return;
 
-  const frequencies = [880, 660];
   const now = orderAlertAudioContext.currentTime;
-
-  frequencies.forEach((frequency, index) => {
-    const start = now + index * 0.22;
+  [1046, 784, 1046].forEach((frequency, index) => {
+    const start = now + index * 0.19;
     const oscillator = orderAlertAudioContext.createOscillator();
     const gain = orderAlertAudioContext.createGain();
-
-    oscillator.type = "sine";
+    oscillator.type = "square";
     oscillator.frequency.setValueAtTime(frequency, start);
-
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
-
+    gain.gain.exponentialRampToValueAtTime(0.32, start + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
     oscillator.connect(gain);
     gain.connect(orderAlertAudioContext.destination);
-
     oscillator.start(start);
-    oscillator.stop(start + 0.19);
+    oscillator.stop(start + 0.17);
   });
+}
+
+function speakNewOrderAnnouncement(order) {
+  if (!orderSoundAlertsEnabled || !("speechSynthesis" in window)) return;
+  const token = order.token_number == null
+    ? "not assigned"
+    : String(order.token_number).padStart(4, "0");
+  const utterance = new SpeechSynthesisUtterance(
+    "New order received. Token number " + token + "."
+  );
+  utterance.lang = "en-IN";
+  utterance.rate = 0.92;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const indianEnglishVoice = voices.find(voice =>
+    /^en-IN$/i.test(voice.lang)
+  );
+  if (indianEnglishVoice) utterance.voice = indianEnglishVoice;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function runOrderAlertCycle() {
+  if (!orderSoundAlertsEnabled || document.hidden || pendingOrderAlerts.size === 0) return;
+  const nextOrder = pendingOrderAlerts.values().next().value;
+  playNewOrderSound();
+  window.setTimeout(() => speakNewOrderAnnouncement(nextOrder), 650);
+}
+
+function startOrderAlertLoop() {
+  if (orderAlertRepeatTimer) window.clearInterval(orderAlertRepeatTimer);
+  if (pendingOrderAlerts.size > 0) runOrderAlertCycle();
+  orderAlertRepeatTimer = window.setInterval(runOrderAlertCycle, 9000);
+}
+
+function stopPendingOrderAlert(orderId) {
+  pendingOrderAlerts.delete(orderId);
+  if (pendingOrderAlerts.size === 0 && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 async function enableOrderSoundAlerts() {
@@ -244,37 +281,27 @@ async function enableOrderSoundAlerts() {
   const status = document.getElementById("orderSoundStatus");
 
   try {
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
-
-    if (!AudioContextClass) {
-      throw new Error("Sound alerts are not supported by this browser.");
-    }
-
-    if (!orderAlertAudioContext) {
-      orderAlertAudioContext = new AudioContextClass();
-    }
-
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error("Sound alerts are not supported by this browser.");
+    if (!orderAlertAudioContext) orderAlertAudioContext = new AudioContextClass();
     await orderAlertAudioContext.resume();
 
-    orderSoundAlertsEnabled = true;
-    playNewOrderSound();
+    if (!("speechSynthesis" in window)) {
+      throw new Error("Voice announcements are not supported by this browser. Please use Chrome or Edge.");
+    }
 
+    orderSoundAlertsEnabled = true;
     if (button) {
-      button.textContent = "Sound Alerts Enabled";
+      button.textContent = "Loud Voice Alerts Enabled";
       button.disabled = true;
     }
-
     if (status) {
-      status.textContent = "Sound alerts are enabled.";
+      status.textContent = "Loud alarm and spoken token announcements repeat every 9 seconds until each order is acted on.";
     }
-
+    startOrderAlertLoop();
   } catch (error) {
-    console.error("Could not enable sound alerts:", error);
-
-    if (status) {
-      status.textContent = error.message;
-    }
+    console.error("Could not enable voice order alerts:", error);
+    if (status) status.textContent = error.message;
   }
 }
 async function setOrderingEnabled(action) {
@@ -1527,31 +1554,38 @@ async function loadOrders(options = {}) {
     if (error) throw error;
 
        window.foodStallNewOrderIds = window.foodStallNewOrderIds || new Set();
-       const currentOrderIds = new Set(
-  (orders || []).map(order => order.id)
-);
+       const currentOrderIds = new Set((orders || []).map(order => order.id));
+       const newOrders = [];
 
-if (knownOrderIdsForAlerts === null) {
-  knownOrderIdsForAlerts = currentOrderIds;
-} else {
-  const newOrders = [];
+       if (knownOrderIdsForAlerts === null) {
+         knownOrderIdsForAlerts = currentOrderIds;
+       } else {
+         (orders || []).forEach(order => {
+           if (!knownOrderIdsForAlerts.has(order.id)) {
+             newOrders.push(order);
+             knownOrderIdsForAlerts.add(order.id);
+             window.foodStallNewOrderIds.add(order.id);
+           }
+         });
+       }
 
-  (orders || []).forEach(order => {
-    if (!knownOrderIdsForAlerts.has(order.id)) {
-      newOrders.push(order);
-      knownOrderIdsForAlerts.add(order.id);
-      window.foodStallNewOrderIds.add(order.id);
-    }
-  });
+       // Keep every unhandled pending order in the repeat-alert queue.
+       // This also restores alerts after a page refresh without replaying completed orders.
+       (orders || []).forEach(order => {
+         if ((order.order_status || "pending").toLowerCase() === "pending") {
+           pendingOrderAlerts.set(order.id, order);
+         } else {
+           stopPendingOrderAlert(order.id);
+           window.foodStallNewOrderIds.delete(order.id);
+         }
+       });
 
-  if (newOrders.length > 0) {
-    playNewOrderSound();
-
-    newOrders.forEach(order => {
-      showNewOrderNotification(order);
-    });
-  }
-}
+       if (newOrders.length > 0) {
+         newOrders.forEach(showNewOrderNotification);
+       }
+       if (orderSoundAlertsEnabled && pendingOrderAlerts.size > 0) {
+         startOrderAlertLoop();
+       }
     // Daily summary always uses today's orders, regardless of the active list filters.
     const todayKey = toLocalDateKey(new Date());
     const todaysOrders = (orders || []).filter(order =>
@@ -1919,6 +1953,8 @@ if (newStatus === "accepted") {
       ? result.data
       : "Order status updated successfully!";
 
+  stopPendingOrderAlert(orderId);
+  window.foodStallNewOrderIds.delete(orderId);
   await loadOrders({ force: true });
 }
 
