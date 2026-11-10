@@ -1668,10 +1668,6 @@ async function loadOrders(options = {}) {
     // The active Orders page is today's live queue only.
     // Older orders are kept in the separate read-only Order History page.
     const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
-    const todayKey = toLocalDateKey(new Date());
-    const todaysOrders = (orders || []).filter(order =>
-      order.created_at && toLocalDateKey(new Date(order.created_at)) === todayKey
-    );
     const visibleOrders = statusFilter === "all"
       ? todaysOrders
       : todaysOrders.filter(order => (order.order_status || "pending").toLowerCase() === statusFilter);
