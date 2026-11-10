@@ -63,6 +63,16 @@
         <p class="report-note">Orders marked as paid within the selected period.</p>
       </div>
       <div class="report-card">
+        <h3>Cash Sales</h3>
+        <div class="report-value" id="cashSales">₹—</div>
+        <p class="report-note" id="cashSalesDetail">Received: ₹— • Pending: ₹—</p>
+      </div>
+      <div class="report-card">
+        <h3>Online (UPI) Sales</h3>
+        <div class="report-value" id="onlineSales">₹—</div>
+        <p class="report-note" id="onlineSalesDetail">Received: ₹— • Pending: ₹—</p>
+      </div>
+      <div class="report-card">
         <h3>Pending Payments</h3>
         <div class="report-value" id="pendingPayments">₹—</div>
         <p class="report-note">Shown separately; not included in paid sales.</p>
@@ -100,6 +110,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=launch-audit-20261108-1705"></script>
+  <script src="app.js?v=cash-online-sales-report-20261110"></script>
 </body>
 </html>
