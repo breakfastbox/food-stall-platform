@@ -258,7 +258,7 @@ function speakNewOrderAnnouncement(order) {
 }
 
 function runOrderAlertCycle() {
-  if (!orderSoundAlertsEnabled || document.hidden || pendingOrderAlerts.size === 0) return;
+  if (!orderSoundAlertsEnabled || pendingOrderAlerts.size === 0) return;
   const pendingOrders = Array.from(pendingOrderAlerts.values());
   const nextOrder = pendingOrders[orderAlertCursor % pendingOrders.length];
   orderAlertCursor += 1;
