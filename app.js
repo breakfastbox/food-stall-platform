@@ -1028,7 +1028,7 @@ async function saveStallUpiSettings() {
   if (upiId && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z0-9.-]{2,64}$/.test(upiId)) { message.textContent = "Enter a valid UPI ID, for example name@bank."; return; }
   if (accountName.length > 100) { message.textContent = "Account name must be 100 characters or fewer."; return; }
   if (!["dynamic","bank_qr"].includes(mode)) { message.textContent = "Choose a valid UPI payment method."; return; }
-  if (mode === "dynamic" && !upiId) { message.textContent = "Enter the stall UPI ID for the app-generated QR."; return; }
+  if (!upiId) { message.textContent = "Enter the stall bank-provided UPI ID."; return; }
   if (file && (!["image/png","image/jpeg","image/webp"].includes(file.type) || file.size > 2*1024*1024)) { message.textContent = "Choose a PNG, JPG or WebP image no larger than 2 MB."; return; }
   button.disabled = true; message.textContent = "Saving UPI settings...";
   try {
@@ -1041,7 +1041,6 @@ async function saveStallUpiSettings() {
       if (uploadError) throw uploadError;
       qrUrl = supabaseClient.storage.from("stall-logos").getPublicUrl(path).data.publicUrl;
     }
-    if (mode === "bank_qr" && !qrUrl) throw new Error("Upload your bank's official merchant QR before selecting this method.");
     const { data, error } = await supabaseClient.from("stalls")
       .update({ upi_id: upiId || null, upi_account_name: accountName || null, upi_payment_mode: mode, upi_qr_url: qrUrl })
       .eq("id", stall.id).select("id, upi_id, upi_account_name, upi_payment_mode, upi_qr_url").single();
@@ -1050,8 +1049,8 @@ async function saveStallUpiSettings() {
     if (preview) { preview.hidden = !data.upi_qr_url; if (data.upi_qr_url) preview.src = data.upi_qr_url; }
     if (fileInput) fileInput.value = "";
     message.textContent = data.upi_payment_mode === "bank_qr"
-      ? "Bank merchant QR saved. Customers will see only this QR at checkout."
-      : "App-generated UPI QR selected. Customers will see the exact order amount.";
+      ? "Bank UPI ID saved. Customers can open their UPI app and enter the order amount manually."
+      : "App-generated UPI QR selected. Customers will see the exact order amount pre-filled.";
   } catch (error) { console.error(error); message.textContent = "Could not save UPI settings: " + (error.message || "Please try again."); }
   finally { button.disabled = false; }
 }
