@@ -2020,14 +2020,25 @@ function renderCategoryOrderControls(categories, stallId) {
     handle.title = "Drag to rearrange " + category.name;
     handle.setAttribute("aria-label", "Drag to rearrange " + category.name);
     handle.addEventListener("dragstart", event => {
-      categoryOrderDragState = { row, stallId };
+      categoryOrderDragState = {
+        row,
+        stallId,
+        originalOrder: [...list.querySelectorAll("[data-category-row]")].map(item => item.dataset.categoryId)
+      };
       row.classList.add("dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("text/plain", category.id);
     });
-    handle.addEventListener("dragend", () => {
+    handle.addEventListener("dragend", async () => {
+      const dragState = categoryOrderDragState;
+      categoryOrderDragState = null;
       row.classList.remove("dragging");
       list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
+      if (!dragState) return;
+      const finalOrder = [...list.querySelectorAll("[data-category-row]")].map(item => item.dataset.categoryId);
+      const changed = finalOrder.length === dragState.originalOrder.length &&
+        finalOrder.some((id, index) => id !== dragState.originalOrder[index]);
+      if (changed) await saveCategoryDisplayOrder(dragState.stallId);
     });
 
     const name = document.createElement("span");
@@ -2068,25 +2079,21 @@ function renderCategoryOrderControls(categories, stallId) {
   if (!list.dataset.nativeDragBound) {
     list.addEventListener("dragover", event => {
       if (!categoryOrderDragState) return;
-      const targetRow = event.target.closest?.("[data-category-row]");
-      if (!targetRow || targetRow === categoryOrderDragState.row || targetRow.parentElement !== list) return;
+      // Accept drops anywhere in the list, including the gaps between rows.
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
+      const targetRow = event.target.closest?.("[data-category-row]");
+      if (!targetRow || targetRow === categoryOrderDragState.row || targetRow.parentElement !== list) return;
       const rect = targetRow.getBoundingClientRect();
       const after = event.clientY > rect.top + rect.height / 2;
       list.insertBefore(categoryOrderDragState.row, after ? targetRow.nextSibling : targetRow);
       list.querySelectorAll(".category-order-row").forEach(item => item.classList.remove("drop-target"));
       targetRow.classList.add("drop-target");
     });
-    list.addEventListener("drop", async event => {
+    list.addEventListener("drop", event => {
       if (!categoryOrderDragState) return;
       event.preventDefault();
-      const stallIdToSave = categoryOrderDragState.stallId;
-      categoryOrderDragState = null;
-      list.querySelectorAll(".category-order-row").forEach(item => {
-        item.classList.remove("dragging", "drop-target");
-      });
-      await saveCategoryDisplayOrder(stallIdToSave);
+      // Save once in dragend, after the browser completes the drop.
     });
     list.dataset.nativeDragBound = "true";
   }
