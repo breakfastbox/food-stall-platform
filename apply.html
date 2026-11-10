@@ -9,6 +9,7 @@
 <div class="form-field"><label for="email">Email address *</label><input id="email" type="email" maxlength="254" required></div>
 <div class="form-field"><label for="phone">WhatsApp phone number *</label><input id="phone" type="tel" maxlength="20" required placeholder="Include country code, e.g. +91"></div>
 <div class="form-field"><label for="address">Stall address / area</label><input id="address" maxlength="250"></div>
+<div class="form-field"><label for="upi_payment_mode">Preferred UPI payment setup</label><select id="upi_payment_mode"><option value="dynamic">App-generated QR (exact order amount)</option><option value="bank_qr">My bank's official merchant QR</option></select><small>You can change this later from your stall dashboard. If you choose the bank QR, upload it after your stall is approved.</small></div>
 <div style="position:absolute;left:-10000px" aria-hidden="true"><label>Website<input id="website" tabindex="-1" autocomplete="off"></label></div>
 <button class="button-primary" id="submitApplication" type="submit">Submit Application</button>
 <p id="applicationMessage" role="status" aria-live="polite"></p>
@@ -17,7 +18,7 @@
 const client=window.supabase.createClient("https://anlgfcltudysjnsipsmd.supabase.co","sb_publishable_x6V-O5rj20gGsoJSlbTsBw_kVuICTBv");
 document.getElementById("applicationForm").addEventListener("submit",async e=>{
  e.preventDefault();const btn=document.getElementById("submitApplication"),msg=document.getElementById("applicationMessage");
- const body={stall_name:document.getElementById("stall_name").value.trim(),owner_name:document.getElementById("owner_name").value.trim(),email:document.getElementById("email").value.trim(),phone:document.getElementById("phone").value.trim(),address:document.getElementById("address").value.trim(),website:document.getElementById("website").value};
+ const body={stall_name:document.getElementById("stall_name").value.trim(),owner_name:document.getElementById("owner_name").value.trim(),email:document.getElementById("email").value.trim(),phone:document.getElementById("phone").value.trim(),address:document.getElementById("address").value.trim(),upi_payment_mode:document.getElementById("upi_payment_mode").value,website:document.getElementById("website").value};
  btn.disabled=true;msg.textContent="Submitting your application...";
  try{const {data,error}=await client.functions.invoke("submit-stall-application",{body});if(error)throw new Error(data?.error||error.message);msg.textContent="Your application has been submitted successfully. The Platform Admin will contact you on WhatsApp after reviewing it.";document.getElementById("applicationForm").reset();}
  catch(err){msg.textContent="Unable to submit: "+err.message;}finally{btn.disabled=false;}
