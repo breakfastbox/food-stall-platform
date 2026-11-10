@@ -1029,6 +1029,7 @@ async function saveStallUpiSettings() {
   if (accountName.length > 100) { message.textContent = "Account name must be 100 characters or fewer."; return; }
   if (!["dynamic","bank_qr"].includes(mode)) { message.textContent = "Choose a valid UPI payment method."; return; }
   if (!upiId) { message.textContent = "Enter the stall bank-provided UPI ID."; return; }
+  if (mode === "bank_qr" && !file && !(await getCurrentStallContext()).stall.upi_qr_url) { message.textContent = "Upload your bank official merchant QR before selecting this method."; return; }
   if (file && (!["image/png","image/jpeg","image/webp"].includes(file.type) || file.size > 2*1024*1024)) { message.textContent = "Choose a PNG, JPG or WebP image no larger than 2 MB."; return; }
   button.disabled = true; message.textContent = "Saving UPI settings...";
   try {
