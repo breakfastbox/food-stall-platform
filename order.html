@@ -424,6 +424,8 @@
     let stallPhone = "";
     let stallUpiId = "";
     let stallUpiName = "";
+    let stallUpiPaymentMode = "dynamic";
+    let stallUpiQrUrl = "";
     let menuItems = [];
     let menuCategories = [];
     const cartQuantities = new Map();
@@ -477,12 +479,23 @@ let stallOrderingPaused = false;
       document.getElementById("upiPayeeName").textContent = stallUpiName || stallName;
       document.getElementById("upiPayeeId").textContent = stallUpiId;
       document.getElementById("upiQrAmount").textContent = money(amount);
-      const uri = buildUpiUri(amount);
-      document.getElementById("upiPayLink").href = uri;
       const qr = document.getElementById("upiQrCode");
       qr.innerHTML = "";
-      if (window.QRCode) new QRCode(qr, { text: uri, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
-      else qr.textContent = "QR code could not load. Use the Pay with UPI app link.";
+      const payLink = document.getElementById("upiPayLink");
+      if (stallUpiPaymentMode === "bank_qr" && stallUpiQrUrl) {
+        const img = document.createElement("img");
+        img.src = stallUpiQrUrl; img.alt = "Bank official merchant UPI QR";
+        img.style.cssText = "display:block;width:220px;max-width:100%;height:auto;object-fit:contain";
+        qr.appendChild(img);
+        payLink.hidden = true;
+        document.getElementById("upiQrAmount").parentElement.textContent = "Enter this exact amount in your UPI app: ₹" + money(amount);
+      } else {
+        const uri = buildUpiUri(amount);
+        payLink.href = uri; payLink.hidden = false;
+        document.getElementById("upiQrAmount").parentElement.textContent = "Amount: ₹" + money(amount);
+        if (window.QRCode) new QRCode(qr, { text: uri, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+        else qr.textContent = "QR code could not load. Use the Pay with UPI app link.";
+      }
     }
     document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
       input.addEventListener("change", () => updateUpiPaymentPanel(getSelectedItems().reduce((sum, item) => {
@@ -511,7 +524,7 @@ let stallOrderingPaused = false;
 
         let stallQuery = client
           .from("stalls")
-          .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url, upi_id, upi_account_name");
+          .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url");
 
         if (requestedStallId) {
           stallQuery = stallQuery.eq("id", requestedStallId);
@@ -534,9 +547,12 @@ let stallOrderingPaused = false;
         stallPhone = stall.phone || "";
         stallUpiId = (stall.upi_id || "").trim();
         stallUpiName = (stall.upi_account_name || stall.name || "").trim();
+        stallUpiPaymentMode = stall.upi_payment_mode || "dynamic";
+        stallUpiQrUrl = (stall.upi_qr_url || "").trim();
         const upiChoice = document.getElementById("paymentUpiChoice");
         const upiUnavailable = document.getElementById("upiUnavailableNote");
-        if (stallUpiId) { upiChoice.style.display = "flex"; upiUnavailable.textContent = "UPI payments are available for this stall."; }
+        const upiReady = stallUpiPaymentMode === "bank_qr" ? Boolean(stallUpiQrUrl) : Boolean(stallUpiId);
+        if (upiReady) { upiChoice.style.display = "flex"; upiUnavailable.textContent = stallUpiPaymentMode === "bank_qr" ? "Pay using the bank's official merchant QR." : "Pay using the app-generated UPI QR."; }
         else { upiChoice.style.display = "none"; upiUnavailable.textContent = "UPI is not configured by this stall yet. Please pay by cash."; }
         document.getElementById("stallName").textContent = stall.name;
         const customerLogo = document.getElementById("customerStallLogo");
