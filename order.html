@@ -363,7 +363,7 @@
           </label>
           <label id="paymentUpiChoice" for="paymentUpi" style="display:none;align-items:flex-start;gap:10px;margin-top:9px;padding:12px;border:1px solid #b9dfc4;border-radius:11px;background:#fff;color:var(--coffee);font-weight:750;cursor:pointer;">
             <input id="paymentUpi" type="radio" name="paymentMethod" value="upi_manual" style="margin-top:4px;">
-            <span>Pay by UPI <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Scan the QR or open your UPI app. Enter the payment reference before placing your order.</small></span>
+            <span>Pay by UPI <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Scan the QR or open your UPI app. You can add the transaction reference if you have it.</small></span>
           </label>
           <div id="upiPaymentPanel" hidden style="margin-top:12px;padding:14px;border:1px solid #dce8df;border-radius:13px;background:#f7fbf8;">
             <strong style="display:block;color:var(--coffee);">Pay this amount to <span id="upiPayeeName"></span></strong>
@@ -372,9 +372,9 @@
             <p style="text-align:center;margin:6px 0 10px;font-weight:800;color:var(--green);">Amount: ₹<span id="upiQrAmount">0.00</span></p>
             <a id="upiPayLink" href="#" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#176b45;color:#fff;text-decoration:none;font-weight:800;">Pay with UPI app</a>
             <div class="field" style="margin:14px 0 0;">
-              <label for="upiTransactionReference">UPI transaction reference / UTR</label>
-              <input id="upiTransactionReference" type="text" maxlength="40" autocomplete="off" placeholder="Enter reference after completing payment">
-              <small style="display:block;margin-top:5px;color:var(--muted);">Your order will stay unpaid until the stall owner verifies the payment.</small>
+              <label for="upiTransactionReference">UPI transaction reference / UTR (optional)</label>
+              <input id="upiTransactionReference" type="text" maxlength="40" autocomplete="off" placeholder="Enter UTR if available (optional)">
+              <small style="display:block;margin-top:5px;color:var(--muted);">Adding a UTR is optional. Your order will stay unpaid until the stall owner verifies the payment.</small>
             </div>
           </div>
           <p id="upiUnavailableNote" style="margin:9px 0 0;color:var(--muted);font-size:12px;">Choose cash or UPI if enabled by this stall.</p>
@@ -884,8 +884,8 @@ if (!validPhone) {
 
           const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "cash";
       const upiReference = document.getElementById("upiTransactionReference")?.value.trim() || "";
-      if (paymentMethod === "upi_manual" && !/^[A-Za-z0-9]{6,40}$/.test(upiReference)) {
-        showMessage("Please complete the UPI payment and enter its 6–40 character transaction reference.", "error");
+      if (paymentMethod === "upi_manual" && upiReference && !/^[A-Za-z0-9]{6,40}$/.test(upiReference)) {
+        showMessage("If you enter a UPI reference, use 6–40 letters or numbers.", "error");
         document.getElementById("upiTransactionReference")?.focus();
         return;
       }
@@ -942,7 +942,7 @@ if (!validPhone) {
   ? "Pending — awaiting stall confirmation"
   : order.order_status) + "\n" +
           "Total: ₹" + money(order.total_amount) + "\n" +
-          "Payment: " + (paymentMethod === "upi_manual" ? "UPI — awaiting owner verification (reference " + upiReference + ")" : "Cash at the stall (pending)") + "\n" +
+          "Payment: " + (paymentMethod === "upi_manual" ? "UPI — awaiting owner verification" + (upiReference ? " (reference " + upiReference + ")" : " (reference not provided)") : "Cash at the stall (pending)") + "\n" +
           "Thank you!";
 
         const whatsappNumber = stallPhone.replace(/[^0-9]/g, "");
