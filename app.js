@@ -150,6 +150,7 @@ let orderSoundAlertsEnabled = false;
 let orderAlertAudioContext = null;
 let orderAlertRepeatTimer = null;
 let pendingOrderAlerts = new Map();
+let orderAlertCursor = 0;
 let orderBrowserNotificationsEnabled =
   "Notification" in window &&
   Notification.permission === "granted";
@@ -258,7 +259,9 @@ function speakNewOrderAnnouncement(order) {
 
 function runOrderAlertCycle() {
   if (!orderSoundAlertsEnabled || document.hidden || pendingOrderAlerts.size === 0) return;
-  const nextOrder = pendingOrderAlerts.values().next().value;
+  const pendingOrders = Array.from(pendingOrderAlerts.values());
+  const nextOrder = pendingOrders[orderAlertCursor % pendingOrders.length];
+  orderAlertCursor += 1;
   playNewOrderSound();
   window.setTimeout(() => speakNewOrderAnnouncement(nextOrder), 650);
 }
@@ -271,6 +274,7 @@ function startOrderAlertLoop() {
 
 function stopPendingOrderAlert(orderId) {
   pendingOrderAlerts.delete(orderId);
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   if (pendingOrderAlerts.size === 0) {
     if (orderAlertRepeatTimer) window.clearInterval(orderAlertRepeatTimer);
     orderAlertRepeatTimer = null;
