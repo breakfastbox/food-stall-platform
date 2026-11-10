@@ -2833,7 +2833,7 @@ async function loadDailyReport() {
 
     const { data: orders, error: ordersError } = await supabaseClient
       .from("orders")
-      .select("id, total_amount, subtotal, payment_status, order_status, created_at, stock_deducted_at")
+      .select("id, total_amount, subtotal, payment_status, payment_method, order_status, created_at, stock_deducted_at")
       .eq("stall_id", stall.id)
       .gte("created_at", reportStartDate.toISOString())
       .lt("created_at", reportEndDate.toISOString());
@@ -2846,6 +2846,20 @@ async function loadDailyReport() {
     const pendingPayments = validOrders
       .filter(order => order.payment_status === "pending")
       .reduce((sum, order) => sum + Number(order.total_amount ?? order.subtotal ?? 0), 0);
+
+    // Split sales by the payment method selected at checkout. Keep collected
+    // and pending amounts separate so unpaid orders are never reported as cash received.
+    const paymentBreakdown = {
+      cash: { total: 0, paid: 0, pending: 0 },
+      online: { total: 0, paid: 0, pending: 0 }
+    };
+    validOrders.forEach(order => {
+      const amount = Number(order.total_amount ?? order.subtotal ?? 0);
+      const method = order.payment_method === "upi_manual" ? "online" : "cash";
+      paymentBreakdown[method].total += amount;
+      if (order.payment_status === "paid") paymentBreakdown[method].paid += amount;
+      else if (order.payment_status === "pending") paymentBreakdown[method].pending += amount;
+    });
 
     const { data: expenses, error: expensesError } = await supabaseClient
       .from("business_expenses")
@@ -2956,6 +2970,18 @@ async function loadDailyReport() {
     if (totalOrdersElement) totalOrdersElement.textContent = String(validOrders.length);
     document.getElementById("paidSales").textContent = formatRupees(paidSales);
     document.getElementById("pendingPayments").textContent = formatRupees(pendingPayments);
+    const cashSalesElement = document.getElementById("cashSales");
+    const onlineSalesElement = document.getElementById("onlineSales");
+    const cashSalesDetail = document.getElementById("cashSalesDetail");
+    const onlineSalesDetail = document.getElementById("onlineSalesDetail");
+    if (cashSalesElement) cashSalesElement.textContent = formatRupees(paymentBreakdown.cash.total);
+    if (onlineSalesElement) onlineSalesElement.textContent = formatRupees(paymentBreakdown.online.total);
+    if (cashSalesDetail) cashSalesDetail.textContent =
+      "Received: " + formatRupees(paymentBreakdown.cash.paid) +
+      " • Pending: " + formatRupees(paymentBreakdown.cash.pending);
+    if (onlineSalesDetail) onlineSalesDetail.textContent =
+      "Received: " + formatRupees(paymentBreakdown.online.paid) +
+      " • Pending: " + formatRupees(paymentBreakdown.online.pending);
     document.getElementById("businessExpenses").textContent = formatRupees(businessExpenses);
     document.getElementById("ingredientCost").textContent = formatRupees(ingredientCost);
     document.getElementById("estimatedProfit").textContent = formatRupees(estimatedProfit);
