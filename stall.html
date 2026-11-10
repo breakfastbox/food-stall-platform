@@ -123,10 +123,11 @@
         <div class="field"><label for="stallUpiPaymentMode">UPI payment method shown to customers</label><select id="stallUpiPaymentMode"><option value="dynamic">App-generated QR (exact order amount)</option><option value="bank_qr">Bank's official merchant QR</option></select></div>
         <div class="field"><label for="stallUpiId">Stall UPI ID</label><input type="text" id="stallUpiId" maxlength="256" placeholder="yourname@bank"></div>
         <div class="field"><label for="stallUpiAccountName">UPI account / payee name</label><input type="text" id="stallUpiAccountName" maxlength="100" placeholder="Name shown in your UPI app"></div>
-        <small id="stallUpiModeHelp" style="display:block;margin-top:8px;color:#75685f;">Bank merchant mode opens the customer UPI app with your bank-provided UPI ID; the customer enters the order amount manually. App-generated mode pre-fills the exact amount.</small>
+        <div class="field"><label for="stallUpiQrFile">Official bank merchant QR image (PNG, JPG or WebP; max 2 MB)</label><input type="file" id="stallUpiQrFile" accept="image/png,image/jpeg,image/webp"><img id="stallUpiQrPreview" alt="Official merchant QR preview" hidden style="max-width:220px;max-height:220px;object-fit:contain;margin-top:10px;border:1px solid #ddd;border-radius:10px;padding:8px;background:white;"></div>
+        <small id="stallUpiModeHelp" style="display:block;margin-top:8px;color:#75685f;">Bank merchant mode displays your official bank QR for customers to scan and enter the amount manually. App-generated mode pre-fills the exact amount.</small>
         <p id="stallUpiMessage" aria-live="polite"></p>
         <button type="button" id="saveStallUpiButton" onclick="saveStallUpiSettings()">Save UPI Settings</button>
-        <small style="display:block;margin-top:9px;color:#75685f;">For bank merchant mode, customers enter the exact displayed order total in their UPI app. Confirm payment only after checking your bank app or sound box. UTR remains optional.</small>
+        <small style="display:block;margin-top:9px;color:#75685f;">For bank merchant mode, upload the official bank QR. Customers scan it and enter the exact displayed order total. Confirm payment only after checking your bank app or sound box. UTR remains optional.</small>
       </section>
 
       <section class="stats">
@@ -330,7 +331,7 @@
       if (recoveryBox) recoveryBox.style.setProperty("display", "block", "important");
     }
   </script>
-  <script src="app.js?v=bank-upi-app-link-20261110"></script>
+  <script src="app.js?v=bank-merchant-qr-restore-20261110"></script>
 
 </body>
 </html>
