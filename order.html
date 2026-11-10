@@ -473,7 +473,7 @@ let stallOrderingPaused = false;
       const selected = document.querySelector('input[name="paymentMethod"]:checked')?.value;
       const panel = document.getElementById("upiPaymentPanel");
       if (!panel) return;
-      const show = selected === "upi_manual" && Boolean(stallUpiId);
+      const show = selected === "upi_manual" && (stallUpiPaymentMode === "bank_qr" ? Boolean(stallUpiQrUrl) : Boolean(stallUpiId));
       panel.hidden = !show;
       if (!show) return;
       document.getElementById("upiPayeeName").textContent = stallUpiName || stallName;
