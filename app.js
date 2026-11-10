@@ -2098,23 +2098,13 @@ async function saveCategoryDisplayOrder(stallId) {
   if (!list || !message) return;
 
   const rows = [...list.querySelectorAll("[data-category-row]")];
+  if (!rows.length) return;
   message.textContent = "Saving category order...";
   list.querySelectorAll("button").forEach(button => { button.disabled = true; });
 
   try {
-    // Move all rows to temporary negative positions first, then assign the final
-    // sequence. This prevents collisions if a database has a unique sort index.
-    for (let index = 0; index < rows.length; index++) {
-      const { data, error } = await supabaseClient
-        .from("menu_categories")
-        .update({ sort_order: -(index + 1) })
-        .eq("id", rows[index].dataset.categoryId)
-        .eq("stall_id", stallId)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("Your account cannot update this category. Please sign in using the correct stall-owner account.");
-    }
+    // Persist each final position once. A single pass is quicker and avoids the
+    // previous temporary-negative-position round trip.
     for (let index = 0; index < rows.length; index++) {
       const { data, error } = await supabaseClient
         .from("menu_categories")
@@ -2124,14 +2114,17 @@ async function saveCategoryDisplayOrder(stallId) {
         .select("id")
         .maybeSingle();
       if (error) throw error;
-      if (!data) throw new Error("The final category order could not be confirmed. Please retry.");
+      if (!data) throw new Error("The category order could not be confirmed. Please retry.");
     }
-    message.textContent = "✓ Category order saved. Refresh the customer page to see the new order.";
+    message.textContent = "✓ Category order saved.";
+    // Refresh only the category editor data; don't reload the whole dashboard.
     await loadCategoriesForEditing();
   } catch (error) {
     console.error("Could not save category display order:", error);
     message.textContent = "Could not save the order: " + error.message;
     await loadCategoriesForEditing();
+  } finally {
+    list.querySelectorAll("button").forEach(button => { button.disabled = false; });
   }
 }
 
