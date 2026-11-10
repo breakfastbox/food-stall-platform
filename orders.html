@@ -142,22 +142,9 @@
       </select>
     </div>
 
-    <div class="card">
-      <label for="orderDateFilter"><strong>Filter orders by date:</strong></label>
-      <select id="orderDateFilter" onchange="toggleCustomOrderDate(); loadOrders();">
-        <option value="all">All Dates</option>
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="custom">Choose a Date</option>
-      </select>
-      <input
-        type="date"
-        id="customOrderDate"
-        aria-label="Choose order date"
-        style="display:none; padding:10px; margin:5px 5px 5px 0;"
-        onchange="loadOrders()"
-      >
-    </div>
+    <button onclick="window.location.href='stall-order-history.html' + window.location.search">
+      Order History
+    </button>
 
     <p id="ordersMessage" class="muted">Loading orders...</p>
     <h2>Customer Change Requests</h2>
@@ -169,7 +156,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=todays-alerts-20261110"></script>
+  <script src="app.js?v=today-only-orders-history-20261110"></script>
   <script>
   loadOrders();
   loadOrderChangeRequests();
