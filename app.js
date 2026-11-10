@@ -264,15 +264,17 @@ function runOrderAlertCycle() {
 }
 
 function startOrderAlertLoop() {
-  if (orderAlertRepeatTimer) window.clearInterval(orderAlertRepeatTimer);
-  if (pendingOrderAlerts.size > 0) runOrderAlertCycle();
+  if (pendingOrderAlerts.size === 0 || orderAlertRepeatTimer) return;
+  runOrderAlertCycle();
   orderAlertRepeatTimer = window.setInterval(runOrderAlertCycle, 9000);
 }
 
 function stopPendingOrderAlert(orderId) {
   pendingOrderAlerts.delete(orderId);
-  if (pendingOrderAlerts.size === 0 && "speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
+  if (pendingOrderAlerts.size === 0) {
+    if (orderAlertRepeatTimer) window.clearInterval(orderAlertRepeatTimer);
+    orderAlertRepeatTimer = null;
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   }
 }
 
