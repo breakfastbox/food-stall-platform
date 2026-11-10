@@ -1553,10 +1553,13 @@ async function loadOrders(options = {}) {
     const heading = document.querySelector(".container > p.muted");
     if (heading) heading.textContent = assignedStall.name + " — manage customer orders";
 
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     const { data: orders, error } = await supabaseClient
       .from("orders")
       .select("id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, created_at")
       .eq("stall_id", assignedStall.id)
+      .gte("created_at", todayStart.toISOString())
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -1662,43 +1665,18 @@ async function loadOrders(options = {}) {
       message.textContent = orders.length + " order(s) found.";
     }
 
-    // Apply status and local-calendar date filters after processing new-order alerts.
+    // The active Orders page is today's live queue only.
+    // Older orders are kept in the separate read-only Order History page.
     const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
-    const dateMode = document.getElementById("orderDateFilter")?.value || "all";
-    const customDate = document.getElementById("customOrderDate")?.value || "";
+    const todayKey = toLocalDateKey(new Date());
+    const todaysOrders = (orders || []).filter(order =>
+      order.created_at && toLocalDateKey(new Date(order.created_at)) === todayKey
+    );
+    const visibleOrders = statusFilter === "all"
+      ? todaysOrders
+      : todaysOrders.filter(order => (order.order_status || "pending").toLowerCase() === statusFilter);
 
-    const today = new Date();
-    const selectedDate = new Date(today);
-    if (dateMode === "yesterday") selectedDate.setDate(selectedDate.getDate() - 1);
-
-    const targetDateKey = dateMode === "custom"
-      ? customDate
-      : dateMode === "today" || dateMode === "yesterday"
-        ? toLocalDateKey(selectedDate)
-        : null;
-
-    let visibleOrders = statusFilter === "all"
-      ? orders
-      : orders.filter(order => (order.order_status || "pending") === statusFilter);
-
-    if (targetDateKey) {
-      visibleOrders = visibleOrders.filter(order =>
-        order.created_at &&
-        toLocalDateKey(new Date(order.created_at)) === targetDateKey
-      );
-    }
-
-    const dateDescription = dateMode === "today"
-      ? " today"
-      : dateMode === "yesterday"
-        ? " yesterday"
-        : dateMode === "custom" && targetDateKey
-          ? " on " + targetDateKey
-          : "";
-
-    message.textContent =
-      visibleOrders.length + " of " + orders.length + " order(s) shown" + dateDescription + ".";
-
+    message.textContent = visibleOrders.length + " fresh order(s) shown for today.";
     if (visibleOrders.length === 0) {
       list.innerHTML = '<p class="muted">No orders match these filters.</p>';
       return;
