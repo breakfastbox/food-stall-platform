@@ -150,6 +150,7 @@ let orderSoundAlertsEnabled = false;
 let orderAlertAudioContext = null;
 let orderAlertRepeatTimer = null;
 let pendingOrderAlerts = new Map();
+let acknowledgedOrderAlertIds = new Set();
 let orderAlertCursor = 0;
 let orderBrowserNotificationsEnabled =
   "Notification" in window &&
@@ -273,6 +274,7 @@ function startOrderAlertLoop() {
 }
 
 function stopPendingOrderAlert(orderId) {
+  acknowledgedOrderAlertIds.add(orderId);
   pendingOrderAlerts.delete(orderId);
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   if (pendingOrderAlerts.size === 0) {
@@ -1582,7 +1584,7 @@ async function loadOrders(options = {}) {
          const isPending = (order.order_status || "pending").toLowerCase() === "pending";
          const isToday = order.created_at &&
            toLocalDateKey(new Date(order.created_at)) === todayAlertKey;
-         if (isPending && isToday) {
+         if (isPending && isToday && !acknowledgedOrderAlertIds.has(order.id)) {
            if (!pendingOrderAlerts.has(order.id)) pendingOrderAlerts.set(order.id, order);
          } else {
            stopPendingOrderAlert(order.id);
