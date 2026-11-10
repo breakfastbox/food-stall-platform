@@ -581,9 +581,9 @@ let stallOrderingPaused = false;
           .order("sort_order")
           .order("name");
         if (categoryError) console.warn("Menu categories could not be loaded:", categoryError);
-        menuCategories = (categoryRows || []).filter(category =>
-          menuItems.some(item => item.category_id === category.id)
-        );
+        // Keep empty categories visible so customers can see the full stall menu structure.
+        // Selecting an empty category displays a friendly "No items yet" message.
+        menuCategories = categoryRows || [];
 
         renderCategoryFilters();
         renderMenuItems();
@@ -601,7 +601,7 @@ let stallOrderingPaused = false;
         id: category.id,
         name: category.name,
         items: menuItems.filter(item => String(item.category_id) === String(category.id))
-      })).filter(group => group.items.length);
+      }));
       const uncategorized = menuItems.filter(item =>
         !menuCategories.some(category => String(category.id) === String(item.category_id))
       );
