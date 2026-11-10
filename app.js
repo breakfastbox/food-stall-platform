@@ -2441,8 +2441,8 @@ async function addMenuItem() {
     message.textContent = "Please enter the food item name.";
     return;
   }
-  if (!Number.isFinite(price) || price < 0) {
-    message.textContent = "Please enter a valid price.";
+  if (!Number.isFinite(price) || price <= 0) {
+    message.textContent = "Please enter a price greater than ₹0. Items priced at ₹0 are not shown on the customer ordering page.";
     return;
   }
   if (photoFile) {
@@ -2502,7 +2502,25 @@ async function addMenuItem() {
     (highest, item) => Math.max(highest, Number(item.sort_order) || 0), 0
   ) + 1;
 
-  const { error } = await supabaseClient
+  if (categoryId) {
+    const { data: selectedCategory, error: selectedCategoryError } = await supabaseClient
+      .from("menu_categories")
+      .select("id")
+      .eq("id", categoryId)
+      .eq("stall_id", stallId)
+      .maybeSingle();
+    if (selectedCategoryError) {
+      message.textContent = "Could not verify the selected category: " + selectedCategoryError.message;
+      return;
+    }
+    if (!selectedCategory) {
+      message.textContent = "That category does not belong to this stall. Refresh the category list and try again.";
+      await loadMenuCategories();
+      return;
+    }
+  }
+
+  const { data: insertedItem, error } = await supabaseClient
     .from("menu_items")
     .insert({
       stall_id: stallId,
@@ -2513,11 +2531,17 @@ async function addMenuItem() {
       price,
       image_url: imageUrl,
       is_available: isAvailable
-    });
+    })
+    .select("id, name, category_id, is_available")
+    .single();
 
   if (error) {
     console.error("Could not add menu item:", error);
     message.textContent = "Unable to add item: " + error.message;
+    return;
+  }
+  if (!insertedItem) {
+    message.textContent = "The item could not be confirmed as saved. Please check the menu before trying again.";
     return;
   }
 
@@ -2530,29 +2554,29 @@ async function addMenuItem() {
   await loadStallDashboard();
 }
 async function toggleMenuItem(itemId, currentStatus) {
+  const message = document.getElementById("menuMessage");
+  try {
+    const stall = (await getCurrentStallContext()).stall;
+    const { data, error } = await supabaseClient
+      .from("menu_items")
+      .update({ is_available: !currentStatus })
+      .eq("id", itemId)
+      .eq("stall_id", stall.id)
+      .select("id, name, is_available")
+      .maybeSingle();
 
-  const { error } = await supabaseClient
-    .from("menu_items")
-    .update({
-      is_available: !currentStatus
-    })
-    .eq("id", itemId);
+    if (error) throw error;
+    if (!data) throw new Error("No item was updated. Please sign in to the correct stall account and try again.");
 
-
-  if (error) {
-
-    console.error(error);
-
-    alert(
-      "Unable to change item availability: " +
-      error.message
-    );
-
-    return;
+    if (message) {
+      message.textContent = data.name + " is now " + (data.is_available ? "available" : "unavailable") + ".";
+    }
+    await loadStallDashboard();
+  } catch (error) {
+    console.error("Could not change menu item availability:", error);
+    if (message) message.textContent = "Could not change availability: " + error.message;
+    else alert("Unable to change item availability: " + error.message);
   }
-
-
-  loadStallDashboard();
 }
 async function editMenuItem(itemId) {
   const newName = prompt("Enter new item name:");
@@ -2673,6 +2697,7 @@ async function loadMenuCategories() {
 
   if (error) {
     console.error("Could not load categories:", error);
+    categorySelect.innerHTML = '<option value="">Could not load categories — tap to retry</option>';
     return;
   }
 
