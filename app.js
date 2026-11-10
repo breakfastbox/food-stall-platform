@@ -1575,11 +1575,15 @@ async function loadOrders(options = {}) {
          });
        }
 
-       // Keep every unhandled pending order in the repeat-alert queue.
-       // This also restores alerts after a page refresh without replaying completed orders.
+       // Alert only today's pending orders. Never replay yesterday's backlog.
+       // Remove anything no longer pending or outside today's local date.
+       const todayAlertKey = toLocalDateKey(new Date());
        (orders || []).forEach(order => {
-         if ((order.order_status || "pending").toLowerCase() === "pending") {
-           pendingOrderAlerts.set(order.id, order);
+         const isPending = (order.order_status || "pending").toLowerCase() === "pending";
+         const isToday = order.created_at &&
+           toLocalDateKey(new Date(order.created_at)) === todayAlertKey;
+         if (isPending && isToday) {
+           if (!pendingOrderAlerts.has(order.id)) pendingOrderAlerts.set(order.id, order);
          } else {
            stopPendingOrderAlert(order.id);
            window.foodStallNewOrderIds.delete(order.id);
@@ -1591,6 +1595,10 @@ async function loadOrders(options = {}) {
        }
        if (orderSoundAlertsEnabled && pendingOrderAlerts.size > 0) {
          startOrderAlertLoop();
+       } else if (pendingOrderAlerts.size === 0 && orderAlertRepeatTimer) {
+         window.clearInterval(orderAlertRepeatTimer);
+         orderAlertRepeatTimer = null;
+         if ("speechSynthesis" in window) window.speechSynthesis.cancel();
        }
     // Daily summary always uses today's orders, regardless of the active list filters.
     const todayKey = toLocalDateKey(new Date());
