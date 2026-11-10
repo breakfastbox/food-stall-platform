@@ -119,7 +119,7 @@ async function getCurrentStallContext() {
 
   let stallQuery = supabaseClient
     .from("stalls")
-    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name")
+    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url")
     .limit(1);
 
   if (profile.role === "admin") {
@@ -1021,15 +1021,37 @@ async function saveStallUpiSettings() {
   const button = document.getElementById("saveStallUpiButton"), message = document.getElementById("stallUpiMessage");
   const upiId = document.getElementById("stallUpiId")?.value.trim() || "";
   const accountName = document.getElementById("stallUpiAccountName")?.value.trim() || "";
+  const mode = document.getElementById("stallUpiPaymentMode")?.value || "dynamic";
+  const fileInput = document.getElementById("stallUpiQrFile");
+  const file = fileInput?.files?.[0] || null;
   if (!button || !message) return;
   if (upiId && !/^[A-Za-z0-9._-]{2,256}@[A-Za-z0-9.-]{2,64}$/.test(upiId)) { message.textContent = "Enter a valid UPI ID, for example name@bank."; return; }
   if (accountName.length > 100) { message.textContent = "Account name must be 100 characters or fewer."; return; }
+  if (!["dynamic","bank_qr"].includes(mode)) { message.textContent = "Choose a valid UPI payment method."; return; }
+  if (mode === "dynamic" && !upiId) { message.textContent = "Enter the stall UPI ID for the app-generated QR."; return; }
+  if (file && (!["image/png","image/jpeg","image/webp"].includes(file.type) || file.size > 2*1024*1024)) { message.textContent = "Choose a PNG, JPG or WebP image no larger than 2 MB."; return; }
   button.disabled = true; message.textContent = "Saving UPI settings...";
   try {
     const stall = (await getCurrentStallContext()).stall;
-    const { data, error } = await supabaseClient.from("stalls").update({ upi_id: upiId || null, upi_account_name: accountName || null }).eq("id", stall.id).select("id, upi_id, upi_account_name").single();
+    let qrUrl = stall.upi_qr_url || null;
+    if (file) {
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      const path = stall.id + "/" + Date.now() + "-merchant-qr." + ext;
+      const { error: uploadError } = await supabaseClient.storage.from("stall-logos").upload(path, file, { upsert: true, contentType: file.type, cacheControl: "3600" });
+      if (uploadError) throw uploadError;
+      qrUrl = supabaseClient.storage.from("stall-logos").getPublicUrl(path).data.publicUrl;
+    }
+    if (mode === "bank_qr" && !qrUrl) throw new Error("Upload your bank's official merchant QR before selecting this method.");
+    const { data, error } = await supabaseClient.from("stalls")
+      .update({ upi_id: upiId || null, upi_account_name: accountName || null, upi_payment_mode: mode, upi_qr_url: qrUrl })
+      .eq("id", stall.id).select("id, upi_id, upi_account_name, upi_payment_mode, upi_qr_url").single();
     if (error) throw error;
-    message.textContent = data.upi_id ? "UPI settings saved. Customers can now choose UPI at checkout." : "UPI details cleared. Customers will only see Cash at the stall.";
+    const preview = document.getElementById("stallUpiQrPreview");
+    if (preview) { preview.hidden = !data.upi_qr_url; if (data.upi_qr_url) preview.src = data.upi_qr_url; }
+    if (fileInput) fileInput.value = "";
+    message.textContent = data.upi_payment_mode === "bank_qr"
+      ? "Bank merchant QR saved. Customers will see only this QR at checkout."
+      : "App-generated UPI QR selected. Customers will see the exact order amount.";
   } catch (error) { console.error(error); message.textContent = "Could not save UPI settings: " + (error.message || "Please try again."); }
   finally { button.disabled = false; }
 }
@@ -1051,6 +1073,10 @@ async function loadStallDashboard() {
   const upiNameInput = document.getElementById("stallUpiAccountName");
   if (upiIdInput) upiIdInput.value = stall.upi_id || "";
   if (upiNameInput) upiNameInput.value = stall.upi_account_name || "";
+  const upiModeInput = document.getElementById("stallUpiPaymentMode");
+  if (upiModeInput) upiModeInput.value = stall.upi_payment_mode || "dynamic";
+  const upiQrPreview = document.getElementById("stallUpiQrPreview");
+  if (upiQrPreview) { upiQrPreview.hidden = !stall.upi_qr_url; if (stall.upi_qr_url) upiQrPreview.src = stall.upi_qr_url; }
   const brandingName = document.getElementById("brandingStallName");
   if (brandingName) brandingName.value = stall.name || "";
   const stallLogo = document.getElementById("stallLogo");
@@ -3207,7 +3233,8 @@ async function registerNewStall() {
     ownerName: document.getElementById("newStallOwner")?.value.trim() || "",
     email: document.getElementById("newStallEmail")?.value.trim().toLowerCase() || "",
     phone: document.getElementById("newStallPhone")?.value.trim() || "",
-    address: document.getElementById("newStallAddress")?.value.trim() || ""
+    address: document.getElementById("newStallAddress")?.value.trim() || "",
+    upiPaymentMode: document.getElementById("newStallUpiMode")?.value || "dynamic"
   };
   const message = document.getElementById("stallRegistrationMessage");
   const button = document.getElementById("registerStallButton");
@@ -3241,6 +3268,7 @@ async function registerNewStall() {
       const input = document.getElementById(id);
       if (input) input.value = "";
     });
+    const modeSelect = document.getElementById("newStallUpiMode"); if (modeSelect) modeSelect.value = "dynamic";
     await loadStalls();
   } catch (error) {
     console.error("Stall registration failed:", error);
