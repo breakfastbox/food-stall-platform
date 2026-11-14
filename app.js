@@ -9,6 +9,17 @@ const supabaseClient = window.supabase.createClient(
 
 const APP_SITE_URL = "https://breakfastbox.github.io/food-stall-platform/";
 
+let knownOrderIdsForAlerts = null;
+let orderSoundAlertsEnabled = false;
+let orderAlertAudioContext = null;
+let orderAlertRepeatTimer = null;
+let pendingOrderAlerts = new Map();
+let acknowledgedOrderAlertIds = new Set();
+let orderAlertCursor = 0;
+let orderBrowserNotificationsEnabled =
+  "Notification" in window &&
+  Notification.permission === "granted";
+
 function normalizeOrderStatus(status) {
   const value = String(status || "pending").toLowerCase();
   if (["preparing", "ready"].includes(value)) return "accepted";
@@ -156,17 +167,6 @@ async function getCurrentStallContext() {
   currentStallRecord = stall;
   return { user, profile, stall };
 }
-
-let knownOrderIdsForAlerts = null;
-let orderSoundAlertsEnabled = false;
-let orderAlertAudioContext = null;
-let orderAlertRepeatTimer = null;
-let pendingOrderAlerts = new Map();
-let acknowledgedOrderAlertIds = new Set();
-let orderAlertCursor = 0;
-let orderBrowserNotificationsEnabled =
-  "Notification" in window &&
-  Notification.permission === "granted";
 
 async function enableBrowserOrderNotifications() {
   const button = document.getElementById(
