@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="upi-mode-choice-20261110">
+  <meta name="app-version" content="checkout-bar-visibility-20261114">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -238,6 +238,7 @@
     .checkout-panel { scroll-margin-top:18px; }
     .total { border-radius:14px; }
     .mobile-order-bar { display:none; }
+    .mobile-order-bar[hidden] { display:none !important; }
     @media (max-width:700px) {
       main { margin-top:20px; padding-inline:13px; padding-bottom:115px; }
       header { padding:36px 16px 43px; }
@@ -303,7 +304,7 @@
       <div id="menuList" class="menu-grid">Loading menu...</div>
     </section>
 
-    <section class="panel" id="checkoutPanel">
+    <section class="panel checkout-panel" id="checkoutPanel">
       <h2>Quick checkout</h2>
       <p class="section-hint">Just your name and phone number. You can add optional details if needed.</p>
 
@@ -820,6 +821,17 @@ let stallOrderingPaused = false;
     document.getElementById("mobileOrderBar")?.addEventListener("click", () => {
       document.getElementById("checkoutPanel")?.scrollIntoView({ behavior:"smooth", block:"start" });
     });
+
+    // Keep the floating cart shortcut out of the way while checkout is visible.
+    const checkoutPanel = document.getElementById("checkoutPanel");
+    const mobileOrderBar = document.getElementById("mobileOrderBar");
+    if (checkoutPanel && mobileOrderBar && "IntersectionObserver" in window) {
+      const checkoutObserver = new IntersectionObserver(entries => {
+        const checkoutVisible = entries.some(entry => entry.isIntersecting);
+        mobileOrderBar.hidden = checkoutVisible;
+      }, { threshold: 0.05, rootMargin: "0px 0px -12% 0px" });
+      checkoutObserver.observe(checkoutPanel);
+    }
 
     function getSelectedItems() {
       return menuItems
