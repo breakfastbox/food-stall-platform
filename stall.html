@@ -136,6 +136,15 @@
         <small style="display:block;margin-top:9px;color:#75685f;">For bank merchant mode, upload the official bank QR. Customers scan it and enter the exact displayed order total. Confirm payment only after checking your bank app or sound box. UTR remains optional.</small>
       </section>
 
+      <section class="panel" id="stallQrPanel">
+        <h2>My Customer Order QR Code</h2>
+        <p>Generate a QR code that opens your own stall's customer menu. Download and print it for your tables or counter.</p>
+        <button type="button" id="generateStallQrButton" onclick="generateStallOrderQr()">Generate My QR Code</button>
+        <div id="stallQrResult" style="margin-top:16px;text-align:center;"></div>
+        <a id="downloadStallQr" hidden download="my-stall-order-qr.png" style="display:inline-block;margin-top:12px;">Download QR Code</a>
+        <p id="stallQrMessage" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="stats">
 
         <div class="card">
@@ -354,6 +363,30 @@
   if(isIOS&&!isStandalone){showInstall();if(hint)hint.textContent="To install on iPhone: open in Safari → Share → Add to Home Screen.";}
   window.addEventListener("appinstalled",()=>{buttons.forEach(b=>b.hidden=true);if(hint)hint.textContent="App installed successfully.";});
 })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+function generateStallOrderQr(){
+  const result=document.getElementById("stallQrResult");
+  const message=document.getElementById("stallQrMessage");
+  const download=document.getElementById("downloadStallQr");
+  if(!result||!message||!download)return;
+  if(typeof currentStallId==="undefined"||!currentStallId){message.textContent="Please log in to your stall account first.";return;}
+  if(typeof QRCode==="undefined"){message.textContent="QR generator could not load. Please refresh and try again.";return;}
+  const orderUrl=new URL("order.html",window.location.href);
+  orderUrl.search="";orderUrl.searchParams.set("stall_id",currentStallId);
+  result.innerHTML="";
+  new QRCode(result,{text:orderUrl.toString(),width:260,height:260,colorDark:"#111111",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
+  message.textContent="This QR code opens the customer ordering page for your stall.";
+  download.hidden=false;
+  setTimeout(()=>{
+    const canvas=result.querySelector("canvas");
+    const image=result.querySelector("img");
+    const dataUrl=canvas?canvas.toDataURL("image/png"):image?.src;
+    if(dataUrl)download.href=dataUrl;
+  },300);
+}
 </script>
 
 </body>
