@@ -356,6 +356,79 @@ async function setOrderingEnabled(action) {
 }
 
 
+async function runOneSignalTask(task) {
+  return new Promise((resolve, reject) => {
+    if (!window.OneSignalDeferred) {
+      reject(new Error("Notification service is not ready. Please refresh the app."));
+      return;
+    }
+    window.OneSignalDeferred.push(async (OneSignal) => {
+      try {
+        resolve(await task(OneSignal));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+async function identifyStallPushUser() {
+  if (!["stall_owner", "staff"].includes(currentUserRole)) return;
+  const { data: { user }, error } = await supabaseClient.auth.getUser();
+  if (error || !user) throw new Error("Could not identify your notification account.");
+  await runOneSignalTask(async (OneSignal) => OneSignal.login(user.id));
+}
+
+async function enableStallPushNotifications() {
+  const message = document.getElementById("stallPushMessage");
+  const enableButton = document.getElementById("enableStallPushButton");
+  const testButton = document.getElementById("testStallPushButton");
+  if (message) message.textContent = "Preparing notifications...";
+  if (enableButton) enableButton.disabled = true;
+  try {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      throw new Error("This browser does not support web notifications. Please use an updated Chrome or Safari browser.");
+    }
+    await identifyStallPushUser();
+    const granted = await runOneSignalTask(async (OneSignal) => {
+      const permissionGranted = await OneSignal.Notifications.requestPermission();
+      if (permissionGranted) {
+        await OneSignal.User.PushSubscription.optIn();
+      }
+      return permissionGranted;
+    });
+    if (!granted || Notification.permission !== "granted") {
+      throw new Error("Notifications were not enabled. Please allow notifications in your browser settings.");
+    }
+    if (message) message.textContent = "Notifications are enabled on this device.";
+    if (testButton) testButton.hidden = false;
+    if (enableButton) enableButton.textContent = "Notifications Enabled";
+  } catch (error) {
+    if (message) message.textContent = error.message || "Could not enable notifications. Please try again.";
+  } finally {
+    if (enableButton) enableButton.disabled = false;
+  }
+}
+
+async function sendStallPushTest() {
+  const message = document.getElementById("stallPushMessage");
+  const button = document.getElementById("testStallPushButton");
+  if (button) button.disabled = true;
+  if (message) message.textContent = "Sending a test notification...";
+  try {
+    const { data, error } = await supabaseClient.functions.invoke("send-stall-push-test", {
+      body: { test: true }
+    });
+    if (error) throw new Error(data?.error || error.message || "Could not send the test notification.");
+    if (!data?.success) throw new Error(data?.error || "The test notification could not be sent.");
+    if (message) message.textContent = "Test notification sent. Check your phone or browser notification area.";
+  } catch (error) {
+    if (message) message.textContent = error.message || "Could not send the test notification.";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function loginStallOwner() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
@@ -371,6 +444,12 @@ async function loginStallOwner() {
 
   try {
     await getCurrentStallContext();
+
+    try {
+      await identifyStallPushUser();
+    } catch (pushError) {
+      console.warn("OneSignal user identification is pending:", pushError);
+    }
 
     // Token sequence resets only on a stall owner's first login on a later India date.
     // Midnight and same-day logout/login do not reset the counter.
@@ -397,6 +476,11 @@ async function loginStallOwner() {
 }
 
 async function logoutStallOwner() {
+  try {
+    await runOneSignalTask(async (OneSignal) => OneSignal.logout());
+  } catch (pushError) {
+    console.warn("OneSignal logout did not complete:", pushError);
+  }
   const { error } = await supabaseClient.auth.signOut();
   if (error) {
     alert("Logout failed: " + error.message);
