@@ -7,6 +7,9 @@
   <title>Stall Dashboard - Food Stall Platform</title>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1769aa">
+  <link rel="apple-touch-icon" href="icons/app-icon.svg">
   <style>
     .category-order-panel { margin-top:22px; padding:16px; border:1px solid #e7ddd3; border-radius:14px; background:#fffdfb; }
     .category-order-panel h3 { margin:0 0 5px; }
@@ -40,6 +43,8 @@
 
   <h1>Food Stall Platform</h1>
   <h2>Stall / Admin Login</h2>
+  <button type="button" id="installAppButton" hidden style="margin-bottom:12px;">Install Food Stall App</button>
+  <p id="installAppHint" aria-live="polite" style="font-size:13px;color:#667085;"></p>
 
   <input
     type="email"
@@ -82,7 +87,7 @@
         <p>Food Stall Management</p>
       </div>
 
-      <button onclick="logoutStallOwner()">Logout</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button type="button" id="installAppButtonDashboard" hidden>Install App</button><button onclick="logoutStallOwner()">Logout</button></div>
     </header>
 
 
@@ -332,6 +337,23 @@
     }
   </script>
   <script src="app.js?v=bank-merchant-qr-restore-20261110"></script>
+
+<script>
+(function(){
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(err=>console.warn("App offline support unavailable:",err)));
+  }
+  let installPrompt=null;
+  const buttons=[document.getElementById("installAppButton"),document.getElementById("installAppButtonDashboard")].filter(Boolean);
+  const hint=document.getElementById("installAppHint");
+  function showInstall(){buttons.forEach(b=>{b.hidden=false;b.onclick=async()=>{if(!installPrompt){if(hint)hint.textContent="On iPhone: open this page in Safari, tap Share, then choose Add to Home Screen.";return;}installPrompt.prompt();const choice=await installPrompt.userChoice;if(choice?.outcome==="accepted"){buttons.forEach(x=>x.hidden=true);if(hint)hint.textContent="Food Stall Platform is being added to your Home Screen.";}installPrompt=null;};});}
+  window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();installPrompt=event;showInstall();});
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+  if(isIOS&&!isStandalone){showInstall();if(hint)hint.textContent="To install on iPhone: open in Safari → Share → Add to Home Screen.";}
+  window.addEventListener("appinstalled",()=>{buttons.forEach(b=>b.hidden=true);if(hint)hint.textContent="App installed successfully.";});
+})();
+</script>
 
 </body>
 </html>
