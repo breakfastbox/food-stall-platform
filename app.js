@@ -3417,30 +3417,25 @@ async function loadStallApplications() {
   target.innerHTML = data.map(app => {
     const created = new Date(app.created_at).toLocaleString("en-IN");
     const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
-    const plan = app.selected_plan === "trial" ? "7-day Free Trial selected" :
-      app.selected_plan === "paid" ? "Paid Subscription selected" : "Awaiting subscription choice";
+    const plan = app.selected_plan === "trial" ? "7-day Free Trial requested" :
+      app.selected_plan === "paid" ? "Active Paid Account requested (₹499/month)" : "Plan not selected";
     const waText = encodeURIComponent("Hello " + app.owner_name + ", regarding your application for " + app.stall_name + " on Food Stall Platform.");
     const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
     const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
     const actions = app.status === "submitted"
-      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Accept &amp; Create Link</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
-      : app.status === "approved" && app.approval_token
-        ? '<p><strong>Acceptance link:</strong><br><a href="https://breakfastbox.github.io/food-stall-platform/choose-plan.html?token=' + encodeURIComponent(app.approval_token) + '" target="_blank" rel="noopener">Open subscription choice link</a></p><button type="button" onclick="copyApplicationLink(\'' + app.approval_token + '\')">Copy Link</button>' +
-          (app.selected_plan ? '<p><strong>Subscription choice:</strong> ' + escapeHtml(plan) + '</p><button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
-            (app.selected_plan === "trial" ? 'Create Trial Stall &amp; Owner Login' : 'Prepare Paid Stall for Payment') +
-            '</button>' : '')
+      ? '<button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'approved\\')">Approve Application</button> <button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'rejected\\')">Reject</button>'
+      : app.status === "approved"
+        ? '<p><strong>Admin decision:</strong> Approved. The applicant\'s requested plan is ready for processing.</p><button type="button" onclick="convertStallApplication(\\'' + app.id + '\\')">' +
+          (app.selected_plan === "trial" ? 'Activate 7-Day Trial &amp; Create Owner Account' : 'Prepare Paid Account for Payment') +
+          '</button>'
         : app.status === "converted" && app.converted_stall_id
           ? '<p><strong>Stall account:</strong> Created</p>' +
             (app.selected_plan === "trial"
               ? '<p>7-day trial is active and customer ordering is enabled.</p>'
-              : '<p>Paid stall is prepared but remains suspended until you record the verified subscription payment.</p>') +
-            '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link</button>' +
+              : '<p>Paid account is prepared but remains suspended until you record the verified subscription payment.</p>') +
+            '<button type="button" onclick="generateOwnerSetupLink(\\'' + app.id + '\\')">Generate Owner Setup Link</button>' +
             '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
-          : app.status === "approved" && app.selected_plan
-            ? '<button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
-              (app.selected_plan === "trial" ? 'Create Trial Stall &amp; Owner Login' : 'Prepare Paid Stall for Payment') +
-              '</button>'
-            : "";
+          : ""; 
     return '<article class="stall" style="margin:12px 0"><h3>' + escapeHtml(app.stall_name) + '</h3>' +
       '<p><strong>Owner:</strong> ' + escapeHtml(app.owner_name) + '</p>' +
       '<p><strong>Email:</strong> ' + escapeHtml(app.email) + '</p>' +
@@ -3455,17 +3450,20 @@ async function loadStallApplications() {
 
 async function decideStallApplication(applicationId, decision) {
   if (!["approved", "rejected"].includes(decision)) return;
-  const confirmText = decision === "approved"
-    ? "Accept this application and create a private subscription-choice link?"
-    : "Reject this application?";
-  if (!window.confirm(confirmText)) return;
-  const token = decision === "approved" ? crypto.randomUUID() + crypto.randomUUID() : null;
-  const update = { status: decision, decision_at: new Date().toISOString(), approval_token: token };
-  const { error } = await supabaseClient.from("stall_applications").update(update).eq("id", applicationId).eq("status", "submitted");
-  if (error) {
-    alert("Could not update application: " + error.message);
+  const { data: application, error: lookupError } = await supabaseClient
+    .from("stall_applications").select("stall_name, selected_plan").eq("id", applicationId).maybeSingle();
+  if (lookupError || !application || !["trial", "paid"].includes(application.selected_plan)) {
+    alert("This application has no valid Trial or Paid selection. Refresh and review it.");
     return;
   }
+  const confirmText = decision === "approved"
+    ? "Approve " + application.stall_name + " for its requested " + (application.selected_plan === "trial" ? "7-day free trial" : "paid account") + "?"
+    : "Reject this application?";
+  if (!window.confirm(confirmText)) return;
+  const { error } = await supabaseClient.from("stall_applications")
+    .update({ status: decision, decision_at: new Date().toISOString(), approval_token: null })
+    .eq("id", applicationId).eq("status", "submitted");
+  if (error) { alert("Could not update application: " + error.message); return; }
   await loadStallApplications();
 }
 
