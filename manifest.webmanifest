@@ -1,0 +1,20 @@
+{
+  "id": "./stall.html",
+  "name": "Food Stall Platform",
+  "short_name": "Food Stall",
+  "description": "Manage your food stall, menu, orders and reports.",
+  "start_url": "./stall.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#f4f6f8",
+  "theme_color": "#1769aa",
+  "icons": [
+    {"src": "icons/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Manage Orders", "short_name": "Orders", "url": "./orders.html"},
+    {"name": "Stall Dashboard", "short_name": "Dashboard", "url": "./stall.html"}
+  ]
+}
