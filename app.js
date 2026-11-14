@@ -1671,6 +1671,10 @@ async function loadOrders(options = {}) {
 
     if (!orders || orders.length === 0) {
       message.textContent = "No orders yet.";
+      if (list.dataset.renderedOrdersHtml !== "") {
+        list.innerHTML = "";
+        list.dataset.renderedOrdersHtml = "";
+      }
       return;
     }
 
@@ -1700,7 +1704,11 @@ async function loadOrders(options = {}) {
 
     message.textContent = visibleOrders.length + " fresh order(s) shown for today.";
     if (visibleOrders.length === 0) {
-      list.innerHTML = '<p class="muted">No orders match these filters.</p>';
+      const emptyHtml = '<p class="muted">No orders match these filters.</p>';
+      if (list.dataset.renderedOrdersHtml !== emptyHtml) {
+        list.innerHTML = emptyHtml;
+        list.dataset.renderedOrdersHtml = emptyHtml;
+      }
       return;
     }
 
@@ -1715,7 +1723,7 @@ async function loadOrders(options = {}) {
       itemsByOrder.get(item.order_id).push(item);
     });
 
-    list.innerHTML = visibleOrders.map(order => {
+    const nextOrdersHtml = visibleOrders.map(order => {
       const items = itemsByOrder.get(order.id) || [];
 
       const itemList = items.length > 0
@@ -1794,6 +1802,13 @@ async function loadOrders(options = {}) {
         </div>
       `;
     }).join("");
+
+    // Avoid replacing the live order cards on every 20-second poll when
+    // nothing changed. This keeps scroll position, open controls and focus stable.
+    if (list.dataset.renderedOrdersHtml !== nextOrdersHtml) {
+      list.innerHTML = nextOrdersHtml;
+      list.dataset.renderedOrdersHtml = nextOrdersHtml;
+    }
 
   } catch (error) {
     console.error("Could not load orders:", error);
