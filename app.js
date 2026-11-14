@@ -373,7 +373,7 @@ async function runOneSignalTask(task) {
 }
 
 async function identifyStallPushUser() {
-  if (!["stall_owner", "staff"].includes(currentUserRole)) return;
+  if (!["stall_owner", "staff", "admin"].includes(currentUserRole)) return;
   const { data: { user }, error } = await supabaseClient.auth.getUser();
   if (error || !user) throw new Error("Could not identify your notification account.");
   await runOneSignalTask(async (OneSignal) => OneSignal.login(user.id));
