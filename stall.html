@@ -10,6 +10,17 @@
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1769aa">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "0fac5ece-4790-4109-b800-41415d49ca82",
+        serviceWorkerPath: "food-stall-platform/push/onesignal/OneSignalSDKWorker.js",
+        serviceWorkerParam: { scope: "/food-stall-platform/push/onesignal/" }
+      });
+    });
+  </script>
   <style>
     .category-order-panel { margin-top:22px; padding:16px; border:1px solid #e7ddd3; border-radius:14px; background:#fffdfb; }
     .category-order-panel h3 { margin:0 0 5px; }
@@ -143,6 +154,14 @@
         <div id="stallQrResult" style="margin-top:16px;text-align:center;"></div>
         <a id="downloadStallQr" hidden download="my-stall-order-qr.png" style="display:inline-block;margin-top:12px;">Download QR Code</a>
         <p id="stallQrMessage" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" id="pushNotificationsPanel">
+        <h2>Mobile Notifications</h2>
+        <p>Enable notifications on this device to receive important Food Stall Platform updates, even when the app is closed.</p>
+        <button type="button" id="enableStallPushButton" onclick="enableStallPushNotifications()">Enable Notifications</button>
+        <button type="button" id="testStallPushButton" onclick="sendStallPushTest()" hidden>Send Test Notification</button>
+        <p id="stallPushMessage" role="status" aria-live="polite"></p>
       </section>
 
       <section class="stats">
