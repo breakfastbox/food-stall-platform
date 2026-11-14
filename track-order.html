@@ -185,8 +185,9 @@ function displayOrder(order) {
 
   result.appendChild(heading);
 
+  const customerStatus = normalizeCustomerChangeStatus(order.order_status) === "preparing" || normalizeCustomerChangeStatus(order.order_status) === "ready" ? "Accepted" : (String(order.order_status || "pending").toLowerCase() === "completed" ? "Delivered" : String(order.order_status || "Pending").replace(/^./, c => c.toUpperCase()));
   const details = [
-    "Order status: " + order.order_status,
+    "Order status: " + customerStatus,
     "Payment status: " + order.payment_status,
     "Total: ₹" + Number(order.total_amount || 0).toFixed(2)
   ];
@@ -298,7 +299,7 @@ async function renderOrderChangePanel(order, parent) {
         ? "Last change request: " + existing.request_status + ". "
         : "";
     if (!stillEligible) {
-      info.textContent = previousRequestMessage + (!["pending", "accepted"].includes(order.order_status)
+      info.textContent = previousRequestMessage + (normalizeCustomerChangeStatus(order.order_status) !== "pending"
         ? "Changes are locked because the stall has accepted the order or closed it."
         : order.stock_deducted_at
           ? "Changes are locked because stock has already been deducted."
