@@ -185,7 +185,8 @@ function displayOrder(order) {
 
   result.appendChild(heading);
 
-  const customerStatus = normalizeCustomerChangeStatus(order.order_status) === "preparing" || normalizeCustomerChangeStatus(order.order_status) === "ready" ? "Accepted" : (String(order.order_status || "pending").toLowerCase() === "completed" ? "Delivered" : String(order.order_status || "Pending").replace(/^./, c => c.toUpperCase()));
+  const rawCustomerStatus = String(order.order_status || "pending").toLowerCase();
+  const customerStatus = ["preparing", "ready"].includes(rawCustomerStatus) ? "Accepted" : rawCustomerStatus === "completed" ? "Delivered" : rawCustomerStatus.replace(/^./, c => c.toUpperCase());
   const details = [
     "Order status: " + customerStatus,
     "Payment status: " + order.payment_status,
