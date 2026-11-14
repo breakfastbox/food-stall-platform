@@ -920,6 +920,19 @@ if (!validPhone) {
       placeOrderButton.textContent = "Submitting...";
       showMessage("Submitting your order...");
 
+      // Open a tab during the customer's submit gesture so the browser is
+      // less likely to block WhatsApp after the order has been saved.
+      const ownerWhatsAppDigits = String(stallPhone || "").replace(/\D/g, "");
+      const ownerWhatsAppNumber = ownerWhatsAppDigits.length === 10
+        ? "91" + ownerWhatsAppDigits
+        : ownerWhatsAppDigits.startsWith("0") && ownerWhatsAppDigits.length === 11
+          ? "91" + ownerWhatsAppDigits.slice(1)
+          : ownerWhatsAppDigits;
+      let whatsappPopup = null;
+      if (ownerWhatsAppNumber.length >= 11) {
+        try { whatsappPopup = window.open("about:blank", "_blank"); } catch {}
+      }
+
       try {
 
         const response = await fetch(ORDER_FUNCTION_URL, {
@@ -953,48 +966,70 @@ if (!validPhone) {
 
        
         const order = result.order;
-        const whatsappMessage =
-          "Hello " + stallName + "! I have placed an order.\n" +
-          "Token: " + String(order.token_number).padStart(4, "0") + "\n" +
-          "Status: " +
-(order.order_status.toLowerCase() === "pending"
-  ? "Pending — awaiting stall confirmation"
-  : order.order_status) + "\n" +
-          "Total: ₹" + money(order.total_amount) + "\n" +
-          "Payment: " + (paymentMethod === "upi_manual" ? "UPI — awaiting owner verification" + (upiReference ? " (reference " + upiReference + ")" : " (reference not provided)") : "Cash at the stall (pending)") + "\n" +
-          "Thank you!";
+        const tokenText = String(order.token_number).padStart(4, "0");
+        const orderedItemLines = items.map(selection => {
+          const menuItem = menuItems.find(item => item.id === selection.menu_item_id);
+          if (!menuItem) return null;
+          const quantity = Number(selection.quantity || 0);
+          const unitPrice = Number(menuItem.price || 0);
+          return "- " + menuItem.name + " × " + quantity +
+            " — ₹" + money(unitPrice) + " each = ₹" + money(unitPrice * quantity);
+        }).filter(Boolean).join("\n");
 
-        const whatsappNumber = stallPhone.replace(/[^0-9]/g, "");
-        const whatsappUrl = whatsappNumber
-          ? "https://wa.me/" + whatsappNumber + "?text=" + encodeURIComponent(whatsappMessage)
+        const specialInstructions = buildSpecialInstructions();
+        const whatsappMessage =
+          "NEW ORDER — " + stallName + "\n" +
+          "Customer: " + name + "\n" +
+          "Customer phone: " + normalizedPhone + "\n" +
+          "Token: #" + tokenText + "\n" +
+          "Items:\n" + (orderedItemLines || "Please check the order in Food Stall Platform.") + "\n" +
+          (specialInstructions ? "Customer instructions: " + specialInstructions + "\n" : "") +
+          "Total: ₹" + money(order.total_amount) + "\n" +
+          "Payment: " + (paymentMethod === "upi_manual"
+            ? "UPI — awaiting owner verification" + (upiReference ? " (reference " + upiReference + ")" : " (reference not provided)")
+            : "Cash at the stall — pending") + "\n" +
+          "Order status: " + (order.order_status || "pending") + "\n\n" +
+          "Please confirm this order in Food Stall Platform.";
+
+        const whatsappUrl = ownerWhatsAppNumber.length >= 11
+          ? "https://wa.me/" + ownerWhatsAppNumber + "?text=" + encodeURIComponent(whatsappMessage)
           : null;
 
         showMessage(
           "Order placed successfully!\n" +
-          "Token: " + order.token_number + "\n" +
-          "Status: " + order.order_status + "\n" +
+          "Customer: " + name + "\n" +
+          "Token: " + tokenText + "\n" +
           "Total: ₹" + money(order.total_amount) +
-          (paymentMethod === "upi_manual" ? "\nUPI reference submitted. Payment is awaiting stall-owner verification." : "\nPayment: Cash at the stall — pay when you collect.") + "\n\nOpen WhatsApp to send your confirmation:",
+          (paymentMethod === "upi_manual"
+            ? "\nUPI reference submitted. Payment is awaiting stall-owner verification."
+            : "\nPayment: Cash at the stall — pay when you collect.") +
+          (whatsappUrl ? "\nOpening WhatsApp — please tap Send to notify the stall." : "\nWhatsApp contact is not configured for this stall."),
           "success"
         );
 
         const messageElement = document.getElementById("message");
         if (whatsappUrl) {
-          const whatsappLink = document.createElement("a");
-          whatsappLink.href = whatsappUrl;
-          whatsappLink.target = "_blank";
-          whatsappLink.rel = "noopener noreferrer";
-          whatsappLink.textContent = "Confirm on WhatsApp";
-          whatsappLink.style.display = "inline-block";
-          whatsappLink.style.marginTop = "12px";
-          whatsappLink.style.padding = "12px 18px";
-          whatsappLink.style.background = "#25D366";
-          whatsappLink.style.color = "#ffffff";
-          whatsappLink.style.borderRadius = "8px";
-          whatsappLink.style.textDecoration = "none";
-          whatsappLink.style.fontWeight = "bold";
-          messageElement.appendChild(document.createElement("br"));
-          messageElement.appendChild(whatsappLink);
+          if (whatsappPopup && !whatsappPopup.closed) {
+            whatsappPopup.location.href = whatsappUrl;
+          } else {
+            const whatsappLink = document.createElement("a");
+            whatsappLink.href = whatsappUrl;
+            whatsappLink.target = "_blank";
+            whatsappLink.rel = "noopener noreferrer";
+            whatsappLink.textContent = "Send Order to Stall on WhatsApp";
+            whatsappLink.style.display = "inline-block";
+            whatsappLink.style.marginTop = "12px";
+            whatsappLink.style.padding = "12px 18px";
+            whatsappLink.style.background = "#25D366";
+            whatsappLink.style.color = "#ffffff";
+            whatsappLink.style.borderRadius = "8px";
+            whatsappLink.style.textDecoration = "none";
+            whatsappLink.style.fontWeight = "bold";
+            messageElement.appendChild(document.createElement("br"));
+            messageElement.appendChild(whatsappLink);
+          }
+        } else if (whatsappPopup && !whatsappPopup.closed) {
+          whatsappPopup.close();
         }
 
         // Create the customer's private tracking link.
@@ -1078,6 +1113,7 @@ try {
         renderMenuItems();
         updateTotal();
       } catch (error) {
+        if (whatsappPopup && !whatsappPopup.closed) whatsappPopup.close();
         console.error(error);
         showMessage(error.message || "Something went wrong.", "error");
       } finally {
