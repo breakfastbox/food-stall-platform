@@ -3423,9 +3423,9 @@ async function loadStallApplications() {
     const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
     const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
     const actions = app.status === "submitted"
-      ? '<button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'approved\\')">Approve Application</button> <button type="button" onclick="decideStallApplication(\\'' + app.id + '\\', \\'rejected\\')">Reject</button>'
+      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Approve Application</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
       : app.status === "approved"
-        ? '<p><strong>Admin decision:</strong> Approved. The applicant\'s requested plan is ready for processing.</p><button type="button" onclick="convertStallApplication(\\'' + app.id + '\\')">' +
+        ? '<p><strong>Admin decision:</strong> Approved. The applicant\'s requested plan is ready for processing.</p><button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
           (app.selected_plan === "trial" ? 'Activate 7-Day Trial &amp; Create Owner Account' : 'Prepare Paid Account for Payment') +
           '</button>'
         : app.status === "converted" && app.converted_stall_id
@@ -3433,7 +3433,7 @@ async function loadStallApplications() {
             (app.selected_plan === "trial"
               ? '<p>7-day trial is active and customer ordering is enabled.</p>'
               : '<p>Paid account is prepared but remains suspended until you record the verified subscription payment.</p>') +
-            '<button type="button" onclick="generateOwnerSetupLink(\\'' + app.id + '\\')">Generate Owner Setup Link</button>' +
+            '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link</button>' +
             '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
           : ""; 
     return '<article class="stall" style="margin:12px 0"><h3>' + escapeHtml(app.stall_name) + '</h3>' +
