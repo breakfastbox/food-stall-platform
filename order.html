@@ -989,7 +989,7 @@ if (!validPhone) {
             ? "UPI — awaiting owner verification" + (upiReference ? " (reference " + upiReference + ")" : " (reference not provided)")
             : "Cash at the stall — pending") + "\n" +
           "Order status: " + (order.order_status || "pending") + "\n\n" +
-          "Please confirm this order in Food Stall Platform.";
+          "";
 
         const whatsappUrl = ownerWhatsAppNumber.length >= 11
           ? "https://wa.me/" + ownerWhatsAppNumber + "?text=" + encodeURIComponent(whatsappMessage)
