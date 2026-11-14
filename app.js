@@ -3357,7 +3357,7 @@ async function generateOwnerSetupLink(applicationId) {
 
     const { data: application, error: applicationError } = await supabaseClient
       .from("stall_applications")
-      .select("stall_name, owner_name, phone")
+      .select("stall_name, owner_name, phone, selected_plan")
       .eq("id", applicationId)
       .maybeSingle();
     if (applicationError || !application) {
@@ -3368,8 +3368,11 @@ async function generateOwnerSetupLink(applicationId) {
     // WhatsApp link-preview crawlers may open direct recovery links and consume their one-time token.
     const safeSetupUrl = APP_SITE_URL + "owner-setup.html#" + encodeURIComponent(data.action_link);
     const phone = String(application.phone || "").replace(/[^0-9]/g, "");
+    const planMessage = application.selected_plan === "trial"
+      ? "Your 7-day free trial is active."
+      : "Your paid account is ready. Your subscription has been verified by the Platform Admin.";
     const message = "Hello " + application.owner_name + ",\n\nWelcome to Food Stall Platform! Your " +
-      application.stall_name + " stall account has been created with a 7-day free trial.\n\n" +
+      application.stall_name + " stall account has been created. " + planMessage + "\n\n" +
       "Please open this page, then tap Continue to securely set your password:\n" +
       safeSetupUrl + "\n\nThank you!";
     const whatsappUrl = phone
