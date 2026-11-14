@@ -8,6 +8,18 @@ const supabaseClient = window.supabase.createClient(
 );
 
 const APP_SITE_URL = "https://breakfastbox.github.io/food-stall-platform/";
+
+function normalizeOrderStatus(status) {
+  const value = String(status || "pending").toLowerCase();
+  if (["preparing", "ready"].includes(value)) return "accepted";
+  if (value === "completed") return "delivered";
+  return ["pending", "accepted", "delivered", "cancelled"].includes(value) ? value : "pending";
+}
+
+function orderStatusLabel(status) {
+  const value = normalizeOrderStatus(status);
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 let currentStallId = null;
 let currentUserRole = null;
 let currentStallRecord = null;
@@ -1472,7 +1484,7 @@ async function loadOrdersInternal() {
         <hr>
 
         <p><strong>Order Status:</strong>
-          ${escapeHTML(order.order_status || "Pending")}
+          ${escapeHTML(orderStatusLabel(order.order_status))}
         </p>
 
         <p><strong>Payment Status:</strong>
@@ -1507,9 +1519,7 @@ async function loadOrdersInternal() {
         <select id="status-${escapeHTML(order.id)}">
           <option value="pending">Pending</option>
           <option value="accepted">Accepted</option>
-          <option value="preparing">Preparing</option>
-          <option value="ready">Ready</option>
-          <option value="completed">Completed</option>
+          <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
         </select>
 
@@ -1526,7 +1536,7 @@ async function loadOrdersInternal() {
     const select = document.getElementById("status-" + order.id);
 
     if (select) {
-      select.value = order.order_status || "pending";
+      select.value = normalizeOrderStatus(order.order_status);
     }
   });
 }
@@ -1639,10 +1649,10 @@ async function loadOrders(options = {}) {
     const pendingToday = todaysOrders.filter(order =>
       (order.order_status || "pending").toLowerCase() === "pending"
     ).length;
-    const completedToday = todaysOrders.filter(order =>
-      (order.order_status || "").toLowerCase() === "completed"
+    const deliveredToday = todaysOrders.filter(order =>
+      normalizeOrderStatus(order.order_status) === "delivered"
     );
-    const completedSalesToday = completedToday.reduce(
+    const deliveredSalesToday = deliveredToday.reduce(
       (sum, order) => sum + Number(order.total_amount ?? 0), 0
     );
 
@@ -1658,13 +1668,13 @@ async function loadOrders(options = {}) {
           <strong>${pendingToday}</strong>
         </div>
         <div class="summary-card">
-          <span class="summary-label">Completed Orders</span>
-          <strong>${completedToday.length}</strong>
+          <span class="summary-label">Delivered Orders</span>
+          <strong>${deliveredToday.length}</strong>
         </div>
         <div class="summary-card">
-          <span class="summary-label">Completed Order Value</span>
-          <strong>₹${formatRupees(completedSalesToday)}</strong>
-          <small>Completed orders only; may include pending payments</small>
+          <span class="summary-label">Delivered Order Value</span>
+          <strong>₹${formatRupees(deliveredSalesToday)}</strong>
+          <small>Delivered orders only; may include pending payments</small>
         </div>
       `;
     }
@@ -1700,7 +1710,7 @@ async function loadOrders(options = {}) {
     const statusFilter = document.getElementById("orderStatusFilter")?.value || "all";
     const visibleOrders = statusFilter === "all"
       ? todaysOrders
-      : todaysOrders.filter(order => (order.order_status || "pending").toLowerCase() === statusFilter);
+      : todaysOrders.filter(order => normalizeOrderStatus(order.order_status) === statusFilter);
 
     message.textContent = visibleOrders.length + " fresh order(s) shown for today.";
     if (visibleOrders.length === 0) {
@@ -1759,16 +1769,14 @@ async function loadOrders(options = {}) {
           ${itemList}
           ${customerInstructions}
 
-          <p><strong>Order status:</strong> ${escapeHtml(order.order_status ?? "Pending")}</p>
+          <p><strong>Order status:</strong> ${escapeHtml(orderStatusLabel(order.order_status))}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
           <p><strong>Payment method:</strong> ${escapeHtml(order.payment_method === "upi_manual" ? "UPI (manual verification)" : "Cash at the stall")}</p>
           ${order.upi_transaction_reference ? `<p><strong>UPI reference:</strong> ${escapeHtml(order.upi_transaction_reference)}</p>` : ""}
 
           <div class="order-quick-actions">
-            ${order.order_status === "pending" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;accepted&quot;)'>Accept order</button>` : ""}
-            ${order.order_status === "accepted" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;preparing&quot;)'>Start preparing</button>` : ""}
-            ${order.order_status === "preparing" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;ready&quot;)'>Mark ready</button>` : ""}
-            ${order.order_status === "ready" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;completed&quot;)'>Complete order</button>` : ""}
+            ${normalizeOrderStatus(order.order_status) === "pending" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;accepted&quot;)'>Accept order</button>` : ""}
+            ${normalizeOrderStatus(order.order_status) === "accepted" ? `<button class='quick-action primary' onclick='quickSetOrderStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;delivered&quot;)'>Mark delivered</button>` : ""}
             ${order.payment_status === "paid" ? `<button class='quick-action paid' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;pending&quot;)'>✓ Paid · Undo</button>` : `<button class='quick-action payment-due' onclick='quickSetPaymentStatus(&quot;${escapeHtml(order.id)}&quot;,&quot;paid&quot;)'>Mark payment received</button>`}
           </div>
 
@@ -1787,12 +1795,10 @@ async function loadOrders(options = {}) {
             </label>
 
             <select id="status-${escapeHtml(order.id)}">
-              <option value="pending" ${order.order_status === "pending" ? "selected" : ""}>Pending</option>
-              <option value="accepted" ${order.order_status === "accepted" ? "selected" : ""}>Accepted</option>
-              <option value="preparing" ${order.order_status === "preparing" ? "selected" : ""}>Preparing</option>
-              <option value="ready" ${order.order_status === "ready" ? "selected" : ""}>Ready</option>
-              <option value="completed" ${order.order_status === "completed" ? "selected" : ""}>Completed</option>
-              <option value="cancelled" ${order.order_status === "cancelled" ? "selected" : ""}>Cancelled</option>
+              <option value="pending" ${normalizeOrderStatus(order.order_status) === "pending" ? "selected" : ""}>Pending</option>
+              <option value="accepted" ${normalizeOrderStatus(order.order_status) === "accepted" ? "selected" : ""}>Accepted</option>
+              <option value="delivered" ${normalizeOrderStatus(order.order_status) === "delivered" ? "selected" : ""}>Delivered</option>
+              <option value="cancelled" ${normalizeOrderStatus(order.order_status) === "cancelled" ? "selected" : ""}>Cancelled</option>
             </select>
 
             <button onclick="updateOrderStatus('${escapeHtml(order.id)}')">
@@ -2913,10 +2919,10 @@ async function loadDailyReport() {
 
     // Keep the existing cautious recipe-cost estimate; do not change stock or recipe data.
     const eligibleOrders = validOrders.filter(order =>
-      order.order_status === "completed" || Boolean(order.stock_deducted_at)
+      ["completed", "delivered"].includes(String(order.order_status || "").toLowerCase()) || Boolean(order.stock_deducted_at)
     );
     const completedOrdersWithoutDeduction = validOrders.filter(order =>
-      order.order_status === "completed" && !order.stock_deducted_at
+      ["completed", "delivered"].includes(String(order.order_status || "").toLowerCase()) && !order.stock_deducted_at
     ).length;
     let ingredientCost = 0;
     let ingredientCostDataIncomplete = false;
