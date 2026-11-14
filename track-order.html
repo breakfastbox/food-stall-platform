@@ -230,7 +230,7 @@ function displayOrder(order) {
     // This prevents customer-entered quantities and notes from being erased.
     result.appendChild(existingPanel);
     const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
-    const canChangeBeforePreparation = ["pending", "accepted"].includes(order.order_status);
+    const canChangeBeforePreparation = normalizeCustomerChangeStatus(order.order_status) === "pending";
     const locked = !canChangeBeforePreparation ||
       Boolean(order.stock_deducted_at) || Date.now() >= deadline;
 
@@ -238,9 +238,9 @@ function displayOrder(order) {
       const info = existingPanel.querySelector(".change-muted");
       if (info) {
         info.textContent = !canChangeBeforePreparation
-          ? "Changes are locked because the stall has started preparation or closed this order."
+          ? "Changes are locked because the stall has accepted the order or closed it."
           : order.stock_deducted_at
-            ? "Changes are locked because preparation has started."
+            ? "Changes are locked because the stall has accepted the order."
             : "The 5-minute change window has ended. Please contact the stall for help.";
       }
       existingPanel.querySelectorAll("input, textarea, button").forEach(control => {
@@ -250,6 +250,11 @@ function displayOrder(order) {
   } else {
     renderOrderChangePanel(order, result);
   }
+}
+
+function normalizeCustomerChangeStatus(status) {
+  const value = String(status || "pending").toLowerCase();
+  return ["preparing", "ready"].includes(value) ? "accepted" : value;
 }
 
 const CHANGE_REQUEST_URL = SUPABASE_URL + "/functions/v1/order-change-requests";
@@ -268,7 +273,7 @@ async function renderOrderChangePanel(order, parent) {
   parent.appendChild(panel);
 
   const deadline = new Date(order.created_at).getTime() + 5 * 60 * 1000;
-  const stillEligible = ["pending", "accepted"].includes(order.order_status) &&
+  const stillEligible = String(order.order_status || "").toLowerCase() === "pending" &&
     !order.stock_deducted_at && Date.now() < deadline;
 
   try {
@@ -294,7 +299,7 @@ async function renderOrderChangePanel(order, parent) {
         : "";
     if (!stillEligible) {
       info.textContent = previousRequestMessage + (!["pending", "accepted"].includes(order.order_status)
-        ? "Changes are locked because the stall has started preparation or closed this order."
+        ? "Changes are locked because the stall has accepted the order or closed it."
         : order.stock_deducted_at
           ? "Changes are locked because stock has already been deducted."
           : "The 5-minute change window has ended. Please contact the stall for help.");
