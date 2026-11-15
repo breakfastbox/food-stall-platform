@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="checkout-bar-visibility-20261114">
+  <meta name="app-version" content="upi-at-counter-20261115">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -362,9 +362,9 @@
             <input id="paymentCash" type="radio" name="paymentMethod" value="cash" checked style="margin-top:4px;">
             <span>Cash at the stall <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Place your order now and pay when you collect it.</small></span>
           </label>
-          <label id="paymentUpiChoice" for="paymentUpi" style="display:none;align-items:flex-start;gap:10px;margin-top:9px;padding:12px;border:1px solid #b9dfc4;border-radius:11px;background:#fff;color:var(--coffee);font-weight:750;cursor:pointer;">
+          <label id="paymentUpiChoice" for="paymentUpi" style="display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:12px;border:1px solid #b9dfc4;border-radius:11px;background:#fff;color:var(--coffee);font-weight:750;cursor:pointer;">
             <input id="paymentUpi" type="radio" name="paymentMethod" value="upi_manual" style="margin-top:4px;">
-            <span>Pay by UPI <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Scan the QR or open your UPI app. You can add the transaction reference if you have it.</small></span>
+            <span>UPI at the counter <small style="display:block;margin-top:3px;color:var(--muted);font-weight:500;">Place your order now and pay at the stall counter using UPI. The stall will confirm payment.</small></span>
           </label>
           <div id="upiPaymentPanel" hidden style="margin-top:12px;padding:14px;border:1px solid #dce8df;border-radius:13px;background:#f7fbf8;">
             <strong style="display:block;color:var(--coffee);">Pay this amount to <span id="upiPayeeName"></span></strong>
@@ -378,7 +378,7 @@
               <small style="display:block;margin-top:5px;color:var(--muted);">Adding a UTR is optional. Your order will stay unpaid until the stall owner verifies the payment.</small>
             </div>
           </div>
-          <p id="upiUnavailableNote" style="margin:9px 0 0;color:var(--muted);font-size:12px;">Choose cash or UPI if enabled by this stall.</p>
+          <p id="upiUnavailableNote" style="margin:9px 0 0;color:var(--muted);font-size:12px;">UPI payment is collected at the counter. Your order remains unpaid until the stall confirms receipt.</p>
         </div>
 
         <div class="total">
@@ -470,36 +470,11 @@ let stallOrderingPaused = false;
       const params = new URLSearchParams({ pa: stallUpiId, pn: stallUpiName || stallName, am: Number(amount).toFixed(2), cu: "INR", tn: "Food order " + stallName });
       return "upi://pay?" + params.toString();
     }
-    function updateUpiPaymentPanel(amount) {
-      const selected = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+    function updateUpiPaymentPanel() {
+      // Direct QR / UPI-app payment will be enabled in a later release.
+      // For now, selecting UPI means the customer pays at the counter.
       const panel = document.getElementById("upiPaymentPanel");
-      if (!panel) return;
-      const bankMode = stallUpiPaymentMode === "bank_qr";
-      const show = selected === "upi_manual" && (bankMode ? Boolean(stallUpiQrUrl) : Boolean(stallUpiId));
-      panel.hidden = !show;
-      if (!show) return;
-      document.getElementById("upiPayeeName").textContent = stallUpiName || stallName;
-      document.getElementById("upiPayeeId").textContent = stallUpiId;
-      document.getElementById("upiQrAmount").textContent = money(amount);
-      const qr = document.getElementById("upiQrCode");
-      qr.innerHTML = "";
-      const payLink = document.getElementById("upiPayLink");
-      if (bankMode && stallUpiQrUrl) {
-        const img = document.createElement("img");
-        img.src = stallUpiQrUrl; img.alt = "Bank official merchant UPI QR";
-        img.style.cssText = "display:block;width:220px;max-width:100%;height:auto;object-fit:contain";
-        qr.appendChild(img);
-        qr.hidden = false;
-        payLink.hidden = true;
-        document.getElementById("upiAmountPrefix").textContent = "Enter this exact amount in your UPI app: ₹";
-      } else {
-        const uri = buildUpiUri(amount);
-        payLink.href = uri; payLink.hidden = false;
-        qr.hidden = false;
-        document.getElementById("upiAmountPrefix").textContent = "Amount: ₹";
-        if (window.QRCode) new QRCode(qr, { text: uri, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
-        else qr.textContent = "QR code could not load. Use the Pay with UPI app link.";
-      }
+      if (panel) panel.hidden = true;
     }
     document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
       input.addEventListener("change", () => updateUpiPaymentPanel(getSelectedItems().reduce((sum, item) => {
@@ -553,11 +528,10 @@ let stallOrderingPaused = false;
         stallUpiName = (stall.upi_account_name || stall.name || "").trim();
         stallUpiPaymentMode = stall.upi_payment_mode || "dynamic";
         stallUpiQrUrl = (stall.upi_qr_url || "").trim();
-        const upiChoice = document.getElementById("paymentUpiChoice");
-        const upiUnavailable = document.getElementById("upiUnavailableNote");
-        const upiReady = stallUpiPaymentMode === "bank_qr" ? Boolean(stallUpiQrUrl) : Boolean(stallUpiId);
-        if (upiReady) { upiChoice.style.display = "flex"; upiUnavailable.textContent = stallUpiPaymentMode === "bank_qr" ? "Pay using the bank's official merchant QR." : "Pay using the app-generated UPI QR."; }
-        else { upiChoice.style.display = "none"; upiUnavailable.textContent = "UPI is not configured by this stall yet. Please pay by cash."; }
+        // Counter UPI is available even before the direct QR payment integration.
+        document.getElementById("paymentUpiChoice").style.display = "flex";
+        document.getElementById("upiUnavailableNote").textContent =
+          "UPI payment is collected at the counter. Your order remains unpaid until the stall confirms receipt.";
         document.getElementById("stallName").textContent = stall.name;
         const customerLogo = document.getElementById("customerStallLogo");
         if (customerLogo) { customerLogo.hidden = !stall.logo_url; if (stall.logo_url) customerLogo.src = stall.logo_url; }
@@ -914,7 +888,7 @@ if (!validPhone) {
 
 
           const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "cash";
-      const upiReference = document.getElementById("upiTransactionReference")?.value.trim() || "";
+      const upiReference = "";
       if (paymentMethod === "upi_manual" && upiReference && !/^[A-Za-z0-9]{6,40}$/.test(upiReference)) {
         showMessage("If you enter a UPI reference, use 6–40 letters or numbers.", "error");
         document.getElementById("upiTransactionReference")?.focus();
@@ -998,7 +972,7 @@ if (!validPhone) {
           (specialInstructions ? "Customer instructions: " + specialInstructions + "\n" : "") +
           "Total: ₹" + money(order.total_amount) + "\n" +
           "Payment: " + (paymentMethod === "upi_manual"
-            ? "UPI — awaiting owner verification" + (upiReference ? " (reference " + upiReference + ")" : " (reference not provided)")
+            ? "UPI at the counter — pending collection"
             : "Cash at the stall — pending") + "\n" +
           "Order status: " + (order.order_status || "pending") + "\n\n" +
           "";
