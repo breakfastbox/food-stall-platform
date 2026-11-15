@@ -1228,16 +1228,30 @@ async function loadStallDashboard() {
   if (stallLogo) { stallLogo.hidden = !stall.logo_url; if (stall.logo_url) stallLogo.src = stall.logo_url; }
   if (brandingPreview) { brandingPreview.hidden = !stall.logo_url; if (stall.logo_url) brandingPreview.src = stall.logo_url; }
   document.getElementById("stallStatus").textContent = stall.status;
+  const statusElement = document.getElementById("stallStatus");
+  const statusCard = statusElement?.closest(".card");
+  if (statusCard) statusCard.classList.add("stall-status-card");
   let subscriptionDates = document.getElementById("stallSubscriptionDates");
   if (!subscriptionDates) {
     subscriptionDates = document.createElement("div");
     subscriptionDates.id = "stallSubscriptionDates";
-    const statusElement = document.getElementById("stallStatus");
+    subscriptionDates.className = "subscription-summary";
     statusElement.insertAdjacentElement("afterend", subscriptionDates);
   }
+  const dateLabel = String(stall.status || "").toLowerCase() === "trial" ? "Trial" : "Subscription";
   subscriptionDates.innerHTML =
-    '<p><strong>Trial start date:</strong> ' + escapeHtml(formatSubscriptionDate(stall.subscription_start)) + '</p>' +
-    '<p><strong>Trial expiry date:</strong> ' + escapeHtml(formatSubscriptionDate(stall.subscription_end)) + '</p>';
+    '<div class="subscription-date-tile"><span class="subscription-date-label">' + dateLabel + ' starts</span><strong class="subscription-date-value">' + escapeHtml(formatSubscriptionDate(stall.subscription_start)) + '</strong></div>' +
+    '<div class="subscription-date-tile"><span class="subscription-date-label">' + dateLabel + ' expires</span><strong class="subscription-date-value">' + escapeHtml(formatSubscriptionDate(stall.subscription_end)) + '</strong></div>';
+  let periodNote = document.getElementById("stallSubscriptionNote");
+  if (!periodNote) {
+    periodNote = document.createElement("p");
+    periodNote.id = "stallSubscriptionNote";
+    periodNote.className = "subscription-period-note";
+    subscriptionDates.insertAdjacentElement("afterend", periodNote);
+  }
+  periodNote.textContent = String(stall.status || "").toLowerCase() === "trial"
+    ? "Your 10-day free trial period."
+    : "Your current subscription period.";
 
   const { data: categories, error: categoryError } = await supabaseClient
     .from("menu_categories")
