@@ -11,6 +11,7 @@ const APP_SITE_URL = "https://breakfastbox.github.io/food-stall-platform/";
 
 let knownOrderIdsForAlerts = null;
 let orderSoundAlertsEnabled = false;
+let orderSoundRestoreAttemptedForStall = null;
 let orderAlertAudioContext = null;
 let orderAlertRepeatTimer = null;
 let pendingOrderAlerts = new Map();
@@ -296,6 +297,52 @@ function stopPendingOrderAlert(orderId) {
   }
 }
 
+async function restoreOrderSoundAlerts(stallId) {
+  if (!stallId || orderSoundRestoreAttemptedForStall === stallId) return;
+  orderSoundRestoreAttemptedForStall = stallId;
+
+  const saved = sessionStorage.getItem("foodStallOrderSoundEnabled:" + stallId) === "1";
+  if (!saved) return;
+
+  const button = document.getElementById("enableOrderSoundButton");
+  const status = document.getElementById("orderSoundStatus");
+
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error("Sound alerts are not supported by this browser.");
+    if (!orderAlertAudioContext) orderAlertAudioContext = new AudioContextClass();
+    await orderAlertAudioContext.resume();
+
+    if (!("speechSynthesis" in window)) {
+      throw new Error("Voice announcements are not supported by this browser.");
+    }
+
+    if (orderAlertAudioContext.state === "running") {
+      orderSoundAlertsEnabled = true;
+      if (button) {
+        button.textContent = "Loud Voice Alerts Enabled";
+        button.disabled = true;
+      }
+      if (status) status.textContent = "Sound alerts restored for this login.";
+      startOrderAlertLoop();
+    } else {
+      orderSoundAlertsEnabled = false;
+      if (button) {
+        button.textContent = "Resume Sound Alerts";
+        button.disabled = false;
+      }
+      if (status) status.textContent = "Sound alerts are saved for this login. Your browser paused audio after refresh; tap Resume Sound Alerts once.";
+    }
+  } catch (error) {
+    console.warn("Could not automatically restore order sound:", error);
+    if (button) {
+      button.textContent = "Resume Sound Alerts";
+      button.disabled = false;
+    }
+    if (status) status.textContent = "Sound alerts are saved for this login. Tap Resume Sound Alerts to activate audio.";
+  }
+}
+
 async function enableOrderSoundAlerts() {
   const button = document.getElementById("enableOrderSoundButton");
   const status = document.getElementById("orderSoundStatus");
@@ -311,12 +358,15 @@ async function enableOrderSoundAlerts() {
     }
 
     orderSoundAlertsEnabled = true;
+    if (currentStallId) {
+      sessionStorage.setItem("foodStallOrderSoundEnabled:" + currentStallId, "1");
+    }
     if (button) {
       button.textContent = "Loud Voice Alerts Enabled";
       button.disabled = true;
     }
     if (status) {
-      status.textContent = "Loud alarm and spoken token announcements repeat every 9 seconds until each order is acted on.";
+      status.textContent = "Sound alerts stay enabled for this login, including after page refreshes. They turn off when you log out.";
     }
     startOrderAlertLoop();
   } catch (error) {
@@ -487,6 +537,12 @@ async function logoutStallOwner() {
     return;
   }
 
+  if (currentStallId) {
+    sessionStorage.removeItem("foodStallOrderSoundEnabled:" + currentStallId);
+  }
+  orderSoundAlertsEnabled = false;
+  if (orderAlertRepeatTimer) window.clearInterval(orderAlertRepeatTimer);
+  orderAlertRepeatTimer = null;
   currentStallId = null;
   currentUserRole = null;
   currentStallRecord = null;
@@ -1742,6 +1798,7 @@ async function loadOrders(options = {}) {
   try {
     // Always load orders for the stall assigned to the signed-in account.
     const assignedStall = (await getCurrentStallContext()).stall;
+    await restoreOrderSoundAlerts(assignedStall.id);
     const heading = document.querySelector(".container > p.muted");
     if (heading) heading.textContent = assignedStall.name + " — manage customer orders";
 
