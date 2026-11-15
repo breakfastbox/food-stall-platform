@@ -496,6 +496,50 @@ async function logoutStallOwner() {
   if (message) message.textContent = "";
 }
 
+
+async function runAdminOneSignalTask(task) {
+  return new Promise((resolve, reject) => {
+    if (!window.OneSignalDeferred) {
+      reject(new Error("Push notifications are not ready. Refresh the Admin Dashboard."));
+      return;
+    }
+    window.OneSignalDeferred.push(async OneSignal => {
+      try { resolve(await task(OneSignal)); }
+      catch (error) { reject(error); }
+    });
+  });
+}
+
+async function identifyAdminPushUser() {
+  const { data: { user }, error } = await supabaseClient.auth.getUser();
+  if (error || !user) throw new Error("Could not verify the admin notification account.");
+  await runAdminOneSignalTask(OneSignal => OneSignal.login(user.id));
+}
+
+async function enableAdminRegistrationNotifications() {
+  const button = document.getElementById("enableAdminPushButton");
+  const message = document.getElementById("adminPushMessage");
+  if (button) button.disabled = true;
+  if (message) message.textContent = "Enabling registration alerts...";
+  try {
+    await identifyAdminPushUser();
+    const granted = await runAdminOneSignalTask(async OneSignal => {
+      const allowed = await OneSignal.Notifications.requestPermission();
+      if (allowed) await OneSignal.User.PushSubscription.optIn();
+      return allowed;
+    });
+    if (!granted || Notification.permission !== "granted") {
+      throw new Error("Please allow notifications in your browser settings.");
+    }
+    if (message) message.textContent = "Admin registration alerts are enabled on this device.";
+    if (button) button.textContent = "Registration Alerts Enabled";
+  } catch (error) {
+    if (message) message.textContent = error.message || "Could not enable registration alerts.";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 async function loginAdmin() {
 
   const email = document.getElementById("email").value.trim();
@@ -556,6 +600,8 @@ async function loginAdmin() {
 
   loginMessage.textContent = "";
 
+  try { await identifyAdminPushUser(); } catch (pushError) { console.warn('Admin push identity is not ready yet:', pushError); }
+
   await loadStalls();
   await loadStallApplications();
 
@@ -571,6 +617,8 @@ async function logoutAdmin() {
     alert(error.message || "Could not pause ordering. You are still logged in.");
     return;
   }
+
+  try { await runAdminOneSignalTask(OneSignal => OneSignal.logout()); } catch (pushError) { console.warn('Could not clear admin push identity:', pushError); }
 
   const { error } = await supabaseClient.auth.signOut();
 
@@ -3604,6 +3652,7 @@ if (window.location.pathname.endsWith("index.html") || window.location.pathname.
       loginBox.style.display = "none";
       dashboard.style.display = "block";
       if (loginMessage) loginMessage.textContent = "";
+      try { await identifyAdminPushUser(); } catch (pushError) { console.warn('Admin push identity is not ready yet:', pushError); }
       await loadStalls();
       await loadStallApplications();
     } catch (error) {
