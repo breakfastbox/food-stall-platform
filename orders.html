@@ -93,7 +93,8 @@
     <h1>📦 Order Management</h1>
     <p class="muted">Loading stall orders...</p>
 
-    <button onclick="loadOrders()">Refresh Orders</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button onclick="loadOrders()">Refresh Orders</button><button type="button" onclick="openWalkInOrderForm()" style="background:#176b45;color:white;border:0;border-radius:8px;font-weight:700">＋ Create Order for Customer</button></div>
+<div id="walkInOrderPanel" class="card" hidden><h2>Create Walk-in Order</h2><p class="muted">No customer name or phone number is required. Select items and quantities below.</p><div id="walkInMenuList">Loading menu...</div><label for="walkInPaymentMethod"><strong>Payment method</strong></label><select id="walkInPaymentMethod"><option value="cash">Cash at the Stall</option><option value="upi_manual">UPI at the Counter</option></select><label for="walkInInstructions" style="display:block;margin-top:10px"><strong>Order note (optional)</strong></label><textarea id="walkInInstructions" rows="2" maxlength="500" style="width:100%;box-sizing:border-box;padding:10px" placeholder="Optional note for the kitchen"></textarea><p id="walkInOrderMessage" class="muted" aria-live="polite"></p><button id="saveWalkInOrderButton" type="button" onclick="submitWalkInOrder()" style="background:#176b45;color:white;border:0;border-radius:8px;font-weight:700">Create Order</button><button type="button" onclick="closeWalkInOrderForm()">Cancel</button></div>
 
 <button
   id="enableOrderSoundButton"
