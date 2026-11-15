@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Food Stall Platform - Admin</title>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>window.OneSignalDeferred=window.OneSignalDeferred||[];window.OneSignalDeferred.push(async OneSignal=>{await OneSignal.init({appId:"0fac5ece-4790-4109-b800-41415d49ca82",serviceWorkerPath:"food-stall-platform/push/onesignal/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/food-stall-platform/push/onesignal/"}});});</script>
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -67,6 +69,7 @@
 
       <section class="panel" id="stallApplicationsPanel">
         <div class="panel-header"><div><h2>Stall Applications</h2><p>Review applications submitted through your personal registration link. Accept or reject, then contact the applicant manually on WhatsApp.</p></div><button type="button" onclick="loadStallApplications()">Refresh</button></div>
+        <div id="adminRegistrationPushPanel" style="margin:12px 0;padding:14px;border:1px solid #d7dee7;border-radius:12px;background:#f8fafc"><strong>New Registration Alerts</strong><p>Enable push notifications on this admin device. You will be alerted when someone submits a stall registration form.</p><button type="button" id="enableAdminPushButton" onclick="enableAdminRegistrationNotifications()">Enable Admin Registration Alerts</button><p id="adminPushMessage" role="status" aria-live="polite"></p></div>
         <p><strong>Share this application link:</strong> <a href="https://breakfastbox.github.io/food-stall-platform/apply.html" target="_blank" rel="noopener">https://breakfastbox.github.io/food-stall-platform/apply.html</a></p>
         <div id="stallApplicationsList">Loading applications...</div>
       </section>
@@ -272,7 +275,7 @@
 
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=launch-audit-20261108-1705"></script>
+  <script src="app.js?v=admin-registration-push-20261115-1"></script>
 
 </body>
 </html>
