@@ -142,7 +142,7 @@ async function getCurrentStallContext() {
 
   let stallQuery = supabaseClient
     .from("stalls")
-    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url")
+    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url, subscription_start, subscription_end")
     .limit(1);
 
   if (profile.role === "admin") {
@@ -1228,6 +1228,16 @@ async function loadStallDashboard() {
   if (stallLogo) { stallLogo.hidden = !stall.logo_url; if (stall.logo_url) stallLogo.src = stall.logo_url; }
   if (brandingPreview) { brandingPreview.hidden = !stall.logo_url; if (stall.logo_url) brandingPreview.src = stall.logo_url; }
   document.getElementById("stallStatus").textContent = stall.status;
+  let subscriptionDates = document.getElementById("stallSubscriptionDates");
+  if (!subscriptionDates) {
+    subscriptionDates = document.createElement("div");
+    subscriptionDates.id = "stallSubscriptionDates";
+    const statusElement = document.getElementById("stallStatus");
+    statusElement.insertAdjacentElement("afterend", subscriptionDates);
+  }
+  subscriptionDates.innerHTML =
+    '<p><strong>Trial start date:</strong> ' + escapeHtml(formatSubscriptionDate(stall.subscription_start)) + '</p>' +
+    '<p><strong>Trial expiry date:</strong> ' + escapeHtml(formatSubscriptionDate(stall.subscription_end)) + '</p>';
 
   const { data: categories, error: categoryError } = await supabaseClient
     .from("menu_categories")
