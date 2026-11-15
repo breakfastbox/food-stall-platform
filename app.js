@@ -1647,7 +1647,7 @@ async function loadOrdersInternal() {
           ${escapeHTML(order.payment_status || "Unknown")}
         </p>
 
-        <p><strong>Payment Method:</strong> ${escapeHTML(order.payment_method === "upi_manual" ? "UPI (manual verification)" : "Cash at the stall")}</p>
+        <p><strong>Payment Method:</strong> ${escapeHTML(order.payment_method === "upi_manual" ? "UPI at the counter" : "Cash at the stall")}</p>
         ${order.upi_transaction_reference ? `<p><strong>UPI reference:</strong> ${escapeHTML(order.upi_transaction_reference)}</p>` : ""}
 
         <p><strong>Subtotal:</strong>
@@ -1927,7 +1927,7 @@ async function loadOrders(options = {}) {
 
           <p><strong>Order status:</strong> ${escapeHtml(orderStatusLabel(order.order_status))}</p>
           <p><strong>Payment status:</strong> ${escapeHtml(order.payment_status ?? "Unknown")}</p>
-          <p><strong>Payment method:</strong> ${escapeHtml(order.payment_method === "upi_manual" ? "UPI (manual verification)" : "Cash at the stall")}</p>
+          <p><strong>Payment method:</strong> ${escapeHtml(order.payment_method === "upi_manual" ? "UPI at the counter" : "Cash at the stall")}</p>
           ${order.upi_transaction_reference ? `<p><strong>UPI reference:</strong> ${escapeHtml(order.upi_transaction_reference)}</p>` : ""}
 
           <div class="order-quick-actions">
