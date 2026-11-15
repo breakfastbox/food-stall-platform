@@ -3561,15 +3561,16 @@ async function loadStallApplications() {
       ? '<button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' + (app.selected_plan === "trial" ? "Create 10-Day Trial &amp; Owner Account" : "Prepare Paid Account (Pending Payment)") + '</button>'
       : app.status === "approved"
         ? '<p><strong>Admin decision:</strong> Approved. The applicant\'s requested plan is ready for processing.</p><button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
-          (app.selected_plan === "trial" ? 'Activate 7-Day Trial &amp; Create Owner Account' : 'Prepare Paid Account for Payment') +
+          (app.selected_plan === "trial" ? 'Activate 10-Day Trial &amp; Create Owner Account' : 'Prepare Paid Account for Payment') +
           '</button>'
         : app.status === "converted" && app.converted_stall_id
           ? '<p><strong>Stall account:</strong> Created</p>' +
             (app.selected_plan === "trial"
               ? '<p>10-day trial is active and customer ordering is enabled.</p>'
               : '<p>Paid account is prepared but remains suspended until you record the verified subscription payment.</p>') +
-            '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link</button>' +
-            '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
+            (app.selected_plan === "paid"
+              ? '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link After Payment</button><div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
+              : '<p>The owner invitation and password setup email has been sent automatically.</p>')
           : ""; 
     return '<article class="stall" style="margin:12px 0"><h3>' + escapeHtml(app.stall_name) + '</h3>' +
       '<p><strong>Owner:</strong> ' + escapeHtml(app.owner_name) + '</p>' +
