@@ -22,6 +22,15 @@
     });
   </script>
   <style>
+    .stall-status-card { position:relative; overflow:hidden; border:1px solid #dbe7f3; background:linear-gradient(145deg,#ffffff 0%,#f5f9ff 100%); }
+    .stall-status-card h3 { color:#344054; }
+    #stallStatus { display:inline-flex; align-items:center; margin:5px 0 14px; padding:6px 12px; border-radius:999px; background:#e8f7ee; color:#18794e; font-size:14px; font-weight:750; text-transform:capitalize; }
+    .subscription-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:4px; }
+    .subscription-date-tile { min-width:0; padding:12px; border:1px solid #e3eaf2; border-radius:12px; background:rgba(255,255,255,.9); }
+    .subscription-date-label { display:block; margin-bottom:6px; color:#667085; font-size:11px; font-weight:750; letter-spacing:.055em; text-transform:uppercase; }
+    .subscription-date-value { display:block; color:#1d2939; font-size:15px; font-weight:750; line-height:1.35; overflow-wrap:anywhere; }
+    .subscription-period-note { margin:11px 0 0; color:#667085; font-size:12px; }
+    @media(max-width:420px) { .subscription-summary { gap:7px; } .subscription-date-tile { padding:10px 8px; } .subscription-date-value { font-size:13px; } }
     .category-order-panel { margin-top:22px; padding:16px; border:1px solid #e7ddd3; border-radius:14px; background:#fffdfb; }
     .category-order-panel h3 { margin:0 0 5px; }
     .category-order-panel > p { color:#75685f; font-size:13px; }
@@ -182,7 +191,7 @@
         </div>
 
         <div class="card">
-          <h3>Stall Status</h3>
+          <h3>Subscription</h3>
           <strong id="stallStatus">Loading...</strong>
         </div>
 
