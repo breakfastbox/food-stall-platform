@@ -3416,7 +3416,7 @@ async function registerNewStall() {
     if (error) throw new Error(data?.error || error.message || "Registration could not be completed.");
     if (!data?.success) throw new Error(data?.error || "Registration could not be completed.");
 
-    message.textContent = "Stall registered successfully. An invitation has been sent to " + fields.email + ". Full app access and customer ordering are enabled during the 7-day free trial.";
+    message.textContent = "Stall registered successfully. An invitation has been sent to " + fields.email + ". Full app access and customer ordering are enabled during the 10-day free trial.";
     ["newStallName", "newStallOwner", "newStallEmail", "newStallPhone", "newStallAddress"].forEach(id => {
       const input = document.getElementById(id);
       if (input) input.value = "";
@@ -3446,7 +3446,7 @@ async function convertStallApplication(applicationId) {
   }
 
   const confirmation = application.selected_plan === "trial"
-    ? "Create the 7-day trial stall and owner login for " + application.stall_name + "? Customer ordering will be enabled."
+    ? "Create the 10-day trial stall and owner login for " + application.stall_name + "? Customer ordering will be enabled."
     : "Prepare a suspended stall and owner login for " + application.stall_name + "? Record the verified subscription payment before sending the owner's setup link.";
   if (!window.confirm(confirmation)) return;
 
@@ -3501,7 +3501,7 @@ async function generateOwnerSetupLink(applicationId) {
     const safeSetupUrl = APP_SITE_URL + "owner-setup.html#" + encodeURIComponent(data.action_link);
     const phone = String(application.phone || "").replace(/[^0-9]/g, "");
     const planMessage = application.selected_plan === "trial"
-      ? "Your 7-day free trial is active."
+      ? "Your 10-day free trial is active."
       : "Your paid account is ready. Your subscription has been verified by the Platform Admin.";
     const message = "Hello " + application.owner_name + ",\n\nWelcome to Food Stall Platform! Your " +
       application.stall_name + " stall account has been created. " + planMessage + "\n\n" +
@@ -3552,13 +3552,13 @@ async function loadStallApplications() {
   target.innerHTML = data.map(app => {
     const created = new Date(app.created_at).toLocaleString("en-IN");
     const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
-    const plan = app.selected_plan === "trial" ? "7-day Free Trial requested" :
+    const plan = app.selected_plan === "trial" ? "10-day Free Trial requested" :
       app.selected_plan === "paid" ? "Active Paid Account requested (₹499/month)" : "Plan not selected";
     const waText = encodeURIComponent("Hello " + app.owner_name + ", regarding your application for " + app.stall_name + " on Food Stall Platform.");
     const waPhone = String(app.phone || "").replace(/[^0-9]/g, "");
     const whatsapp = waPhone ? '<a href="https://wa.me/' + waPhone + '?text=' + waText + '" target="_blank" rel="noopener">Message on WhatsApp</a>' : "";
     const actions = app.status === "submitted"
-      ? '<button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'approved\')">Approve Application</button> <button type="button" onclick="decideStallApplication(\'' + app.id + '\', \'rejected\')">Reject</button>'
+      ? '<button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' + (app.selected_plan === "trial" ? "Create 10-Day Trial &amp; Owner Account" : "Prepare Paid Account (Pending Payment)") + '</button>'
       : app.status === "approved"
         ? '<p><strong>Admin decision:</strong> Approved. The applicant\'s requested plan is ready for processing.</p><button type="button" onclick="convertStallApplication(\'' + app.id + '\')">' +
           (app.selected_plan === "trial" ? 'Activate 7-Day Trial &amp; Create Owner Account' : 'Prepare Paid Account for Payment') +
@@ -3566,7 +3566,7 @@ async function loadStallApplications() {
         : app.status === "converted" && app.converted_stall_id
           ? '<p><strong>Stall account:</strong> Created</p>' +
             (app.selected_plan === "trial"
-              ? '<p>7-day trial is active and customer ordering is enabled.</p>'
+              ? '<p>10-day trial is active and customer ordering is enabled.</p>'
               : '<p>Paid account is prepared but remains suspended until you record the verified subscription payment.</p>') +
             '<button type="button" onclick="generateOwnerSetupLink(\'' + app.id + '\')">Generate Owner Setup Link</button>' +
             '<div id="ownerSetupLink-' + app.id + '" class="owner-setup-link-result" aria-live="polite"></div>'
@@ -3592,7 +3592,7 @@ async function decideStallApplication(applicationId, decision) {
     return;
   }
   const confirmText = decision === "approved"
-    ? "Approve " + application.stall_name + " for its requested " + (application.selected_plan === "trial" ? "7-day free trial" : "paid account") + "?"
+    ? "Approve " + application.stall_name + " for its requested " + (application.selected_plan === "trial" ? "10-day free trial" : "paid account") + "?"
     : "Reject this application?";
   if (!window.confirm(confirmText)) return;
   const { error } = await supabaseClient.from("stall_applications")
