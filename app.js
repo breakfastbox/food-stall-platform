@@ -1915,11 +1915,12 @@ async function loadOrders(options = {}) {
         ? "Not assigned"
         : String(order.token_number).padStart(4, "0");
       const isNewOrder = order.order_status === "pending" && window.foodStallNewOrderIds.has(order.id);
+      const sourceLabel = order.order_source === "stall_owner" ? "<span class=new-order-label style=background:#1d4ed8>STALL OWNER ORDER</span>" : "";
 
       return `
         <div class="card order-card ${isNewOrder ? "new-order-card" : ""}" data-order-id="${escapeHtml(order.id)}">
           ${isNewOrder ? '<span class="new-order-label">NEW ORDER</span>' : ""}
-          <h3>Order Token: ${escapeHtml(token)}</h3>
+          <h3>Order Token: ${escapeHtml(token)}</h3>\n          ${sourceLabel}
 
           <p><strong>Food Items:</strong></p>
           ${itemList}
