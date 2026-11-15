@@ -3037,13 +3037,16 @@ async function loadDailyReport() {
 
     const { data: orders, error: ordersError } = await supabaseClient
       .from("orders")
-      .select("id, total_amount, subtotal, payment_status, payment_method, order_status, created_at, stock_deducted_at")
+      .select("id, total_amount, subtotal, payment_status, payment_method, order_status, order_source, created_at, stock_deducted_at")
       .eq("stall_id", stall.id)
       .gte("created_at", reportStartDate.toISOString())
       .lt("created_at", reportEndDate.toISOString());
     if (ordersError) throw ordersError;
 
     const validOrders = (orders || []).filter(order => order.order_status !== "cancelled");
+    const ownerOrderCount = validOrders.filter(order => order.order_source === "stall_owner").length;
+    const ownerOrderCountElement = document.getElementById("stallOwnerOrderCount");
+    if (ownerOrderCountElement) ownerOrderCountElement.textContent = String(ownerOrderCount);
     const paidSales = validOrders
       .filter(order => order.payment_status === "paid")
       .reduce((sum, order) => sum + Number(order.total_amount ?? order.subtotal ?? 0), 0);
