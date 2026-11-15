@@ -1749,7 +1749,7 @@ async function loadOrders(options = {}) {
     todayStart.setHours(0, 0, 0, 0);
     const { data: orders, error } = await supabaseClient
       .from("orders")
-      .select("id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, created_at")
+      .select("id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, order_source, created_at")
       .eq("stall_id", assignedStall.id)
       .gte("created_at", todayStart.toISOString())
       .order("created_at", { ascending: false });
@@ -3693,3 +3693,84 @@ if (window.location.pathname.endsWith("index.html") || window.location.pathname.
     }
   })();
 }
+
+
+
+async function openWalkInOrderForm() {
+  const panel = document.getElementById("walkInOrderPanel");
+  const menuList = document.getElementById("walkInMenuList");
+  const message = document.getElementById("walkInOrderMessage");
+  if (!panel || !menuList) return;
+  panel.hidden = false;
+  message.textContent = "Loading available menu items...";
+  menuList.replaceChildren();
+  try {
+    const { stall } = await getCurrentStallContext();
+    const { data, error } = await supabaseClient.from("menu_items")
+      .select("id, name, price, is_available").eq("stall_id", stall.id)
+      .eq("is_available", true).order("name", { ascending: true });
+    if (error) throw error;
+    if (!data || !data.length) {
+      menuList.textContent = "No available menu items. Add items to the stall menu first.";
+      message.textContent = "";
+      return;
+    }
+    data.forEach(item => {
+      const row = document.createElement("label");
+      row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #eee";
+      const detail = document.createElement("span");
+      const name = document.createElement("strong");
+      name.textContent = item.name;
+      const price = document.createElement("small");
+      price.textContent = "₹" + Number(item.price).toFixed(2);
+      detail.append(name, document.createElement("br"), price);
+      const quantity = document.createElement("input");
+      quantity.type = "number"; quantity.min = "0"; quantity.max = "50"; quantity.step = "1"; quantity.value = "0";
+      quantity.dataset.walkinItem = item.id;
+      quantity.style.cssText = "width:76px;padding:8px";
+      row.append(detail, quantity);
+      menuList.append(row);
+    });
+    message.textContent = "Enter quantities for the items ordered.";
+  } catch (error) {
+    menuList.textContent = "Could not load menu items.";
+    message.textContent = error.message || "Please try again.";
+  }
+}
+function closeWalkInOrderForm() {
+  const panel = document.getElementById("walkInOrderPanel");
+  if (panel) panel.hidden = true;
+}
+async function submitWalkInOrder() {
+  const button = document.getElementById("saveWalkInOrderButton");
+  const message = document.getElementById("walkInOrderMessage");
+  const inputs = [...document.querySelectorAll("[data-walkin-item]")];
+  const items = inputs.map(input => ({ menu_item_id: input.dataset.walkinItem, quantity: Number(input.value) }))
+    .filter(item => Number.isInteger(item.quantity) && item.quantity > 0);
+  if (!items.length) { message.textContent = "Please enter a quantity for at least one item."; return; }
+  if (items.some(item => item.quantity > 50)) { message.textContent = "Quantity cannot exceed 50 for one item."; return; }
+  button.disabled = true;
+  button.textContent = "Creating order...";
+  message.textContent = "Saving walk-in order...";
+  try {
+    const { data, error } = await supabaseClient.functions.invoke("staff-create-order", {
+      body: { items, payment_method: document.getElementById("walkInPaymentMethod").value,
+        special_instructions: document.getElementById("walkInInstructions").value.trim() }
+    });
+    if (error) throw error;
+    if (!data || !data.success) throw new Error((data && data.error) || "Order could not be created.");
+    const token = String(data.order.token_number).padStart(4, "0");
+    message.textContent = "Order created successfully. Token #" + token + ".";
+    inputs.forEach(input => input.value = "0");
+    document.getElementById("walkInInstructions").value = "";
+    await loadOrders({ force: true });
+    setTimeout(closeWalkInOrderForm, 1200);
+  } catch (error) {
+    console.error("Walk-in order creation failed:", error);
+    message.textContent = error.message || "Could not create the order. Please try again.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Create Order";
+  }
+}
+
