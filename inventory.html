@@ -137,54 +137,6 @@
       <p id="inventoryModeMessage" role="status" aria-live="polite"></p>
     </section>
 
-    <section class="card">
-      <h2>Add New Inventory Item</h2>
-
-      <form id="inventoryForm">
-        <div class="form-grid">
-          <label>
-            Item Name
-            <input id="itemName" required maxlength="100"
-                   placeholder="e.g. Potatoes">
-          </label>
-
-          <label>
-  Unit
-  <select id="itemUnit" required>
-    <option value="">Select unit</option>
-    <option value="kg">Kilogram (kg)</option>
-    <option value="g">Gram (g)</option>
-    <option value="litre">Litre</option>
-    <option value="ml">Millilitre (ml)</option>
-    <option value="piece">Piece</option>
-    <option value="packet">Packet</option>
-    <option value="dozen">Dozen</option>
-    <option value="box">Box</option>
-  </select>
-</label>
-          <label>
-            Starting Quantity
-            <input id="itemQuantity" type="number" min="0"
-                   step="any" required placeholder="e.g. 10">
-          </label>
-
-          <label>
-            Cost per Unit (₹)
-            <input id="itemCost" type="number" min="0"
-                   step="any" required placeholder="e.g. 30">
-          </label>
-
-          <label>
-            Low Stock Threshold
-            <input id="itemMinimum" type="number" min="0"
-                   step="any" required value="2">
-          </label>
-        </div>
-
-        <button id="addButton" type="submit">Add Inventory Item</button>
-      </form>
-    </section>
-
     <section class="card" id="expenseCard">
       <h2>💸 Record Daily Expense</h2>
       <p>Record business expenses separately from inventory purchases.</p>
@@ -421,8 +373,8 @@
     </section>
 
     <section class="card" id="recipeCard" style="display: none;">
-      <h2>Recipe Management</h2>
-      <p>Set the ingredients and quantities needed for one serving of a menu item.</p>
+      <h2>Menu Ingredients</h2>
+      <p>Add the ingredients used to prepare each menu item. New ingredients are automatically added to Current Stock with zero quantity. Record the quantity and rate under Record Inventory Purchase when you buy them.</p>
 
       <label for="recipeMenuItem">Menu Item</label>
       <select id="recipeMenuItem">
@@ -432,24 +384,33 @@
       <form id="recipeForm">
         <div class="form-grid">
           <label>
-            Ingredient
-            <select id="recipeIngredient" required>
-              <option value="">Select ingredient</option>
+            Ingredient Name
+            <input id="recipeIngredientName" type="text" maxlength="100" required placeholder="e.g. Potato">
+          </label>
+          <label>
+            Unit
+            <select id="recipeIngredientUnit" required>
+              <option value="">Select unit</option>
+              <option value="kg">Kilogram (kg)</option>
+              <option value="g">Gram (g)</option>
+              <option value="litre">Litre</option>
+              <option value="ml">Millilitre (ml)</option>
+              <option value="piece">Piece</option>
+              <option value="packet">Packet</option>
+              <option value="dozen">Dozen</option>
+              <option value="box">Box</option>
             </select>
           </label>
-
           <label>
-            Quantity per serving
-            <input id="recipeQuantity" type="number" min="0.001"
-                   step="any" required placeholder="e.g. 0.20">
+            Quantity used per serving
+            <input id="recipeQuantity" type="number" min="0.000001" step="any" required placeholder="e.g. 0.20">
           </label>
         </div>
-
-        <button type="submit">Save Ingredient</button>
+        <button type="submit">Add Ingredient to Menu Item</button>
       </form>
 
       <p id="recipeMessage" role="status" aria-live="polite"></p>
-      <h3>Saved Ingredients</h3>
+      <h3>Ingredients for Selected Menu Item</h3>
       <ul id="recipeList"></ul>
     </section>
 
@@ -540,9 +501,7 @@
 
     async function loadRecipeOptions() {
       const menuSelect = document.getElementById("recipeMenuItem");
-      const ingredientSelect = document.getElementById("recipeIngredient");
-
-      if (!menuSelect || !ingredientSelect || !stallId) return;
+      if (!menuSelect || !stallId) return;
 
       const { data: menuItems, error: menuError } = await supabaseClient
         .from("menu_items")
@@ -561,26 +520,6 @@
 
       menuItemsForRecipes.forEach(item => {
         menuSelect.add(new Option(item.name, item.id));
-      });
-
-      const { data: ingredients, error: ingredientError } = await supabaseClient
-        .from("inventory_items")
-        .select("id, name, unit")
-        .eq("stall_id", stallId)
-        .order("name");
-
-      if (ingredientError) {
-        document.getElementById("recipeMessage").textContent =
-          "Could not load ingredients: " + ingredientError.message;
-        return;
-      }
-
-      ingredientSelect.replaceChildren(new Option("Select ingredient", ""));
-
-      (ingredients || []).forEach(item => {
-        ingredientSelect.add(
-          new Option(item.name + " (" + item.unit + ")", item.id)
-        );
       });
 
       await loadSavedRecipe();
@@ -627,44 +566,75 @@ async function saveRecipeIngredient(event) {
   event.preventDefault();
 
   const menuItemId = document.getElementById("recipeMenuItem").value;
-  const ingredientId = document.getElementById("recipeIngredient").value;
+  const ingredientName = document.getElementById("recipeIngredientName").value.trim();
+  const unit = document.getElementById("recipeIngredientUnit").value;
   const quantity = Number(document.getElementById("recipeQuantity").value);
   const message = document.getElementById("recipeMessage");
 
-  if (!menuItemId || !ingredientId) {
-    message.textContent = "Please select a menu item and an ingredient.";
+  if (!menuItemId || !ingredientName || !unit) {
+    message.textContent = "Select a menu item and enter the ingredient name and unit.";
     return;
   }
-
   if (!Number.isFinite(quantity) || quantity <= 0) {
-    message.textContent = "Please enter a quantity greater than zero.";
+    message.textContent = "Enter a quantity greater than zero.";
     return;
   }
 
   message.textContent = "Saving ingredient...";
+  try {
+    const { data: existingItems, error: findError } = await supabaseClient
+      .from("inventory_items")
+      .select("id, name, unit")
+      .eq("stall_id", stallId);
+    if (findError) throw findError;
 
-  const { error } = await supabaseClient
-    .from("menu_item_ingredients")
-    .upsert(
-      {
-        stall_id: stallId,
-        menu_item_id: menuItemId,
-        inventory_item_id: ingredientId,
-        quantity_required: quantity
-      },
-      {
-        onConflict: "menu_item_id,inventory_item_id"
-      }
+    let inventoryItem = (existingItems || []).find(
+      item => item.name.trim().toLowerCase() === ingredientName.toLowerCase()
     );
 
-  if (error) {
-    message.textContent = "Could not save ingredient: " + error.message;
-    return;
-  }
+    if (inventoryItem && inventoryItem.unit !== unit) {
+      throw new Error("This ingredient already exists in Inventory with unit '" +
+        inventoryItem.unit + "'. Use the same unit for this ingredient.");
+    }
 
-  document.getElementById("recipeQuantity").value = "";
-  await loadSavedRecipe();
-  message.textContent = "Ingredient saved successfully.";
+    if (!inventoryItem) {
+      const { data: createdItem, error: createError } = await supabaseClient
+        .from("inventory_items")
+        .insert({
+          stall_id: stallId,
+          name: ingredientName,
+          unit: unit,
+          quantity: 0,
+          minimum_quantity: 0,
+          cost_per_unit: 0
+        })
+        .select("id, name, unit")
+        .single();
+      if (createError) throw createError;
+      inventoryItem = createdItem;
+    }
+
+    const { error: recipeError } = await supabaseClient
+      .from("menu_item_ingredients")
+      .upsert({
+        stall_id: stallId,
+        menu_item_id: menuItemId,
+        inventory_item_id: inventoryItem.id,
+        quantity_required: quantity
+      }, { onConflict: "menu_item_id,inventory_item_id" });
+    if (recipeError) throw recipeError;
+
+    document.getElementById("recipeIngredientName").value = "";
+    document.getElementById("recipeIngredientUnit").value = "";
+    document.getElementById("recipeQuantity").value = "";
+    await loadSavedRecipe();
+    await loadInventory();
+    await loadPurchaseItems();
+    message.textContent = "Ingredient saved. It is now available in Inventory and Record Inventory Purchase.";
+  } catch (error) {
+    message.textContent = "Could not save ingredient: " + error.message;
+    console.error(error);
+  }
 }
 
     async function loadInventoryMode() {
@@ -1295,9 +1265,6 @@ const unit = units[selectedUnitIndex][0];
         busy = false;
       }
     }
-
-    document.getElementById("inventoryForm")
-      .addEventListener("submit", addInventoryItem);
 
     document.getElementById("recipeMenuItem")
       .addEventListener("change", loadSavedRecipe);
