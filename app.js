@@ -1441,8 +1441,18 @@ function openOrders() {
 function openReports() {
   window.location.href = getStallScopedUrl("reports.html");
 }
-function openInventory() {
-  window.location.href = getStallScopedUrl("inventory.html");
+async function openInventory() {
+  try {
+    // Resolve the active stall at click time so Manage Stock always opens
+    // the inventory for the stall currently shown on this dashboard.
+    const { stall } = await getCurrentStallContext();
+    const url = new URL("inventory.html", window.location.href);
+    url.searchParams.set("stall_id", stall.id);
+    url.searchParams.set("v", "inventory-stall-fix-20261117");
+    window.location.href = url.toString();
+  } catch (error) {
+    alert(error.message || "Could not open this stall's inventory.");
+  }
 }
 
 
