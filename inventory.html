@@ -729,7 +729,12 @@ if (recipeCard) {
           .limit(1);
 
         if (profile.role === "admin") {
-          stallQuery = stallQuery.eq("name", "Breakfast Box");
+          // Admin inventory follows the stall selected in the dashboard.
+          // Keep Breakfast Box as the default only when no stall_id is supplied.
+          const requestedStallId = new URLSearchParams(window.location.search).get("stall_id");
+          stallQuery = requestedStallId
+            ? stallQuery.eq("id", requestedStallId)
+            : stallQuery.eq("name", "Breakfast Box");
         } else if (["stall_owner", "staff"].includes(profile.role) && profile.stall_id) {
           stallQuery = stallQuery.eq("id", profile.stall_id);
         } else {
