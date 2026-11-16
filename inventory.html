@@ -547,13 +547,49 @@
 
       (data || []).forEach(recipe => {
         const li = document.createElement("li");
+        li.style.marginBottom = "10px";
         const ingredient = recipe.inventory_items;
-
-        li.textContent =
+        const label = document.createElement("span");
+        label.textContent =
           (ingredient ? ingredient.name : "Ingredient") + ": " +
           recipe.quantity_required + " " +
           (ingredient ? ingredient.unit : "") + " per serving";
+        li.appendChild(label);
 
+        const editButton = makeButton("Edit", "secondary", async () => {
+          const entered = prompt(
+            "Quantity of " + (ingredient ? ingredient.name : "ingredient") +
+            " used per serving (" + (ingredient ? ingredient.unit : "unit") + "):",
+            String(recipe.quantity_required)
+          );
+          if (entered === null) return;
+          const quantity = Number(entered.trim());
+          if (!Number.isFinite(quantity) || quantity <= 0) {
+            recipeMessage.textContent = "Enter a quantity greater than zero.";
+            return;
+          }
+
+          editButton.disabled = true;
+          recipeMessage.textContent = "Updating ingredient quantity...";
+          try {
+            const { data: updated, error: updateError } = await supabaseClient
+              .from("menu_item_ingredients")
+              .update({ quantity_required: quantity })
+              .eq("id", recipe.id)
+              .eq("stall_id", stallId)
+              .select("id")
+              .maybeSingle();
+            if (updateError) throw updateError;
+            if (!updated) throw new Error("No recipe was updated. Please refresh and try again.");
+            await loadSavedRecipe();
+            recipeMessage.textContent = "Ingredient quantity updated successfully.";
+          } catch (error) {
+            recipeMessage.textContent = "Could not update ingredient: " + error.message;
+            editButton.disabled = false;
+          }
+        });
+        editButton.style.marginLeft = "10px";
+        li.appendChild(editButton);
         recipeList.appendChild(li);
       });
 
