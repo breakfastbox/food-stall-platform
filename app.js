@@ -1178,7 +1178,7 @@ async function saveStallBranding() {
   const tagline = taglineInput?.value.trim() || "";
   const customerTheme = themeInput?.value || "coffee";
   if (tagline.length > 120) { message.textContent = "Tagline must be 120 characters or fewer."; return; }
-  if (!["coffee","ocean","forest","rose","sunset","slate"].includes(customerTheme)) { message.textContent = "Choose a theme from the palette."; return; }
+  if (!["coffee","white","ocean","forest","rose","sunset","slate"].includes(customerTheme)) { message.textContent = "Choose a theme from the palette."; return; }
 
   const file = fileInput.files && fileInput.files[0];
   if (file) {
