@@ -3163,8 +3163,63 @@ async function loadDailyReport() {
       if (itemsError) throw itemsError;
 
       const menuItemIds = [...new Set((orderItems || []).map(item => item.menu_item_id).filter(Boolean))];
+      const { data: inventorySettings, error: inventorySettingsError } = await supabaseClient
+        .from("stalls")
+        .select("inventory_mode")
+        .eq("id", stall.id)
+        .single();
+      if (inventorySettingsError) throw inventorySettingsError;
+      const reportingInventoryMode = inventorySettings?.inventory_mode || "finished_items";
+
       if (menuItemIds.length === 0) {
         ingredientCostDataIncomplete = true;
+      } else if (reportingInventoryMode === "finished_items") {
+        const { data: finishedLinks, error: finishedLinksError } = await supabaseClient
+          .from("menu_item_stock")
+          .select("menu_item_id, inventory_item_id, quantity_per_item")
+          .eq("stall_id", stall.id)
+          .in("menu_item_id", menuItemIds);
+        if (finishedLinksError) throw finishedLinksError;
+
+        const finishedInventoryIds = [...new Set((finishedLinks || []).map(link => link.inventory_item_id).filter(Boolean))];
+        const { data: finishedCosts, error: finishedCostsError } = finishedInventoryIds.length
+          ? await supabaseClient
+              .from("inventory_items")
+              .select("id, cost_per_unit")
+              .eq("stall_id", stall.id)
+              .in("id", finishedInventoryIds)
+          : { data: [], error: null };
+        if (finishedCostsError) throw finishedCostsError;
+
+        const costsByInventoryId = new Map((finishedCosts || []).map(item => [item.id, item]));
+        const linksByMenuItem = new Map();
+        (finishedLinks || []).forEach(link => {
+          if (!linksByMenuItem.has(link.menu_item_id)) linksByMenuItem.set(link.menu_item_id, []);
+          linksByMenuItem.get(link.menu_item_id).push(link);
+        });
+
+        (orderItems || []).forEach(item => {
+          const links = linksByMenuItem.get(item.menu_item_id) || [];
+          const orderQuantity = Number(item.quantity);
+          if (!item.menu_item_id || links.length === 0 ||
+              !Number.isFinite(orderQuantity) || orderQuantity <= 0) {
+            ingredientCostDataIncomplete = true;
+            return;
+          }
+          links.forEach(link => {
+            const stockItem = costsByInventoryId.get(link.inventory_item_id);
+            const quantityPerItem = Number(link.quantity_per_item);
+            const rawCost = stockItem?.cost_per_unit;
+            const costPerPlate = rawCost === null || rawCost === undefined || rawCost === ""
+              ? NaN : Number(rawCost);
+            if (!stockItem || !Number.isFinite(quantityPerItem) || quantityPerItem <= 0 ||
+                !Number.isFinite(costPerPlate) || costPerPlate <= 0) {
+              ingredientCostDataIncomplete = true;
+              return;
+            }
+            ingredientCost += orderQuantity * quantityPerItem * costPerPlate;
+          });
+        });
       } else {
         const { data: recipeStatuses, error: recipeStatusError } = await supabaseClient
           .from("menu_items")
@@ -3178,9 +3233,7 @@ async function loadDailyReport() {
         if (menuItemIds.some(id => recipeStatusMap.get(id) !== true)) {
           ingredientCostDataIncomplete = true;
         }
-      }
 
-      if (menuItemIds.length > 0) {
         const { data: recipes, error: recipesError } = await supabaseClient
           .from("menu_item_ingredients")
           .select("menu_item_id, inventory_item_id, quantity_required")
@@ -3222,19 +3275,15 @@ async function loadDailyReport() {
             const rawCost = ingredient ? ingredient.cost_per_unit : null;
             const costPerUnit = rawCost === null || rawCost === undefined || rawCost === ""
               ? NaN : Number(rawCost);
-            if (
-              !ingredient ||
-              !Number.isFinite(quantityRequired) || quantityRequired <= 0 ||
-              !Number.isFinite(costPerUnit) || costPerUnit <= 0
-            ) {
+            if (!ingredient || !Number.isFinite(quantityRequired) || quantityRequired <= 0 ||
+                !Number.isFinite(costPerUnit) || costPerUnit <= 0) {
               ingredientCostDataIncomplete = true;
               return;
             }
             ingredientCost += orderQuantity * quantityRequired * costPerUnit;
           });
         });
-      }
-    }
+      }    }
 
     const estimatedProfit = paidSales - ingredientCost - businessExpenses;
     const formatRupees = amount => "₹" + amount.toLocaleString("en-IN", {
@@ -3261,13 +3310,13 @@ async function loadDailyReport() {
     document.getElementById("estimatedProfit").textContent = formatRupees(estimatedProfit);
 
     const costCoverageMessage = eligibleOrders.length === 0
-      ? " No completed or stock-deducted orders were found, so ingredient cost was not calculated; ₹0.00 does not mean ingredients cost nothing."
-      : " Ingredient cost is a provisional estimate from recorded recipes. " +
+      ? " No completed or stock-deducted orders were found, so stock cost was not calculated; ₹0.00 does not mean food cost nothing."
+      : " Stock cost is estimated from the current finished-item cost per plate or recorded ingredient recipes. " +
         (completedOrdersWithoutDeduction > 0
-          ? completedOrdersWithoutDeduction + " completed order(s) have no recorded stock-deduction timestamp; their recipe costs are included provisionally. "
+          ? completedOrdersWithoutDeduction + " completed order(s) have no recorded stock-deduction timestamp; their stock costs are included provisionally. "
           : "") +
         (ingredientCostDataIncomplete
-          ? "Some menu items are not marked recipe-complete, or recipe records or ingredient prices are missing or invalid. Ingredient cost may be understated."
+          ? "Some menu items have missing finished-item stock links, cost prices, or incomplete ingredient recipes. Stock cost may be understated."
           : "");
     message.textContent = (sessionReport ? "Daily stall-session report loaded" : periodLabel + " report loaded") +
       " for " + formatDate(reportStartDate) + " to " + formatDate(reportEndDate) +
