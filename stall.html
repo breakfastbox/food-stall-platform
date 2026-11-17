@@ -270,10 +270,27 @@
         <div class="occasional-settings-content">
         <section class="panel" id="stallBrandingPanel">
           <h2>Business Profile</h2>
-          <p>Manage the business name and logo displayed on your customer ordering page.</p>
+          <p>Manage the business name, tagline, logo and customer-page colour theme.</p>
           <div class="field">
             <label for="brandingStallName">Registered Stall Name</label>
             <input type="text" id="brandingStallName" maxlength="100" placeholder="Your registered stall name">
+          </div>
+          <div class="field">
+            <label for="brandingCustomerTagline">Customer Page Tagline (optional)</label>
+            <input type="text" id="brandingCustomerTagline" maxlength="120" placeholder="A short line about your stall">
+            <small>Leave blank if you do not want a tagline displayed.</small>
+          </div>
+          <div class="field">
+            <label for="brandingCustomerTheme">Customer Page Colour Palette</label>
+            <select id="brandingCustomerTheme">
+              <option value="coffee">Coffee &amp; Cream</option>
+              <option value="ocean">Ocean Blue</option>
+              <option value="forest">Forest Green</option>
+              <option value="rose">Rose</option>
+              <option value="sunset">Sunset</option>
+              <option value="slate">Modern Slate</option>
+            </select>
+            <small>Choose the colours customers will see on your ordering page.</small>
           </div>
           <div class="field">
             <label for="brandingLogoFile">Stall Logo</label>
