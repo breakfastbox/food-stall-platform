@@ -136,6 +136,35 @@
       </button>
       <p id="inventoryModeMessage" role="status" aria-live="polite"></p>
     </section>
+    <section class="card" id="finishedItemsCard" style="display: none;">
+      <h2>🍽️ Finished Item Setup</h2>
+      <p>Choose a menu item and enter how many ready-to-sell plates are available now. The selling price is taken from your menu. Cost price is the preparation cost for one plate.</p>
+      <form id="finishedItemForm">
+        <div class="form-grid">
+          <label>
+            Menu Item
+            <select id="finishedMenuItem" required>
+              <option value="">Select menu item</option>
+            </select>
+          </label>
+          <label>
+            Opening Stock (plates)
+            <input id="finishedOpeningStock" type="number" min="0" step="1" required placeholder="e.g. 30">
+          </label>
+          <label>
+            Cost Price per Plate (₹)
+            <input id="finishedCostPerPlate" type="number" min="0" step="0.01" required placeholder="e.g. 45">
+          </label>
+          <label>
+            Minimum Stock Alert (plates)
+            <input id="finishedMinimumStock" type="number" min="0" step="1" required value="5">
+          </label>
+        </div>
+        <button id="saveFinishedItem" type="submit">Save Finished Item</button>
+        <p id="finishedItemMessage" role="status" aria-live="polite"></p>
+      </form>
+      <p class="muted">After setup, use Add Stock whenever a fresh batch is prepared. Accepted orders reduce stock automatically; cancelled orders restore it.</p>
+    </section>
 
     <section class="card" id="expenseCard">
       <h2>💸 Record Daily Expense</h2>
@@ -467,6 +496,8 @@
 
     let stallId = null;
     let inventoryItems = [];
+    let inventoryMode = "finished_items";
+    let finishedMenuItems = [];
     let busy = false;
 
     const message = document.getElementById("message");
@@ -727,12 +758,8 @@ async function saveRecipeIngredient(event) {
       }
 
       modeSelect.value = data.inventory_mode || "finished_items";
-      const recipeCard = document.getElementById("recipeCard");
-
-if (recipeCard) {
-  recipeCard.style.display =
-    modeSelect.value === "recipe_ingredients" ? "block" : "none";
-}
+      inventoryMode = modeSelect.value;
+      applyInventoryModeUI();
       modeMessage.textContent = "Current mode loaded.";
     }
 
@@ -764,13 +791,122 @@ if (recipeCard) {
         return;
       }
 
+      inventoryMode = newMode;
+      applyInventoryModeUI();
       modeMessage.textContent = "Inventory mode saved successfully.";
-      const recipeCard = document.getElementById("recipeCard");
+      await loadInventory();
+    }
 
-if (recipeCard) {
-  recipeCard.style.display =
-    modeSelect.value === "recipe_ingredients" ? "block" : "none";
-}
+    function applyInventoryModeUI() {
+      const isFinished = inventoryMode === "finished_items";
+      document.getElementById("finishedItemsCard").style.display = isFinished ? "block" : "none";
+      document.getElementById("recipeCard").style.display = isFinished ? "none" : "block";
+      document.getElementById("purchaseCard").style.display = isFinished ? "none" : "block";
+      document.getElementById("purchaseHistoryCard").style.display = isFinished ? "none" : "block";
+    }
+
+    async function loadFinishedMenuOptions() {
+      const select = document.getElementById("finishedMenuItem");
+      if (!select || !stallId) return;
+      const { data, error } = await supabaseClient
+        .from("menu_items")
+        .select("id, name, price")
+        .eq("stall_id", stallId)
+        .order("name");
+      if (error) {
+        document.getElementById("finishedItemMessage").textContent =
+          "Could not load menu items: " + error.message;
+        return;
+      }
+      finishedMenuItems = data || [];
+      select.replaceChildren(new Option("Select menu item", ""));
+      finishedMenuItems.forEach(item => {
+        select.add(new Option(item.name + " — Selling price ₹" + Number(item.price || 0).toFixed(2), item.id));
+      });
+    }
+
+    async function saveFinishedItem(event) {
+      event.preventDefault();
+      if (!stallId || busy) return;
+
+      const menuItemId = document.getElementById("finishedMenuItem").value;
+      const openingText = document.getElementById("finishedOpeningStock").value.trim();
+      const costText = document.getElementById("finishedCostPerPlate").value.trim();
+      const minimumText = document.getElementById("finishedMinimumStock").value.trim();
+      const msg = document.getElementById("finishedItemMessage");
+      const opening = Number(openingText);
+      const cost = Number(costText);
+      const minimum = Number(minimumText);
+      const menuItem = finishedMenuItems.find(item => item.id === menuItemId);
+
+      if (!menuItem) {
+        msg.textContent = "Please select a menu item.";
+        return;
+      }
+      if (!Number.isInteger(opening) || opening < 0 ||
+          !Number.isFinite(cost) || cost < 0 ||
+          !Number.isInteger(minimum) || minimum < 0) {
+        msg.textContent = "Enter valid whole-number plate quantities and a valid cost price.";
+        return;
+      }
+
+      busy = true;
+      document.getElementById("saveFinishedItem").disabled = true;
+      msg.textContent = "Saving finished item and opening stock...";
+      let createdInventoryId = null;
+      try {
+        const { data: existingLink, error: linkError } = await supabaseClient
+          .from("menu_item_stock")
+          .select("id")
+          .eq("stall_id", stallId)
+          .eq("menu_item_id", menuItemId)
+          .limit(1);
+        if (linkError) throw linkError;
+        if (existingLink && existingLink.length) {
+          throw new Error("This menu item is already connected to finished stock. Use Current Stock → Edit or Add Stock to update it.");
+        }
+
+        const { data: inventoryItem, error: createError } = await supabaseClient
+          .from("inventory_items")
+          .insert({
+            stall_id: stallId,
+            name: menuItem.name,
+            unit: "plate",
+            quantity: opening,
+            cost_per_unit: cost,
+            minimum_quantity: minimum
+          })
+          .select("id")
+          .single();
+        if (createError) throw createError;
+        createdInventoryId = inventoryItem.id;
+
+        const { error: mappingError } = await supabaseClient
+          .from("menu_item_stock")
+          .insert({
+            stall_id: stallId,
+            menu_item_id: menuItemId,
+            inventory_item_id: createdInventoryId,
+            quantity_per_item: 1
+          });
+        if (mappingError) throw mappingError;
+
+        document.getElementById("finishedItemForm").reset();
+        document.getElementById("finishedMinimumStock").value = "5";
+        msg.textContent = "Finished item saved. Opening stock: " + opening +
+          " plates. Selling price: ₹" + Number(menuItem.price || 0).toFixed(2) + " per plate.";
+        await loadInventory();
+        await loadFinishedMenuOptions();
+      } catch (error) {
+        if (createdInventoryId) {
+          await supabaseClient.from("inventory_items").delete()
+            .eq("id", createdInventoryId).eq("stall_id", stallId);
+        }
+        msg.textContent = "Could not save finished item: " + error.message;
+      } finally {
+        busy = false;
+        document.getElementById("saveFinishedItem").disabled = false;
+      }
     }
 
     async function initializeInventory() {
@@ -828,6 +964,7 @@ if (recipeCard) {
 
         await loadInventoryMode();
         await loadRecipeOptions();
+        await loadFinishedMenuOptions();
         await loadInventory();
         await loadPurchaseItems();
         await loadExpenseHistory();
@@ -957,7 +1094,17 @@ document
 
         if (error) throw error;
 
-        inventoryItems = data || [];
+        if (inventoryMode === "finished_items") {
+          const { data: links, error: linksError } = await supabaseClient
+            .from("menu_item_stock")
+            .select("inventory_item_id")
+            .eq("stall_id", stallId);
+          if (linksError) throw linksError;
+          const finishedIds = new Set((links || []).map(link => link.inventory_item_id));
+          inventoryItems = (data || []).filter(item => finishedIds.has(item.id));
+        } else {
+          inventoryItems = data || [];
+        }
         renderInventory();
       } catch (error) {
         showMessage("Could not load inventory: " + error.message, true);
@@ -1376,6 +1523,9 @@ const unit = units[selectedUnitIndex][0];
 
     document.getElementById("recipeMenuItem")
       .addEventListener("change", loadSavedRecipe);
+
+    document.getElementById("finishedItemForm")
+      .addEventListener("submit", saveFinishedItem);
 
     document.getElementById("recipeForm")
       .addEventListener("submit", saveRecipeIngredient);
