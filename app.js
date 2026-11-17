@@ -427,12 +427,23 @@ async function identifyStallPushUser() {
   const { data: { user }, error } = await supabaseClient.auth.getUser();
   if (error || !user) throw new Error("Could not identify your notification account.");
   await runOneSignalTask(async (OneSignal) => OneSignal.login(user.id));
+  try { await refreshStallPushControls(); } catch (error) { console.warn("Could not read notification preference:", error); }
+}
+
+async function refreshStallPushControls() {
+  const state = await runOneSignalTask(async (OneSignal) => !!OneSignal.User.PushSubscription.optedIn);
+  const enableButton = document.getElementById("enableStallPushButton");
+  const stopButton = document.getElementById("stopStallPushButton");
+  const testButton = document.getElementById("testStallPushButton");
+  if (enableButton) enableButton.hidden = state;
+  if (stopButton) stopButton.hidden = !state;
+  if (testButton) testButton.hidden = !state;
+  return state;
 }
 
 async function enableStallPushNotifications() {
   const message = document.getElementById("stallPushMessage");
   const enableButton = document.getElementById("enableStallPushButton");
-  const testButton = document.getElementById("testStallPushButton");
   if (message) message.textContent = "Preparing notifications...";
   if (enableButton) enableButton.disabled = true;
   try {
@@ -442,21 +453,34 @@ async function enableStallPushNotifications() {
     await identifyStallPushUser();
     const granted = await runOneSignalTask(async (OneSignal) => {
       const permissionGranted = await OneSignal.Notifications.requestPermission();
-      if (permissionGranted) {
-        await OneSignal.User.PushSubscription.optIn();
-      }
+      if (permissionGranted) await OneSignal.User.PushSubscription.optIn();
       return permissionGranted;
     });
     if (!granted || Notification.permission !== "granted") {
       throw new Error("Notifications were not enabled. Please allow notifications in your browser settings.");
     }
-    if (message) message.textContent = "Notifications are enabled on this device.";
-    if (testButton) testButton.hidden = false;
-    if (enableButton) enableButton.textContent = "Notifications Enabled";
+    if (message) message.textContent = "Notifications are on for this device. They will stay on after logout until you turn them off here.";
+    await refreshStallPushControls();
   } catch (error) {
     if (message) message.textContent = error.message || "Could not enable notifications. Please try again.";
   } finally {
     if (enableButton) enableButton.disabled = false;
+  }
+}
+
+async function stopStallPushNotifications() {
+  const message = document.getElementById("stallPushMessage");
+  const stopButton = document.getElementById("stopStallPushButton");
+  if (stopButton) stopButton.disabled = true;
+  if (message) message.textContent = "Turning notifications off...";
+  try {
+    await runOneSignalTask(async (OneSignal) => OneSignal.User.PushSubscription.optOut());
+    if (message) message.textContent = "Notifications are off on this device. You can turn them on again at any time.";
+    await refreshStallPushControls();
+  } catch (error) {
+    if (message) message.textContent = error.message || "Could not turn notifications off.";
+  } finally {
+    if (stopButton) stopButton.disabled = false;
   }
 }
 
@@ -526,11 +550,8 @@ async function loginStallOwner() {
 }
 
 async function logoutStallOwner() {
-  try {
-    await runOneSignalTask(async (OneSignal) => OneSignal.logout());
-  } catch (pushError) {
-    console.warn("OneSignal logout did not complete:", pushError);
-  }
+  // Keep the OneSignal device subscription and user association active.
+  // Logging out of the stall dashboard must not turn off push notifications.
   const { error } = await supabaseClient.auth.signOut();
   if (error) {
     alert("Logout failed: " + error.message);
