@@ -1469,6 +1469,94 @@ window.foodStallOrdersLoadInProgress = false;
 
 
 // Prevent overlapping refreshes
+
+let currentLowStockItemsForPopup = [];
+let lowStockAlertDismissedIds = new Set();
+
+function dismissLowStockPopup() {
+  currentLowStockItemsForPopup.forEach(item => {
+    lowStockAlertDismissedIds.add(item.id);
+    try {
+      sessionStorage.setItem("foodStallLowStockDismissed:" + item.stall_id + ":" + item.id, "1");
+    } catch (_) {}
+  });
+  const overlay = document.getElementById("lowStockAlertOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+async function refreshOrderPageLowStockAlert(stallId) {
+  const overlay = document.getElementById("lowStockAlertOverlay");
+  const popupItems = document.getElementById("lowStockAlertItems");
+  const notice = document.getElementById("lowStockPersistentNotice");
+  const noticeItems = document.getElementById("lowStockPersistentItems");
+  if (!overlay || !popupItems || !notice || !noticeItems) return;
+
+  try {
+    const { data: stockRows, error } = await supabaseClient
+      .from("inventory_items")
+      .select("id, name, quantity, minimum_quantity")
+      .eq("stall_id", stallId);
+    if (error) throw error;
+
+    const lowItems = (stockRows || []).filter(item => {
+      const quantity = Number(item.quantity);
+      const minimum = Number(item.minimum_quantity);
+      return Number.isFinite(quantity) && Number.isFinite(minimum) &&
+        minimum >= 0 && quantity <= minimum;
+    }).map(item => ({ ...item, stall_id: stallId }));
+
+    const lowIds = new Set(lowItems.map(item => item.id));
+    lowStockAlertDismissedIds.forEach(id => {
+      if (!lowIds.has(id)) lowStockAlertDismissedIds.delete(id);
+    });
+
+    (stockRows || []).forEach(item => {
+      if (!lowIds.has(item.id)) {
+        try { sessionStorage.removeItem("foodStallLowStockDismissed:" + stallId + ":" + item.id); } catch (_) {}
+      }
+    });
+
+    notice.hidden = lowItems.length === 0;
+    noticeItems.replaceChildren();
+    lowItems.forEach(item => {
+      const line = document.createElement("p");
+      line.style.cssText = "margin:6px 0;font-weight:700";
+      line.textContent = item.name + ": " + Number(item.quantity) + " remaining (alert level: " + Number(item.minimum_quantity) + ")";
+      noticeItems.append(line);
+    });
+
+    currentLowStockItemsForPopup = lowItems.filter(item => {
+      let dismissed = lowStockAlertDismissedIds.has(item.id);
+      try {
+        dismissed = dismissed || sessionStorage.getItem("foodStallLowStockDismissed:" + stallId + ":" + item.id) === "1";
+      } catch (_) {}
+      return !dismissed;
+    });
+
+    if (currentLowStockItemsForPopup.length) {
+      popupItems.replaceChildren();
+      currentLowStockItemsForPopup.forEach(item => {
+        const line = document.createElement("div");
+        line.style.cssText = "padding:11px 0;border-bottom:1px solid #fee2e2;color:#7f1d1d";
+        const name = document.createElement("strong");
+        name.textContent = item.name;
+        const detail = document.createElement("div");
+        detail.textContent = Number(item.quantity) + " plates / units remaining — alert level " + Number(item.minimum_quantity);
+        line.append(name, detail);
+        popupItems.append(line);
+      });
+      overlay.hidden = false;
+      overlay.style.display = "flex";
+    } else {
+      overlay.hidden = true;
+      overlay.style.display = "none";
+    }
+  } catch (error) {
+    console.warn("Could not refresh low-stock alert:", error);
+  }
+}
+
+
 async function loadOrders() {
   if (window.foodStallOrdersLoadInProgress) return;
 
@@ -1503,6 +1591,7 @@ async function loadOrdersInternal() {
   }
 
   const stallId = stall.id;
+  await refreshOrderPageLowStockAlert(stallId);
   const heading = document.querySelector(".container > p.muted");
   if (heading) heading.textContent = stall.name + " — manage customer orders";
 
