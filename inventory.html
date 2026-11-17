@@ -1573,6 +1573,17 @@ const unit = units[selectedUnitIndex][0];
     refreshButton.addEventListener("click", loadInventory);
 
     initializeInventory();
+
+    // Keep Current Stock in sync with orders accepted or cancelled on other pages.
+    // Refresh every 5 seconds while this page is visible; refresh immediately when
+    // the user returns to this tab. This is scoped to the currently assigned stall.
+    setInterval(() => {
+      if (stallId && !document.hidden) loadInventory();
+    }, 5000);
+
+    document.addEventListener("visibilitychange", () => {
+      if (stallId && !document.hidden) loadInventory();
+    });
     
     function setPurchaseTotal() {
       const quantity = Number(
