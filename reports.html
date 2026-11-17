@@ -88,14 +88,14 @@
         <p class="report-note">Expenses recorded within the selected period.</p>
       </div>
       <div class="report-card">
-        <h3>Estimated Ingredient Cost</h3>
+        <h3>Estimated Stock Cost</h3>
         <div class="report-value" id="ingredientCost">₹—</div>
-        <p class="report-note">Provisional estimate from recorded recipes and current ingredient costs. Some recipes are incomplete.</p>
+        <p class="report-note">Provisional estimate from finished-item cost per plate or recorded ingredient recipes. Some cost records may be incomplete.</p>
       </div>
       <div class="report-card">
         <h3>Estimated Profit</h3>
         <div class="report-value" id="estimatedProfit">₹—</div>
-        <p class="report-note">Paid sales minus estimated ingredient cost and recorded business expenses. This is not verified final profit.</p>
+        <p class="report-note">Paid sales minus estimated stock cost and recorded business expenses. This is not verified final profit.</p>
       </div>
     </section>
 
@@ -106,9 +106,9 @@
         <li>Pending payments are displayed separately and are not included in paid sales.</li>
         <li>Cancelled orders are excluded.</li>
         <li>Inventory purchases are not treated as immediate expenses.</li>
-        <li>Ingredient cost is estimated from recorded recipes and current ingredient prices.</li>
-        <li>Missing recipes or ingredients can cause ingredient costs to be understated.</li>
-        <li>Estimated profit is not verified final profit until recipe completeness and stock-cost calculations have been checked.</li>
+        <li>Stock cost is estimated from finished-item cost per plate or recorded ingredient recipes.</li>
+        <li>Missing finished-item stock links, cost prices, recipes, or ingredient rates can cause stock costs to be understated.</li>
+        <li>Estimated profit is not verified final profit until finished-item costs or recipe completeness and stock-cost calculations have been checked.</li>
       </ul>
       <p class="report-note">This report is read-only. It does not add, edit, or delete database records.</p>
     </section>
