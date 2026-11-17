@@ -1489,7 +1489,12 @@ async function refreshOrderPageLowStockAlert(stallId) {
   const popupItems = document.getElementById("lowStockAlertItems");
   const notice = document.getElementById("lowStockPersistentNotice");
   const noticeItems = document.getElementById("lowStockPersistentItems");
-  if (!overlay || !popupItems || !notice || !noticeItems) return;
+  const diagnostic = document.getElementById("lowStockDiagnostic");
+  if (!overlay || !popupItems || !notice || !noticeItems) {
+    if (diagnostic) diagnostic.textContent = "Low-stock check could not start: alert elements are missing.";
+    console.warn("Low-stock alert elements missing from Order Management page.");
+    return;
+  }
 
   try {
     const { data: stockRows, error } = await supabaseClient
@@ -1504,6 +1509,12 @@ async function refreshOrderPageLowStockAlert(stallId) {
       return Number.isFinite(quantity) && Number.isFinite(minimum) &&
         minimum >= 0 && quantity <= minimum;
     }).map(item => ({ ...item, stall_id: stallId }));
+
+    if (diagnostic) {
+      diagnostic.textContent = "Stock check completed for stall " + stallId +
+        " — " + (stockRows || []).length + " inventory item(s) checked; " +
+        lowItems.length + " below minimum.";
+    }
 
     const lowIds = new Set(lowItems.map(item => item.id));
     lowStockAlertDismissedIds.forEach(id => {
@@ -1564,6 +1575,8 @@ async function refreshOrderPageLowStockAlert(stallId) {
       notice.hidden = false;
       notice.style.display = "block";
       noticeItems.textContent = "Could not check stock: " + (error.message || "Please refresh the page.");
+      const diagnostic = document.getElementById("lowStockDiagnostic");
+      if (diagnostic) diagnostic.textContent = "Stock check failed: " + (error.message || "Unknown error.");
     }
   }
 }
