@@ -28,6 +28,7 @@
       --button-start: #276f4e;
       --button-end: #1c573b;
     }
+    body[data-theme="white"] { --coffee:#30343b; --coffee-dark:#20242a; --caramel:#8a929c; --cream:#ffffff; --paper:#ffffff; --ink:#252a31; --muted:#68717c; --line:#e6e9ed; --green:#3f596f; --hero-start:#252a31; --hero-mid:#424a55; --hero-end:#697481; --button-start:#46515e; --button-end:#252d36; }
     body[data-theme="ocean"] { --coffee:#163b5c; --coffee-dark:#102b43; --caramel:#3686b8; --cream:#eef6fb; --paper:#ffffff; --ink:#183247; --muted:#637b8c; --line:#dceaf2; --green:#167b79; --hero-start:#102b43; --hero-mid:#18577d; --hero-end:#287fa4; --button-start:#167b79; --button-end:#105e68; }
     body[data-theme="forest"] { --coffee:#244b36; --coffee-dark:#173526; --caramel:#8a9d55; --cream:#f1f6ed; --paper:#ffffff; --ink:#263b2d; --muted:#6d7d70; --line:#e0e9dd; --green:#34734a; --hero-start:#173526; --hero-mid:#315b3e; --hero-end:#567747; --button-start:#34734a; --button-end:#245638; }
     body[data-theme="rose"] { --coffee:#653344; --coffee-dark:#43212e; --caramel:#c47791; --cream:#fbf1f4; --paper:#ffffff; --ink:#452d35; --muted:#826b73; --line:#f0dfe5; --green:#a34c69; --hero-start:#43212e; --hero-mid:#754154; --hero-end:#a45d76; --button-start:#a34c69; --button-end:#79364f; }
@@ -548,7 +549,7 @@ let stallOrderingPaused = false;
           customerTagline.textContent = (stall.customer_tagline || "").trim();
           customerTagline.hidden = !customerTagline.textContent;
         }
-        document.body.dataset.theme = ["coffee","ocean","forest","rose","sunset","slate"].includes(stall.customer_theme) ? stall.customer_theme : "coffee";
+        document.body.dataset.theme = ["coffee","white","ocean","forest","rose","sunset","slate"].includes(stall.customer_theme) ? stall.customer_theme : "coffee";
         const customerLogo = document.getElementById("customerStallLogo");
         if (customerLogo) { customerLogo.hidden = !stall.logo_url; if (stall.logo_url) customerLogo.src = stall.logo_url; }
         document.title = stall.name + " | Order Online";
