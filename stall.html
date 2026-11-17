@@ -321,6 +321,7 @@
           <p>Create a QR code that opens your stall menu. Download and display it at your tables or counter.</p>
           <button type="button" id="generateStallQrButton" onclick="generateStallOrderQr()">Generate My QR Code</button>
           <div id="stallQrResult" style="margin-top:16px;text-align:center;"></div>
+          <a id="stallOrderLink" hidden href="#" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;font-weight:700;">Order Here</a>
           <a id="downloadStallQr" hidden download="my-stall-order-qr.png" style="display:inline-block;margin-top:12px;">Download QR Code</a>
           <p id="stallQrMessage" role="status" aria-live="polite"></p>
         </section>
@@ -563,11 +564,14 @@ function generateStallOrderQr(){
   const result=document.getElementById("stallQrResult");
   const message=document.getElementById("stallQrMessage");
   const download=document.getElementById("downloadStallQr");
-  if(!result||!message||!download)return;
+  const orderLink=document.getElementById("stallOrderLink");
+  if(!result||!message||!download||!orderLink)return;
   if(typeof currentStallId==="undefined"||!currentStallId){message.textContent="Please log in to your stall account first.";return;}
   if(typeof QRCode==="undefined"){message.textContent="QR generator could not load. Please refresh and try again.";return;}
   const orderUrl=new URL("order.html",window.location.href);
   orderUrl.search="";orderUrl.searchParams.set("stall_id",currentStallId);
+  orderLink.href=orderUrl.toString();
+  orderLink.hidden=false;
   result.innerHTML="";
   new QRCode(result,{text:orderUrl.toString(),width:260,height:260,colorDark:"#111111",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});
   message.textContent="This QR code opens the customer ordering page for your stall.";
