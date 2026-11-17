@@ -143,7 +143,7 @@ async function getCurrentStallContext() {
 
   let stallQuery = supabaseClient
     .from("stalls")
-    .select("id, name, status, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url, subscription_start, subscription_end")
+    .select("id, name, status, ordering_enabled, logo_url, customer_tagline, customer_theme, upi_id, upi_account_name, upi_payment_mode, upi_qr_url, subscription_start, subscription_end")
     .limit(1);
 
   if (profile.role === "admin") {
@@ -1161,6 +1161,8 @@ async function saveStallBranding() {
   const message = document.getElementById("brandingMessage");
   const nameInput = document.getElementById("brandingStallName");
   const fileInput = document.getElementById("brandingLogoFile");
+  const taglineInput = document.getElementById("brandingCustomerTagline");
+  const themeInput = document.getElementById("brandingCustomerTheme");
   if (!button || !message || !nameInput || !fileInput) return;
 
   const registeredName = nameInput.value.trim();
@@ -1172,6 +1174,11 @@ async function saveStallBranding() {
     message.textContent = "Stall name must be 100 characters or fewer.";
     return;
   }
+
+  const tagline = taglineInput?.value.trim() || "";
+  const customerTheme = themeInput?.value || "coffee";
+  if (tagline.length > 120) { message.textContent = "Tagline must be 120 characters or fewer."; return; }
+  if (!["coffee","ocean","forest","rose","sunset","slate"].includes(customerTheme)) { message.textContent = "Choose a theme from the palette."; return; }
 
   const file = fileInput.files && fileInput.files[0];
   if (file) {
@@ -1191,7 +1198,7 @@ async function saveStallBranding() {
   try {
     const context = await getCurrentStallContext();
     const stall = context.stall;
-    const updates = { name: registeredName };
+    const updates = { name: registeredName, customer_tagline: tagline || null, customer_theme: customerTheme };
 
     if (file) {
       const extension = file.type === "image/png" ? "png" :
@@ -1216,12 +1223,14 @@ async function saveStallBranding() {
       .from("stalls")
       .update(updates)
       .eq("id", stall.id)
-      .select("id, name, logo_url, status, ordering_enabled")
+      .select("id, name, logo_url, customer_tagline, customer_theme, status, ordering_enabled")
       .single();
     if (saveError) throw saveError;
 
     document.getElementById("stallName").textContent = savedStall.name;
     nameInput.value = savedStall.name;
+    if (taglineInput) taglineInput.value = savedStall.customer_tagline || "";
+    if (themeInput) themeInput.value = savedStall.customer_theme || "coffee";
     const headerLogo = document.getElementById("stallLogo");
     const preview = document.getElementById("brandingLogoPreview");
     if (savedStall.logo_url) {
@@ -1300,6 +1309,10 @@ async function loadStallDashboard() {
   if (upiQrPreview) { upiQrPreview.hidden = !stall.upi_qr_url; if (stall.upi_qr_url) upiQrPreview.src = stall.upi_qr_url; }
   const brandingName = document.getElementById("brandingStallName");
   if (brandingName) brandingName.value = stall.name || "";
+  const taglineInput = document.getElementById("brandingCustomerTagline");
+  if (taglineInput) taglineInput.value = stall.customer_tagline || "";
+  const themeInput = document.getElementById("brandingCustomerTheme");
+  if (themeInput) themeInput.value = stall.customer_theme || "coffee";
   const stallLogo = document.getElementById("stallLogo");
   const brandingPreview = document.getElementById("brandingLogoPreview");
   if (stallLogo) { stallLogo.hidden = !stall.logo_url; if (stall.logo_url) stallLogo.src = stall.logo_url; }
