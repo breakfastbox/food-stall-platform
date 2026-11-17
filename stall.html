@@ -53,6 +53,24 @@
     .menu-item-order-actions button { min-width:36px; padding:6px 10px; }
     #menuList [data-menu-item-row].dragging { opacity:.55; outline:2px dashed #64748b; }
     #menuList .menu-item-order-controls.drop-target { background:#eef4ff; border-radius:8px; }
+
+    .occasional-settings { border:1px solid #d7e1ec; border-radius:16px; background:#fff; box-shadow:0 5px 18px rgba(16,24,40,.06); overflow:hidden; margin:0 0 20px; }
+    .occasional-settings > summary { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 20px; cursor:pointer; list-style:none; background:linear-gradient(120deg,#f7faff 0%,#edf4fb 100%); color:#172b4d; }
+    .occasional-settings > summary::-webkit-details-marker { display:none; }
+    .occasional-settings > summary::after { content:"＋"; display:grid; place-items:center; width:30px; height:30px; flex:0 0 30px; border-radius:50%; background:#e1edfa; color:#1769aa; font-size:20px; font-weight:600; }
+    .occasional-settings[open] > summary::after { content:"−"; }
+    .occasional-settings > summary > span:first-child { display:grid; gap:5px; min-width:0; }
+    .occasional-settings > summary strong { font-size:16px; letter-spacing:.01em; }
+    .occasional-settings > summary small { color:#66758a; font-size:12px; font-weight:400; line-height:1.45; }
+    .settings-toggle-hint { color:#1769aa; font-size:10px; font-weight:800; letter-spacing:.08em; white-space:nowrap; }
+    .occasional-settings-content { display:grid; gap:14px; padding:14px; background:#f8fafc; }
+    .occasional-settings-content .panel { margin:0; border:1px solid #e1e8f0; border-radius:12px; box-shadow:0 2px 7px rgba(16,24,40,.035); }
+    .occasional-settings-content .panel h2 { color:#243b53; font-size:17px; }
+    .occasional-settings-content .panel > p { color:#64748b; line-height:1.55; }
+    .occasional-settings-content .field { margin-top:14px; }
+    .occasional-settings-content button { border-radius:9px; font-weight:700; }
+    @media(max-width:480px) { .occasional-settings > summary { padding:15px 14px; } .settings-toggle-hint { display:none; } .occasional-settings-content { padding:10px; gap:10px; } }
+
 </style>
 </head>
 
@@ -128,13 +146,13 @@
 
       <details class="occasional-settings">
         <summary>
-          <span><strong>Stall Setup &amp; Settings</strong><small>Profile, payment QR and customer QR — update only when needed</small></span>
-          <span class="settings-toggle-hint">Tap to open</span>
+          <span><strong>Stall Setup &amp; Settings</strong><small>Business profile, payment setup, customer QR and device notifications</small></span>
+          <span class="settings-toggle-hint">OPEN SETTINGS</span>
         </summary>
         <div class="occasional-settings-content">
         <section class="panel" id="stallBrandingPanel">
-          <h2>Stall Profile & Branding</h2>
-          <p>Use the same stall name registered with Food Stall Platform. Your name and logo will appear on your customer ordering page.</p>
+          <h2>Business Profile</h2>
+          <p>Manage the business name and logo displayed on your customer ordering page.</p>
           <div class="field">
             <label for="brandingStallName">Registered Stall Name</label>
             <input type="text" id="brandingStallName" maxlength="100" placeholder="Your registered stall name">
@@ -150,8 +168,8 @@
         </section>
   
         <section class="panel" id="stallUpiSettingsPanel">
-          <h2>UPI Payment Settings</h2>
-          <p>Choose one UPI method. Customers will see only the method selected here. You can change it any time.</p>
+          <h2>Customer Payment Settings</h2>
+          <p>Select the UPI payment option customers will see when placing an order.</p>
           <div class="field"><label for="stallUpiPaymentMode">UPI payment method shown to customers</label><select id="stallUpiPaymentMode"><option value="dynamic">App-generated QR (exact order amount)</option><option value="bank_qr">Bank's official merchant QR</option></select></div>
           <div class="field"><label for="stallUpiId">Stall UPI ID</label><input type="text" id="stallUpiId" maxlength="256" placeholder="yourname@bank"></div>
           <div class="field"><label for="stallUpiAccountName">UPI account / payee name</label><input type="text" id="stallUpiAccountName" maxlength="100" placeholder="Name shown in your UPI app"></div>
@@ -163,23 +181,24 @@
         </section>
   
         <section class="panel" id="stallQrPanel">
-          <h2>My Customer Order QR Code</h2>
-          <p>Generate a QR code that opens your own stall's customer menu. Download and print it for your tables or counter.</p>
+          <h2>Customer Ordering QR Code</h2>
+          <p>Create a QR code that opens your stall menu. Download and display it at your tables or counter.</p>
           <button type="button" id="generateStallQrButton" onclick="generateStallOrderQr()">Generate My QR Code</button>
           <div id="stallQrResult" style="margin-top:16px;text-align:center;"></div>
           <a id="downloadStallQr" hidden download="my-stall-order-qr.png" style="display:inline-block;margin-top:12px;">Download QR Code</a>
           <p id="stallQrMessage" role="status" aria-live="polite"></p>
         </section>
+                <section class="panel" id="pushNotificationsPanel">
+                  <h2>Device Notifications</h2>
+                  <p>Allow this device to receive important stall updates, including when the app is not open.</p>
+                  <button type="button" id="enableStallPushButton" onclick="enableStallPushNotifications()">Enable Notifications</button>
+                  <button type="button" id="testStallPushButton" onclick="sendStallPushTest()" hidden>Send Test Notification</button>
+                  <p id="stallPushMessage" role="status" aria-live="polite"></p>
+                </section>
         </div>
       </details>
 
-      <section class="panel" id="pushNotificationsPanel">
-        <h2>Mobile Notifications</h2>
-        <p>Enable notifications on this device to receive important Food Stall Platform updates, even when the app is closed.</p>
-        <button type="button" id="enableStallPushButton" onclick="enableStallPushNotifications()">Enable Notifications</button>
-        <button type="button" id="testStallPushButton" onclick="sendStallPushTest()" hidden>Send Test Notification</button>
-        <p id="stallPushMessage" role="status" aria-live="polite"></p>
-      </section>
+
 
       <section class="stats">
 
