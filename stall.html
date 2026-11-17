@@ -71,7 +71,93 @@
     .occasional-settings-content button { border-radius:9px; font-weight:700; }
     @media(max-width:480px) { .occasional-settings > summary { padding:15px 14px; } .settings-toggle-hint { display:none; } .occasional-settings-content { padding:10px; gap:10px; } }
 
-</style>
+
+    /* Main dashboard visual refresh — presentation only */
+    .dashboard { background:#f3f6fb; color:#182638; }
+    .dashboard .topbar {
+      display:flex; justify-content:space-between; align-items:center; gap:20px;
+      padding:26px max(24px,calc((100vw - 1160px)/2));
+      background:linear-gradient(115deg,#102a43 0%,#174f78 58%,#1769aa 100%);
+      box-shadow:0 5px 18px rgba(15,40,65,.16);
+    }
+    .dashboard .topbar h1 { font-size:clamp(22px,3vw,30px); font-weight:800; letter-spacing:-.5px; }
+    .dashboard .topbar p { color:#d7e7f5; font-size:13px; letter-spacing:.02em; }
+    .dashboard .topbar button { background:#fff; color:#174f78; font-weight:750; border-radius:10px; padding:10px 17px; }
+    .dashboard main { max-width:1160px; padding:28px 22px 56px; }
+    .dashboard .welcome {
+      margin:0 0 22px; padding:23px 25px; border:1px solid #dce7f2; border-radius:17px;
+      background:linear-gradient(110deg,#fff 0%,#f6faff 100%); box-shadow:0 4px 15px rgba(24,55,85,.045);
+    }
+    .dashboard .welcome h2 { margin:0 0 7px; color:#183b56; font-size:23px; font-weight:800; }
+    .dashboard .welcome p { color:#63758a; font-size:14px; line-height:1.5; }
+    .dashboard .stats { gap:15px; margin-bottom:23px; }
+    .dashboard .stats > .card {
+      min-width:0; padding:19px 20px; border:1px solid #e2eaf2; border-radius:15px;
+      box-shadow:0 3px 12px rgba(24,55,85,.045); transition:transform .18s ease,box-shadow .18s ease;
+    }
+    .dashboard .stats > .card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(24,55,85,.09); }
+    .dashboard .stats > .card h3 { color:#687b90; font-size:12px; font-weight:750; letter-spacing:.055em; text-transform:uppercase; }
+    .dashboard .stats > .card > strong { display:block; color:#173f60; font-size:30px; line-height:1.2; overflow-wrap:anywhere; }
+    .dashboard #stallStatus { width:max-content; max-width:100%; font-size:13px; }
+    .dashboard main > .panel { margin:0 0 22px; padding:22px; border:1px solid #e1e9f1; border-radius:16px; box-shadow:0 4px 15px rgba(24,55,85,.045); }
+    .dashboard .panel-header { margin-bottom:16px; }
+    .dashboard .panel h2, .dashboard main > h2 { color:#1c3e59; font-size:20px; font-weight:800; letter-spacing:-.2px; }
+    .dashboard .panel h3 { color:#2a4862; }
+    .dashboard #menuManagement { border-top:3px solid #3b82b8; }
+    .dashboard #menuManagement > h2 { margin-top:0; }
+    .dashboard main > .stats .card { background:#fff; }
+    .dashboard main > .panel .stats { margin:0; grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .dashboard main > .panel .stats > .card { display:flex; flex-direction:column; align-items:flex-start; gap:8px; background:#f9fbfe; }
+    .dashboard main > .panel .stats > .card h3 { margin:0; color:#24445f; font-size:16px; letter-spacing:0; text-transform:none; }
+    .dashboard main > .panel .stats > .card p { min-height:38px; margin:0; color:#718197; font-size:13px; line-height:1.45; }
+    .dashboard main > .panel .stats > .card button { width:100%; margin-top:auto; background:#1769aa; font-weight:750; }
+    .dashboard button { border-radius:9px; font-weight:700; transition:background .15s ease,transform .15s ease; }
+    .dashboard button:focus-visible { outline:3px solid rgba(23,105,170,.28); outline-offset:2px; }
+    .dashboard input:not([type="checkbox"]):not([type="file"]), .dashboard textarea, .dashboard select {
+      max-width:100%; border:1px solid #cbd7e3; border-radius:9px; background:#fff; color:#1e3448;
+      padding:11px 12px; font:inherit; font-size:14px;
+    }
+    .dashboard input:not([type="checkbox"]):not([type="file"]):focus, .dashboard textarea:focus, .dashboard select:focus {
+      outline:none; border-color:#4b91c5; box-shadow:0 0 0 3px rgba(23,105,170,.11);
+    }
+    .dashboard #menuManagement > input, .dashboard #menuManagement > select { display:block; width:min(100%,520px); margin:10px 0; }
+    .dashboard #menuManagement > button { background:#1769aa; }
+    .dashboard #menuManagement hr { border:0; border-top:1px solid #e7edf3; margin:22px 0; }
+    .dashboard #menuList { display:grid; gap:20px; }
+    .dashboard #menuList .menu-category { padding:18px; border:1px solid #e1e9f1; border-radius:14px; background:#f9fbfd; }
+    .dashboard #menuList .menu-category > h2 { margin:0 0 13px; padding-bottom:10px; border-bottom:1px solid #e5edf4; font-size:18px; }
+    .dashboard #menuList .stall {
+      position:relative; margin:10px 0 0; padding:15px; border:1px solid #e3eaf1; border-radius:12px;
+      background:#fff; box-shadow:0 2px 7px rgba(24,55,85,.035);
+    }
+    .dashboard #menuList .stall h3 { margin:9px 0 5px; color:#1f405b; font-size:17px; }
+    .dashboard #menuList .stall p { color:#66788b; font-size:13px; line-height:1.5; }
+    .dashboard #menuList .stall p:nth-of-type(2) { color:#174f78; font-size:16px; font-weight:800; }
+    .dashboard #menuList .status { margin:2px 0 8px; background:#e8f7ee; color:#18794e; }
+    .dashboard #menuList .stall button { margin:5px 5px 0 0; padding:9px 12px; background:#1769aa; font-size:12px; }
+    .dashboard #menuList .stall button:last-of-type { background:#fff0f0; color:#b42318; border:1px solid #f3caca; }
+    .dashboard #menuList .stall label { color:#52677b; font-size:12px; }
+    .dashboard #menuList .stall input[type="file"] { max-width:100%; font-size:11px; }
+    @media(max-width:760px) {
+      .dashboard .topbar { padding:20px 17px; align-items:flex-start; }
+      .dashboard .topbar > div:last-child { justify-content:flex-end; }
+      .dashboard main { padding:19px 14px 38px; }
+      .dashboard main > .panel .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media(max-width:480px) {
+      .dashboard .topbar { flex-direction:column; gap:13px; }
+      .dashboard .topbar > div:last-child { width:100%; justify-content:flex-start; }
+      .dashboard .welcome { padding:18px; }
+      .dashboard .stats { gap:9px; }
+      .dashboard .stats > .card { padding:15px 13px; }
+      .dashboard .stats > .card > strong { font-size:25px; }
+      .dashboard main > .panel { padding:16px; }
+      .dashboard main > .panel .stats { grid-template-columns:1fr 1fr; }
+      .dashboard #menuList .menu-category { padding:12px; }
+      .dashboard #menuList .stall { padding:12px; }
+    }
+
+  </style>
 </head>
 
 <body>
