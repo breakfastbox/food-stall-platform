@@ -153,7 +153,7 @@
           </label>
           <label>
             Cost Price per Plate (₹)
-            <input id="finishedCostPerPlate" type="number" min="0" step="0.01" required placeholder="e.g. 45">
+            <input id="finishedCostPerPlate" type="number" min="0.01" step="0.01" required placeholder="e.g. 45">
           </label>
           <label>
             Minimum Stock Alert (plates)
@@ -846,9 +846,9 @@ async function saveRecipeIngredient(event) {
         return;
       }
       if (!Number.isInteger(opening) || opening < 0 ||
-          !Number.isFinite(cost) || cost < 0 ||
+          !Number.isFinite(cost) || cost <= 0 ||
           !Number.isInteger(minimum) || minimum < 0) {
-        msg.textContent = "Enter valid whole-number plate quantities and a valid cost price.";
+        msg.textContent = "Enter whole-number plate quantities and a cost price greater than zero.";
         return;
       }
 
@@ -1150,7 +1150,7 @@ function renderInventory() {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 7;
-    cell.textContent = "No inventory items yet. Add your first item above.";
+    cell.textContent = inventoryMode === "finished_items"\n      ? "No finished items set up yet. Use Finished Item Setup above."\n      : "No inventory items yet. Add ingredients in Menu Ingredients above.";
     row.appendChild(cell);
     tableBody.appendChild(row);
     return;
@@ -1431,7 +1431,7 @@ async function deleteItem(item) {
         if (costText === null) return;
         const minimumText = prompt("Minimum stock alert (plates):", String(item.minimum_quantity));
         if (minimumText === null) return;
-        if (!validNonNegativeNumber(costText) || !validNonNegativeNumber(minimumText) ||
+        if (!validNonNegativeNumber(costText) || Number(costText) <= 0 || !validNonNegativeNumber(minimumText) ||
             !Number.isInteger(Number(minimumText))) {
           showMessage("Enter a valid cost and a whole-number minimum stock level.", true);
           return;
