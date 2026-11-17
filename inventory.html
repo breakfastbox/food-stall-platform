@@ -1179,45 +1179,75 @@ tableBody.appendChild(row);
 async function deleteItem(item) {
   if (busy) return;
 
-  const { data: recipes, error: recipeError } = await supabaseClient
-    .from("menu_item_ingredients")
-    .select("id")
-    .eq("inventory_item_id", item.id)
-    .limit(1);
-
-  if (recipeError) {
-    showMessage("Could not check recipe links: " + recipeError.message, true);
-    return;
-  }
-
-  const { data: stockLinks, error: stockError } = await supabaseClient
-    .from("menu_item_stock")
-    .select("id")
-    .eq("inventory_item_id", item.id)
-    .limit(1);
-
-  if (stockError) {
-    showMessage("Could not check stock links: " + stockError.message, true);
-    return;
-  }
-
-  if ((recipes && recipes.length > 0) ||
-      (stockLinks && stockLinks.length > 0)) {
-    showMessage(
-      "This item is linked to a menu item. Remove its recipe or stock link before deleting it.",
-      true
-    );
-    return;
-  }
-
-  if (!confirm(
-    "Delete " + item.name + " permanently? This cannot be undone."
-  )) return;
-
-  busy = true;
-  showMessage("Deleting inventory item...");
-
   try {
+    // Keep purchase history intact: an item with purchases must not be hard-deleted.
+    const { data: purchases, error: purchaseError } = await supabaseClient
+      .from("inventory_purchases")
+      .select("id")
+      .eq("inventory_item_id", item.id)
+      .eq("stall_id", stallId)
+      .limit(1);
+
+    if (purchaseError) throw purchaseError;
+
+    if (purchases && purchases.length > 0) {
+      showMessage(
+        "Cannot permanently delete " + item.name +
+        " because it has purchase history. This protects past cost and report records. " +
+        "You can remove it from its menu recipes, but its inventory record must remain.",
+        true
+      );
+      return;
+    }
+
+    const { data: recipes, error: recipeError } = await supabaseClient
+      .from("menu_item_ingredients")
+      .select("id")
+      .eq("inventory_item_id", item.id)
+      .eq("stall_id", stallId);
+
+    if (recipeError) throw recipeError;
+
+    const { data: stockLinks, error: stockError } = await supabaseClient
+      .from("menu_item_stock")
+      .select("id")
+      .eq("inventory_item_id", item.id)
+      .eq("stall_id", stallId);
+
+    if (stockError) throw stockError;
+
+    const linkedCount = (recipes || []).length + (stockLinks || []).length;
+    const warning = linkedCount > 0
+      ? "\\n\\nIt is currently linked to " + linkedCount +
+        " menu recipe/stock record(s). Those links will also be removed."
+      : "";
+
+    if (!confirm(
+      "Permanently delete " + item.name + "?" + warning +
+      "\\n\\nThis item has no purchase history. This action cannot be undone."
+    )) return;
+
+    busy = true;
+    showMessage("Deleting inventory item and its menu links...");
+
+    if (recipes && recipes.length > 0) {
+      const { error } = await supabaseClient
+        .from("menu_item_ingredients")
+        .delete()
+        .eq("inventory_item_id", item.id)
+        .eq("stall_id", stallId);
+      if (error) throw error;
+    }
+
+    if (stockLinks && stockLinks.length > 0) {
+      const { error } = await supabaseClient
+        .from("menu_item_stock")
+        .delete()
+        .eq("inventory_item_id", item.id)
+        .eq("stall_id", stallId);
+      if (error) throw error;
+    }
+
     const { data, error } = await supabaseClient
       .from("inventory_items")
       .delete()
@@ -1227,15 +1257,16 @@ async function deleteItem(item) {
       .maybeSingle();
 
     if (error) throw error;
-
     if (!data) {
       throw new Error(
-        "No item was deleted. Check database permissions and try again."
+        "No item was deleted. Check your database permissions and try again."
       );
     }
 
-    showMessage("Inventory item deleted successfully.");
+    showMessage("Inventory item and its menu links deleted successfully.");
     await loadInventory();
+    await loadRecipeOptions();
+    await loadPurchaseItems();
   } catch (error) {
     showMessage("Could not delete item: " + error.message, true);
     console.error(error);
