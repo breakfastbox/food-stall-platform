@@ -22,7 +22,17 @@
       --muted: #796d65;
       --line: #eee4da;
       --green: #24734f;
+      --hero-start: #24150f;
+      --hero-mid: #593725;
+      --hero-end: #75482d;
+      --button-start: #276f4e;
+      --button-end: #1c573b;
     }
+    body[data-theme="ocean"] { --coffee:#163b5c; --coffee-dark:#102b43; --caramel:#3686b8; --cream:#eef6fb; --paper:#ffffff; --ink:#183247; --muted:#637b8c; --line:#dceaf2; --green:#167b79; --hero-start:#102b43; --hero-mid:#18577d; --hero-end:#287fa4; --button-start:#167b79; --button-end:#105e68; }
+    body[data-theme="forest"] { --coffee:#244b36; --coffee-dark:#173526; --caramel:#8a9d55; --cream:#f1f6ed; --paper:#ffffff; --ink:#263b2d; --muted:#6d7d70; --line:#e0e9dd; --green:#34734a; --hero-start:#173526; --hero-mid:#315b3e; --hero-end:#567747; --button-start:#34734a; --button-end:#245638; }
+    body[data-theme="rose"] { --coffee:#653344; --coffee-dark:#43212e; --caramel:#c47791; --cream:#fbf1f4; --paper:#ffffff; --ink:#452d35; --muted:#826b73; --line:#f0dfe5; --green:#a34c69; --hero-start:#43212e; --hero-mid:#754154; --hero-end:#a45d76; --button-start:#a34c69; --button-end:#79364f; }
+    body[data-theme="sunset"] { --coffee:#70401f; --coffee-dark:#482512; --caramel:#d58b45; --cream:#fff5e9; --paper:#ffffff; --ink:#49301f; --muted:#88715d; --line:#f1e2d0; --green:#b85c32; --hero-start:#482512; --hero-mid:#8b4725; --hero-end:#c47a39; --button-start:#b85c32; --button-end:#8e4024; }
+    body[data-theme="slate"] { --coffee:#344256; --coffee-dark:#202b3a; --caramel:#7189a8; --cream:#f1f4f8; --paper:#ffffff; --ink:#293646; --muted:#6d7887; --line:#e0e5ec; --green:#476b8d; --hero-start:#202b3a; --hero-mid:#3b506b; --hero-end:#617995; --button-start:#476b8d; --button-end:#304d6c; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -37,7 +47,7 @@
       padding: 34px 18px 42px;
       text-align: center;
       color: #fffaf4;
-      background: radial-gradient(circle at 85% 15%, #76503a 0, transparent 32%), linear-gradient(135deg, var(--coffee-dark), #593725 70%, #75482d);
+      background: radial-gradient(circle at 85% 15%, var(--hero-end) 0, transparent 32%), linear-gradient(135deg, var(--hero-start), var(--hero-mid) 70%, var(--hero-end));
     }
     header::after {
       content: "";
@@ -168,7 +178,7 @@
     .order-button {
       width: 100%;
       min-height: 52px;
-      background: linear-gradient(135deg, #276f4e, #1c573b);
+      background: linear-gradient(135deg, var(--button-start), var(--button-end));
       color: white;
       font-weight: 800;
       letter-spacing: .2px;
@@ -247,7 +257,7 @@
       .menu-item-photo { width:104px; height:104px; flex-basis:104px; }
       .menu-tools { margin-inline:-2px; }
       .category-grid { margin-inline:0; }
-      .mobile-order-bar { position:fixed; z-index:20; left:12px; right:12px; bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; width:calc(100% - 24px); min-height:60px; padding:10px 17px; border:1px solid #ffffff20; border-radius:16px; background:linear-gradient(135deg,#276f4e,#174b34); color:white; text-align:left; box-shadow:0 10px 30px #172d2180; }
+      .mobile-order-bar { position:fixed; z-index:20; left:12px; right:12px; bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; width:calc(100% - 24px); min-height:60px; padding:10px 17px; border:1px solid #ffffff20; border-radius:16px; background:linear-gradient(135deg,var(--button-start),var(--button-end)); color:white; text-align:left; box-shadow:0 10px 30px #172d2180; }
       .mobile-order-bar span { display:flex; flex-direction:column; gap:1px; }
       .mobile-order-bar small { color:#e1f0e7; font-size:11px; font-weight:500; }
       .mobile-order-bar strong { font-size:14px; }
@@ -281,7 +291,7 @@
     <div class="hero-inner">
       <img id="customerStallLogo" alt="Stall logo" hidden>
       <h1 id="stallName">Loading stall...</h1>
-      <p>Good food, made fresh. Order your favourites here.</p>
+      <p id="customerStallTagline" hidden></p>
       <span class="hero-pill">✦ Online ordering</span>
     </div>
   </header>
@@ -503,7 +513,7 @@ let stallOrderingPaused = false;
 
         let stallQuery = client
           .from("stalls")
-          .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url, upi_id, upi_account_name, upi_payment_mode, upi_qr_url");
+          .select("id, name, phone, status, subscription_end, ordering_enabled, logo_url, customer_tagline, customer_theme, upi_id, upi_account_name, upi_payment_mode, upi_qr_url");
 
         if (requestedStallId) {
           stallQuery = stallQuery.eq("id", requestedStallId);
@@ -533,6 +543,12 @@ let stallOrderingPaused = false;
         document.getElementById("upiUnavailableNote").textContent =
           "UPI payment is collected at the counter. Your order remains unpaid until the stall confirms receipt.";
         document.getElementById("stallName").textContent = stall.name;
+        const customerTagline = document.getElementById("customerStallTagline");
+        if (customerTagline) {
+          customerTagline.textContent = (stall.customer_tagline || "").trim();
+          customerTagline.hidden = !customerTagline.textContent;
+        }
+        document.body.dataset.theme = ["coffee","ocean","forest","rose","sunset","slate"].includes(stall.customer_theme) ? stall.customer_theme : "coffee";
         const customerLogo = document.getElementById("customerStallLogo");
         if (customerLogo) { customerLogo.hidden = !stall.logo_url; if (stall.logo_url) customerLogo.src = stall.logo_url; }
         document.title = stall.name + " | Order Online";
