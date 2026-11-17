@@ -327,7 +327,7 @@
             <tr>
               <th>Date</th>
               <th>Inventory Item</th>
-              <th>Quantity</th>
+              <th id="inventoryQuantityHeader">Quantity</th>
               <th>Unit Cost</th>
               <th>Total Cost</th>
               <th>Notes</th>
@@ -468,7 +468,7 @@
               <th>Item</th>
               <th>Quantity</th>
               <th>Unit</th>
-              <th>Cost / Unit</th>
+              <th id="inventoryCostHeader">Cost / Unit</th>
               <th>Minimum</th>
               <th>Status</th>
               <th>Actions</th>
@@ -803,6 +803,8 @@ async function saveRecipeIngredient(event) {
       document.getElementById("recipeCard").style.display = isFinished ? "none" : "block";
       document.getElementById("purchaseCard").style.display = isFinished ? "none" : "block";
       document.getElementById("purchaseHistoryCard").style.display = isFinished ? "none" : "block";
+      document.getElementById("inventoryQuantityHeader").textContent = isFinished ? "Available Plates" : "Quantity";
+      document.getElementById("inventoryCostHeader").textContent = isFinished ? "Cost / Plate" : "Cost / Unit";
     }
 
     async function loadFinishedMenuOptions() {
@@ -1423,6 +1425,41 @@ async function deleteItem(item) {
 }
     async function editItem(item) {
       if (busy) return;
+
+      if (inventoryMode === "finished_items") {
+        const costText = prompt("Preparation cost per plate (₹):", String(item.cost_per_unit));
+        if (costText === null) return;
+        const minimumText = prompt("Minimum stock alert (plates):", String(item.minimum_quantity));
+        if (minimumText === null) return;
+        if (!validNonNegativeNumber(costText) || !validNonNegativeNumber(minimumText) ||
+            !Number.isInteger(Number(minimumText))) {
+          showMessage("Enter a valid cost and a whole-number minimum stock level.", true);
+          return;
+        }
+        if (!confirm("Save finished-item cost and minimum stock changes for " + item.name + "?")) return;
+        busy = true;
+        try {
+          const { data, error } = await supabaseClient
+            .from("inventory_items")
+            .update({
+              cost_per_unit: Number(costText),
+              minimum_quantity: Number(minimumText)
+            })
+            .eq("id", item.id)
+            .eq("stall_id", stallId)
+            .select("id")
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) throw new Error("No item was updated. Check your permissions and try again.");
+          showMessage("Finished-item cost and stock alert updated.");
+          await loadInventory();
+        } catch (error) {
+          showMessage("Could not edit finished item: " + error.message, true);
+        } finally {
+          busy = false;
+        }
+        return;
+      }
 
       const name = prompt("Item name:", item.name);
       if (name === null) return;
