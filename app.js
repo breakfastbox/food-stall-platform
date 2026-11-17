@@ -1485,6 +1485,8 @@ function dismissLowStockPopup() {
 }
 
 async function refreshOrderPageLowStockAlert(stallId) {
+  const entryDiagnostic = document.getElementById("lowStockDiagnostic");
+  if (entryDiagnostic) entryDiagnostic.textContent = "Low-stock check started for stall " + stallId + "…";
   const overlay = document.getElementById("lowStockAlertOverlay");
   const popupItems = document.getElementById("lowStockAlertItems");
   const notice = document.getElementById("lowStockPersistentNotice");
@@ -1497,10 +1499,13 @@ async function refreshOrderPageLowStockAlert(stallId) {
   }
 
   try {
-    const { data: stockRows, error } = await supabaseClient
+    if (diagnostic) diagnostic.textContent = "Connecting to inventory records…";
+    const stockCheckPromise = supabaseClient
       .from("inventory_items")
       .select("id, name, quantity, minimum_quantity")
       .eq("stall_id", stallId);
+    const stockCheckTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Inventory check timed out after 10 seconds.")), 10000));
+    const { data: stockRows, error } = await Promise.race([stockCheckPromise, stockCheckTimeout]);
     if (error) throw error;
 
     const lowItems = (stockRows || []).filter(item => {
@@ -1616,6 +1621,8 @@ async function loadOrdersInternal() {
   }
 
   const stallId = stall.id;
+  const lowStockDiagnostic = document.getElementById("lowStockDiagnostic");
+  if (lowStockDiagnostic) lowStockDiagnostic.textContent = "Order page connected to stall " + stall.name + "; starting stock check…";
   await refreshOrderPageLowStockAlert(stallId);
   const heading = document.querySelector(".container > p.muted");
   if (heading) heading.textContent = stall.name + " — manage customer orders";
