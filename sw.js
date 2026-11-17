@@ -1,4 +1,4 @@
-const CACHE_NAME = "food-stall-shell-v4";
+const CACHE_NAME = "food-stall-shell-v5";
 const SHELL = [
   "./stall.html",
   "./style.css",
