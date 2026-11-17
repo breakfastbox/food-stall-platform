@@ -160,6 +160,7 @@
     </div>
 
     <p id="ordersMessage" class="muted">Loading orders...</p>
+    <p id="lowStockDiagnostic" role="status" style="margin:6px 0 12px;font-size:12px;color:#64748b">Checking inventory stock…</p>
     <h2>Customer Change Requests</h2>
     <p class="muted">Only pending orders within the 5-minute change window are eligible.</p>
     <div id="changeRequestsMessage" class="muted">Loading change requests...</div>
@@ -169,7 +170,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=low-stock-banner-visible-20261117c"></script>
+  <script src="app.js?v=low-stock-diagnostic-20261117d"></script>
   <script>
   loadOrders();
   loadOrderChangeRequests();
