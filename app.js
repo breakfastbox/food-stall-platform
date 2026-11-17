@@ -1516,7 +1516,10 @@ async function refreshOrderPageLowStockAlert(stallId) {
       }
     });
 
+    // Explicitly control both the hidden attribute and display style so the
+    // warning remains visible across browser CSS/hidden-state differences.
     notice.hidden = lowItems.length === 0;
+    notice.style.display = lowItems.length ? "block" : "none";
     noticeItems.replaceChildren();
     lowItems.forEach(item => {
       const line = document.createElement("p");
@@ -1553,6 +1556,15 @@ async function refreshOrderPageLowStockAlert(stallId) {
     }
   } catch (error) {
     console.warn("Could not refresh low-stock alert:", error);
+    // Surface the lookup failure on Order Management instead of silently
+    // leaving the owner with no indication that the alert check failed.
+    const notice = document.getElementById("lowStockPersistentNotice");
+    const noticeItems = document.getElementById("lowStockPersistentItems");
+    if (notice && noticeItems) {
+      notice.hidden = false;
+      notice.style.display = "block";
+      noticeItems.textContent = "Could not check stock: " + (error.message || "Please refresh the page.");
+    }
   }
 }
 
