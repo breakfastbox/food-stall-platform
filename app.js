@@ -1929,6 +1929,9 @@ async function loadOrders(options = {}) {
   try {
     // Always load orders for the stall assigned to the signed-in account.
     const assignedStall = (await getCurrentStallContext()).stall;
+    const lowStockDiagnostic = document.getElementById("lowStockDiagnostic");
+    if (lowStockDiagnostic) lowStockDiagnostic.textContent = "Order page connected to stall " + assignedStall.name + "; starting stock check…";
+    await refreshOrderPageLowStockAlert(assignedStall.id);
     await restoreOrderSoundAlerts(assignedStall.id);
     const heading = document.querySelector(".container > p.muted");
     if (heading) heading.textContent = assignedStall.name + " — manage customer orders";
