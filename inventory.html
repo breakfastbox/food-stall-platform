@@ -590,6 +590,42 @@
         });
         editButton.style.marginLeft = "10px";
         li.appendChild(editButton);
+
+        const deleteButton = makeButton("Delete", "danger", async () => {
+          const ingredientName = ingredient ? ingredient.name : "this ingredient";
+          if (!confirm(
+            "Remove " + ingredientName + " from this menu item's recipe?\\n\\n" +
+            "Its inventory item, current stock, and purchase history will be kept."
+          )) return;
+
+          deleteButton.disabled = true;
+          recipeMessage.textContent = "Removing ingredient from recipe...";
+          try {
+            const { data: deleted, error: deleteError } = await supabaseClient
+              .from("menu_item_ingredients")
+              .delete()
+              .eq("id", recipe.id)
+              .eq("stall_id", stallId)
+              .select("id")
+              .maybeSingle();
+
+            if (deleteError) throw deleteError;
+            if (!deleted) {
+              throw new Error("No recipe link was removed. Refresh and try again.");
+            }
+
+            await loadSavedRecipe();
+            recipeMessage.textContent =
+              "Ingredient removed from this recipe. Inventory stock and purchase history were kept.";
+            await loadInventory();
+          } catch (error) {
+            recipeMessage.textContent =
+              "Could not remove ingredient: " + error.message;
+            deleteButton.disabled = false;
+          }
+        });
+        deleteButton.style.marginLeft = "6px";
+        li.appendChild(deleteButton);
         recipeList.appendChild(li);
       });
 
