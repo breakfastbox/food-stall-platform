@@ -1150,7 +1150,7 @@ function renderInventory() {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 7;
-    cell.textContent = inventoryMode === "finished_items"\n      ? "No finished items set up yet. Use Finished Item Setup above."\n      : "No inventory items yet. Add ingredients in Menu Ingredients above.";
+    cell.textContent = inventoryMode === "finished_items" ? "No finished items set up yet. Use Finished Item Setup above." : "No inventory items yet. Add ingredients in Menu Ingredients above.";
     row.appendChild(cell);
     tableBody.appendChild(row);
     return;
