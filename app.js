@@ -1343,6 +1343,25 @@ async function loadStallDashboard() {
     ? "Your 10-day free trial period."
     : "Your current subscription period.";
 
+  const expiryAlert = document.getElementById("subscriptionExpiryAlert");
+  const subscriptionInfo = getSubscriptionStatusInfo(stall);
+  if (expiryAlert) {
+    const shouldWarn = ["active", "trial"].includes(String(stall.status || "").toLowerCase()) &&
+      subscriptionInfo.daysRemaining !== null && subscriptionInfo.daysRemaining >= 0 &&
+      subscriptionInfo.daysRemaining <= 2;
+    expiryAlert.hidden = !shouldWarn;
+    if (shouldWarn) {
+      const when = subscriptionInfo.daysRemaining === 0
+        ? "expires today"
+        : subscriptionInfo.daysRemaining === 1
+          ? "expires tomorrow"
+          : "expires in 2 days";
+      expiryAlert.innerHTML = '<strong>⚠ Subscription renewal reminder</strong><span>Your subscription ' +
+        escapeHtml(when) + ' (' + escapeHtml(formatSubscriptionDate(stall.subscription_end)) +
+        '). Please contact the platform administrator to renew and avoid interruption.</span>';
+    }
+  }
+
   const { data: categories, error: categoryError } = await supabaseClient
     .from("menu_categories")
     .select("id, name, sort_order")
@@ -1382,8 +1401,8 @@ async function loadStallDashboard() {
     );
 
     return `
-      <section class="menu-category" data-menu-category-id="${category.id}">
-        <h2>${escapeHtml(category.name)}</h2>
+      <details class="menu-category" data-menu-category-id="${category.id}">
+        <summary><span>${escapeHtml(category.name)}</span><small>${items.length} ${items.length === 1 ? "item" : "items"}</small></summary>
         ${items.map(item => `
           <div class="stall" id="menu-item-${item.id}">
             ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" style="width:100%;max-width:220px;max-height:160px;object-fit:cover;border-radius:10px;">` : ""}
@@ -1407,7 +1426,7 @@ async function loadStallDashboard() {
             </button>
           </div>
         `).join("")}
-      </section>
+      </details>
     `;
   });
 
@@ -1418,8 +1437,8 @@ async function loadStallDashboard() {
 
   if (uncategorizedItems.length > 0) {
     categoryGroups.push(`
-      <section class="menu-category" data-menu-category-id="">
-        <h2>Uncategorized</h2>
+      <details class="menu-category" data-menu-category-id="">
+        <summary><span>Uncategorized</span><small>${uncategorizedItems.length} ${uncategorizedItems.length === 1 ? "item" : "items"}</small></summary>
         ${uncategorizedItems.map(item => `
           <div class="stall" id="menu-item-${item.id}">
             ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}" loading="lazy" style="width:100%;max-width:220px;max-height:160px;object-fit:cover;border-radius:10px;">` : ""}
@@ -1443,7 +1462,7 @@ async function loadStallDashboard() {
             </button>
           </div>
         `).join("")}
-      </section>
+      </details>
     `);
   }
 
@@ -1974,12 +1993,26 @@ async function loadOrders(options = {}) {
     todayStart.setHours(0, 0, 0, 0);
     const { data: orders, error } = await supabaseClient
       .from("orders")
-      .select("id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, order_source, created_at")
+      .select("id, customer_id, token_number, order_status, payment_status, payment_method, upi_transaction_reference, subtotal, total_amount, special_instructions, order_source, created_at")
       .eq("stall_id", assignedStall.id)
       .gte("created_at", todayStart.toISOString())
       .order("created_at", { ascending: false });
 
     if (error) throw error;
+
+    const customerIds = [...new Set((orders || []).map(order => order.customer_id).filter(Boolean))];
+    const customerNamesById = new Map();
+    if (customerIds.length) {
+      const { data: customerRows, error: customersError } = await supabaseClient
+        .from("customers")
+        .select("id, name")
+        .in("id", customerIds);
+      if (customersError) {
+        console.warn("Customer names could not be loaded for orders:", customersError);
+      } else {
+        (customerRows || []).forEach(customer => customerNamesById.set(customer.id, customer.name));
+      }
+    }
 
        window.foodStallNewOrderIds = window.foodStallNewOrderIds || new Set();
        const currentOrderIds = new Set((orders || []).map(order => order.id));
@@ -2141,11 +2174,15 @@ async function loadOrders(options = {}) {
         : String(order.token_number).padStart(4, "0");
       const isNewOrder = order.order_status === "pending" && window.foodStallNewOrderIds.has(order.id);
       const sourceLabel = order.order_source === "stall_owner" ? "<span class=new-order-label style=background:#1d4ed8>STALL OWNER ORDER</span>" : "";
+      const customerName = customerNamesById.get(order.customer_id) ||
+        (order.order_source === "stall_owner" ? "Walk-in Customer" : "Guest Customer");
 
       return `
         <div class="card order-card ${isNewOrder ? "new-order-card" : ""}" data-order-id="${escapeHtml(order.id)}">
           ${isNewOrder ? '<span class="new-order-label">NEW ORDER</span>' : ""}
-          <h3>Order Token: ${escapeHtml(token)}</h3>\n          ${sourceLabel}
+          <h3>Order Token: ${escapeHtml(token)}</h3>
+          <p><strong>Customer:</strong> ${escapeHtml(customerName)}</p>
+          ${sourceLabel}
 
           <p><strong>Food Items:</strong></p>
           ${itemList}
