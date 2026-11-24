@@ -585,7 +585,15 @@ let stallOrderingPaused = false;
       document.getElementById("upiQrAmount").textContent = money(amount);
 
       const upiUri = buildUpiUri(amount);
-      if (payLink) payLink.href = upiUri;
+      // On the Mobile Test Stall, send Android customers directly to BHIM.
+      // Keep the QR payload as the standard generic UPI URI for scanning.
+      const bhimIntentUri = upiUri.replace(/^upi:\/\//, "intent://") +
+        "#Intent;scheme=upi;package=in.org.npci.upiapp;end";
+      if (payLink) {
+        payLink.href = isTestOnlineUpi && /Android/i.test(navigator.userAgent)
+          ? bhimIntentUri
+          : upiUri;
+      }
       if (qrContainer) {
         qrContainer.replaceChildren();
         if (typeof QRCode === "undefined") {
