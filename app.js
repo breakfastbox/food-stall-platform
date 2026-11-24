@@ -2275,9 +2275,24 @@ async function quickSetOrderStatus(orderId, status) {
   await updateOrderStatus(orderId);
 }
 
-async function quickSetPaymentStatus(orderId, status) {
+let paymentConfirmationOrderId = null;
+
+function openPaymentMethodPopup(orderId) {
+  paymentConfirmationOrderId = orderId;
+  const popup = document.getElementById("paymentMethodPopup");
+  if (popup) popup.hidden = false;
+}
+
+function closePaymentMethodPopup() {
+  const popup = document.getElementById("paymentMethodPopup");
+  if (popup) popup.hidden = true;
+  paymentConfirmationOrderId = null;
+}
+
+async function confirmReceivedPayment(method) {
+  const orderId = paymentConfirmationOrderId;
+  if (!orderId || !["cash", "upi_manual"].includes(method)) return;
   const message = document.getElementById("ordersMessage");
-  if (!["pending", "paid"].includes(status) || !message) return;
   let stallId;
   try {
     stallId = (await getCurrentStallContext()).stall.id;
@@ -2285,10 +2300,10 @@ async function quickSetPaymentStatus(orderId, status) {
     message.textContent = "Could not verify your stall: " + error.message;
     return;
   }
-  message.textContent = status === "paid" ? "Recording payment..." : "Restoring pending payment status...";
+  message.textContent = "Recording payment...";
   const { data, error } = await supabaseClient
     .from("orders")
-    .update({ payment_status: status })
+    .update({ payment_status: "paid", payment_method: method })
     .eq("id", orderId)
     .eq("stall_id", stallId)
     .select("id");
@@ -2296,7 +2311,37 @@ async function quickSetPaymentStatus(orderId, status) {
     message.textContent = "Payment was not updated: " + (error?.message || "Please check permissions.");
     return;
   }
-  message.textContent = status === "paid" ? "Payment marked as received." : "Payment status set to pending.";
+  closePaymentMethodPopup();
+  message.textContent = "Payment received and recorded as " + (method === "cash" ? "Cash" : "UPI") + ".";
+  await loadOrders({ force: true });
+}
+
+async function quickSetPaymentStatus(orderId, status) {
+  const message = document.getElementById("ordersMessage");
+  if (!["pending", "paid"].includes(status) || !message) return;
+  if (status === "paid") {
+    openPaymentMethodPopup(orderId);
+    return;
+  }
+  let stallId;
+  try {
+    stallId = (await getCurrentStallContext()).stall.id;
+  } catch (error) {
+    message.textContent = "Could not verify your stall: " + error.message;
+    return;
+  }
+  message.textContent = "Restoring pending payment status...";
+  const { data, error } = await supabaseClient
+    .from("orders")
+    .update({ payment_status: "pending" })
+    .eq("id", orderId)
+    .eq("stall_id", stallId)
+    .select("id");
+  if (error || !data || data.length === 0) {
+    message.textContent = "Payment was not updated: " + (error?.message || "Please check permissions.");
+    return;
+  }
+  message.textContent = "Payment status set to pending.";
   await loadOrders({ force: true });
 }
 
