@@ -588,12 +588,11 @@ let stallOrderingPaused = false;
       // Android: use an implicit UPI intent so the phone can offer any
       // installed UPI app (BHIM, Google Pay, PhonePe, Paytm, etc.).
       // Other platforms keep the standard UPI URI. The QR always stays generic.
-      const universalAndroidUpiIntent = upiUri.replace(/^upi:\/\//, "intent://") +
-        "#Intent;scheme=upi;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end";
+      // Use the standard UPI deep link directly. Android browsers and
+      // installed UPI apps can resolve upi://pay; generic intent:// links
+      // are not consistently supported by all browsers/devices.
       if (payLink) {
-        payLink.href = /Android/i.test(navigator.userAgent)
-          ? universalAndroidUpiIntent
-          : upiUri;
+        payLink.href = upiUri;
       }
       if (qrContainer) {
         qrContainer.replaceChildren();
