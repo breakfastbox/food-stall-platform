@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="upi-at-counter-20261115">
+  <meta name="app-version" content="upi-mobile-test-online-20261124">
   <title>Order Online</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -446,6 +446,8 @@
 
     const ORDER_FUNCTION_URL =
       "https://anlgfcltudysjnsipsmd.supabase.co/functions/v1/rapid-processor";
+    // Online UPI QR is enabled only for this test stall until the full flow is verified.
+    const MOBILE_TEST_STALL_ID = "be5956e8-a8ef-4fb4-8e3d-2dedcf809591";
 
     const client = window.supabase.createClient(
       SUPABASE_URL,
@@ -555,11 +557,48 @@ let stallOrderingPaused = false;
       const params = new URLSearchParams({ pa: stallUpiId, pn: stallUpiName || stallName, am: Number(amount).toFixed(2), cu: "INR", tn: "Food order " + stallName });
       return "upi://pay?" + params.toString();
     }
-    function updateUpiPaymentPanel() {
-      // Direct QR / UPI-app payment will be enabled in a later release.
-      // For now, selecting UPI means the customer pays at the counter.
+    function updateUpiPaymentPanel(amount = 0) {
       const panel = document.getElementById("upiPaymentPanel");
-      if (panel) panel.hidden = true;
+      const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "cash";
+      const isTestOnlineUpi = stallId === MOBILE_TEST_STALL_ID;
+      const qrContainer = document.getElementById("upiQrCode");
+      const payLink = document.getElementById("upiPayLink");
+
+      if (!panel) return;
+      if (
+        !isTestOnlineUpi ||
+        selectedMethod !== "upi_manual" ||
+        !stallUpiId ||
+        stallUpiPaymentMode !== "dynamic" ||
+        !Number.isFinite(Number(amount)) ||
+        Number(amount) <= 0
+      ) {
+        panel.hidden = true;
+        if (qrContainer) qrContainer.replaceChildren();
+        if (payLink) payLink.href = "#";
+        return;
+      }
+
+      panel.hidden = false;
+      document.getElementById("upiPayeeName").textContent = stallUpiName || stallName;
+      document.getElementById("upiPayeeId").textContent = stallUpiId;
+      document.getElementById("upiQrAmount").textContent = money(amount);
+
+      const upiUri = buildUpiUri(amount);
+      if (payLink) payLink.href = upiUri;
+      if (qrContainer) {
+        qrContainer.replaceChildren();
+        if (typeof QRCode === "undefined") {
+          qrContainer.textContent = "QR code could not load. Please use the Pay with UPI app link.";
+        } else {
+          new QRCode(qrContainer, {
+            text: upiUri,
+            width: 220,
+            height: 220,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }
     }
     document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
       input.addEventListener("change", () => updateUpiPaymentPanel(getSelectedItems().reduce((sum, item) => {
@@ -614,10 +653,20 @@ let stallOrderingPaused = false;
         stallUpiName = (stall.upi_account_name || stall.name || "").trim();
         stallUpiPaymentMode = stall.upi_payment_mode || "dynamic";
         stallUpiQrUrl = (stall.upi_qr_url || "").trim();
-        // Counter UPI is available even before the direct QR payment integration.
-        document.getElementById("paymentUpiChoice").style.display = "flex";
-        document.getElementById("upiUnavailableNote").textContent =
-          "UPI payment is collected at the counter. Your order remains unpaid until the stall confirms receipt.";
+        document.getElementById("paymentUpiChoice").style.display = stallUpiId ? "flex" : "none";
+        const upiChoiceText = document.querySelector("#paymentUpiChoice span");
+        if (stallId === MOBILE_TEST_STALL_ID) {
+          if (upiChoiceText) {
+            upiChoiceText.innerHTML = "Pay online using UPI <small style='display:block;margin-top:3px;color:var(--muted);font-weight:500;'>Scan the QR or open your UPI app. Return here and place your order after paying.</small>";
+          }
+          document.getElementById("upiUnavailableNote").textContent =
+            stallUpiPaymentMode === "dynamic"
+              ? "Test mode: the QR contains this order's exact amount. Payment remains pending until the stall owner verifies receipt."
+              : "Online QR testing requires Dynamic UPI QR mode. Please contact the stall owner.";
+        } else {
+          document.getElementById("upiUnavailableNote").textContent =
+            "UPI payment is collected at the counter. Your order remains unpaid until the stall confirms receipt.";
+        }
         document.getElementById("stallName").textContent = stall.name;
         const customerTagline = document.getElementById("customerStallTagline");
         if (customerTagline) {
@@ -987,7 +1036,9 @@ if (!validPhone) {
 
 
           const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || "cash";
-      const upiReference = "";
+      const upiReference = paymentMethod === "upi_manual"
+        ? (document.getElementById("upiTransactionReference")?.value || "").trim()
+        : "";
       if (paymentMethod === "upi_manual" && upiReference && !/^[A-Za-z0-9]{6,40}$/.test(upiReference)) {
         showMessage("If you enter a UPI reference, use 6–40 letters or numbers.", "error");
         document.getElementById("upiTransactionReference")?.focus();
@@ -1072,7 +1123,9 @@ if (!validPhone) {
           (specialInstructions ? "Customer instructions: " + specialInstructions + "\n" : "") +
           "Total: ₹" + money(order.total_amount) + "\n" +
           "Payment: " + (paymentMethod === "upi_manual"
-            ? "UPI at the counter — pending collection"
+            ? (stallId === MOBILE_TEST_STALL_ID
+              ? "Online UPI — awaiting stall verification"
+              : "UPI at the counter — pending collection")
             : "Cash at the stall — pending") + "\n" +
           "Order status: " + (order.order_status || "pending") + "\n\n" +
           "";
@@ -1087,7 +1140,9 @@ if (!validPhone) {
           "Token: " + tokenText + "\n" +
           "Total: ₹" + money(order.total_amount) +
           (paymentMethod === "upi_manual"
-            ? "\nUPI reference submitted. Payment is awaiting stall-owner verification."
+            ? (stallId === MOBILE_TEST_STALL_ID
+              ? "\nOnline UPI selected. Payment is awaiting stall-owner verification."
+              : "\nUPI reference submitted. Payment is awaiting stall-owner verification.")
             : "\nPayment: Cash at the stall — pay when you collect.") +
           (whatsappUrl ? "\nOpening WhatsApp — please tap Send to notify the stall." : "\nWhatsApp contact is not configured for this stall."),
           "success"
