@@ -477,6 +477,37 @@ let stallOrderingPaused = false;
       return Number(value).toFixed(2);
     }
 
+    function customerDetailsKey() {
+      return "foodStallCustomerDetails:" + (stallId || "default");
+    }
+
+    function restoreCustomerDetails() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(customerDetailsKey()) || "null");
+        if (!saved || typeof saved !== "object") return;
+        const name = document.getElementById("customerName");
+        const phone = document.getElementById("customerPhone");
+        const email = document.getElementById("customerEmail");
+        if (name && !name.value) name.value = saved.name || "";
+        if (phone && !phone.value) phone.value = saved.phone || "";
+        if (email && !email.value) email.value = saved.email || "";
+      } catch (error) {
+        console.warn("Saved customer details could not be restored:", error);
+      }
+    }
+
+    function saveCustomerDetails(name, phone, email) {
+      try {
+        localStorage.setItem(customerDetailsKey(), JSON.stringify({
+          name: String(name || "").trim(),
+          phone: String(phone || "").trim(),
+          email: String(email || "").trim()
+        }));
+      } catch (error) {
+        console.warn("Customer details could not be saved on this device:", error);
+      }
+    }
+
     function buildUpiUri(amount) {
       const params = new URLSearchParams({ pa: stallUpiId, pn: stallUpiName || stallName, am: Number(amount).toFixed(2), cu: "INR", tn: "Food order " + stallName });
       return "upi://pay?" + params.toString();
@@ -533,6 +564,7 @@ let stallOrderingPaused = false;
         }
 
         stallId = stall.id;
+        restoreCustomerDetails();
         stallName = stall.name;
         stallPhone = stall.phone || "";
         stallUpiId = (stall.upi_id || "").trim();
@@ -969,6 +1001,7 @@ if (!validPhone) {
 
        
         const order = result.order;
+        saveCustomerDetails(name, normalizedPhone, email);
         const tokenText = String(order.token_number).padStart(4, "0");
         const orderedItemLines = items.map(selection => {
           const menuItem = menuItems.find(item => item.id === selection.menu_item_id);
