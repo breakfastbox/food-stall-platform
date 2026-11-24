@@ -34,7 +34,18 @@
     .category-order-panel { margin-top:22px; padding:16px; border:1px solid #e7ddd3; border-radius:14px; background:#fffdfb; }
     .category-order-panel h3 { margin:0 0 5px; }
     .category-order-panel > p { color:#75685f; font-size:13px; }
+    .category-order-dropdown { margin-top:12px; }
+    .category-order-dropdown > summary { cursor:pointer; padding:12px 14px; border-radius:10px; background:#f4f7fb; color:#174f78; font-weight:750; }
     .category-order-list { display:grid; gap:8px; margin-top:12px; }
+    .subscription-expiry-alert { display:flex; flex-direction:column; gap:5px; margin:0 0 20px; padding:15px 18px; border:1px solid #f0c36d; border-left:6px solid #d97706; border-radius:12px; background:#fff8e8; color:#7c3e08; line-height:1.5; }
+    .subscription-expiry-alert[hidden] { display:none; }
+    .dashboard #menuList .menu-category { margin:12px 0; padding:0; overflow:hidden; border:1px solid #dce6f0; border-radius:13px; background:#fff; }
+    .dashboard #menuList .menu-category > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 17px; cursor:pointer; color:#1f405b; font-weight:800; list-style:none; }
+    .dashboard #menuList .menu-category > summary::-webkit-details-marker { display:none; }
+    .dashboard #menuList .menu-category > summary::after { content:"＋"; color:#1769aa; font-size:20px; }
+    .dashboard #menuList .menu-category[open] > summary::after { content:"−"; }
+    .dashboard #menuList .menu-category > summary small { color:#66788b; font-weight:600; white-space:nowrap; }
+    .dashboard #menuList .menu-category > .stall { margin:0 14px 12px; }
     .category-order-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e8ded5; border-radius:11px; background:#fff; }
     .category-order-row.dragging { opacity:.4; border:2px dashed #b77945; }
     .category-order-row.drop-target { border-color:#b77945; background:#fbf1e7; }
@@ -260,7 +271,7 @@
 
       </section>
 
-
+      <div id="subscriptionExpiryAlert" class="subscription-expiry-alert" role="alert" hidden></div>
 
       <details class="occasional-settings">
         <summary>
@@ -432,9 +443,12 @@
         <div class="category-order-panel">
           <h3>Customer Page Category Order</h3>
           <p>The ☰ DRAG handle is on the LEFT of every category below. Drag it up or down; the order saves automatically. You can also use ↑ and ↓.</p>
-          <div id="categoryOrderList" class="category-order-list">
-            <p>Loading categories...</p>
-          </div>
+          <details class="category-order-dropdown">
+            <summary>Show / change category order</summary>
+            <div id="categoryOrderList" class="category-order-list">
+              <p>Loading categories...</p>
+            </div>
+          </details>
           <p id="categoryOrderMessage" aria-live="polite"></p>
         </div>
 
@@ -539,7 +553,7 @@
       if (recoveryBox) recoveryBox.style.setProperty("display", "block", "important");
     }
   </script>
-  <script src="app.js?v=inventory-stall-fix-20261117"></script>
+  <script src="app.js?v=dashboard-updates-20261124"></script>
 
 <script>
 (function(){
