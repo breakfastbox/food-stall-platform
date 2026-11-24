@@ -85,6 +85,14 @@
     .order-more-controls summary { cursor:pointer; color:#444; font-weight:700; }
     .order-more-controls label { display:block; margin-top:12px; }
     .order-more-controls button { min-height:40px; }
+    #paymentMethodPopup[hidden] { display:none !important; }
+    #paymentMethodPopup { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:18px; background:rgba(15,23,42,.62); }
+    .payment-method-dialog { width:min(420px,100%); padding:22px; border-radius:16px; background:#fff; box-shadow:0 18px 55px rgba(0,0,0,.3); }
+    .payment-method-dialog h2 { margin:0 0 8px; }
+    .payment-method-dialog p { color:#555; margin:0 0 16px; }
+    .payment-method-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .payment-method-options button { min-height:54px; border:0; border-radius:10px; background:#176b45; color:#fff; font-weight:800; }
+    .payment-method-dialog .cancel-payment-method { width:100%; margin-top:10px; background:#eef0f2; color:#333; }
     @media (max-width:600px) { body { padding:12px; } .order-quick-actions { display:grid; grid-template-columns:1fr 1fr; } .order-quick-actions button { width:100%; } .order-card { padding:14px; } }
   </style>
 </head>
@@ -145,6 +153,18 @@
       Order History
     </button>
 
+
+    <div id="paymentMethodPopup" role="dialog" aria-modal="true" aria-labelledby="paymentMethodPopupTitle" hidden>
+      <div class="payment-method-dialog">
+        <h2 id="paymentMethodPopupTitle">Confirm payment received</h2>
+        <p>Which payment mode did the customer actually use?</p>
+        <div class="payment-method-options">
+          <button type="button" onclick="confirmReceivedPayment('cash')">Cash received</button>
+          <button type="button" onclick="confirmReceivedPayment('upi_manual')">UPI received</button>
+        </div>
+        <button type="button" class="cancel-payment-method" onclick="closePaymentMethodPopup()">Cancel</button>
+      </div>
+    </div>
 
     <div id="lowStockAlertOverlay" role="dialog" aria-modal="true" aria-labelledby="lowStockAlertTitle" hidden style="position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.62);padding:18px;align-items:center;justify-content:center">
       <div style="width:min(520px,100%);max-height:80vh;overflow:auto;background:#fff;border-radius:16px;padding:22px;box-shadow:0 18px 55px rgba(0,0,0,.3);border-top:7px solid #dc2626">
