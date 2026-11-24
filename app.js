@@ -2345,43 +2345,6 @@ async function quickSetPaymentStatus(orderId, status) {
   await loadOrders({ force: true });
 }
 
-async function updatePaymentStatus(orderId) {
-  const select = document.getElementById("payment-status-" + orderId);
-  const message = document.getElementById("ordersMessage");
-
-  if (!select || !message) return;
-
-  const newStatus = select.value;
-  if (!["pending", "paid"].includes(newStatus)) {
-    message.textContent = "Invalid payment status.";
-    return;
-  }
-
-  message.textContent = "Updating payment status...";
-
-  const { data, error } = await supabaseClient
-    .from("orders")
-    .update({ payment_status: newStatus })
-    .eq("id", orderId)
-    .select("id");
-
-  if (error) {
-    console.error("Could not update payment status:", error);
-    message.textContent = "Unable to update payment status: " + error.message;
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    message.textContent = "Payment status was not changed. Check your permissions.";
-    await loadOrders();
-    return;
-  }
-
-  message.textContent = "Payment status updated successfully!";
-  await loadOrders({ force: true });
-}
-
-
 async function updateOrderStatus(orderId) {
   const select = document.getElementById("status-" + orderId);
   const message = document.getElementById("ordersMessage");
@@ -3361,8 +3324,9 @@ async function loadDailyReport() {
       .filter(order => order.payment_status === "pending")
       .reduce((sum, order) => sum + Number(order.total_amount ?? order.subtotal ?? 0), 0);
 
-    // Split sales by the payment method selected at checkout. Keep collected
-    // and pending amounts separate so unpaid orders are never reported as cash received.
+    // Split totals by the payment method recorded on each order. When the stall
+    // confirms payment, confirmReceivedPayment updates this field to the actual
+    // mode received. Pending orders remain grouped under their checkout choice.
     const paymentBreakdown = {
       cash: { total: 0, paid: 0, pending: 0 },
       online: { total: 0, paid: 0, pending: 0 }
