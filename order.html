@@ -146,6 +146,19 @@
     .instruction-chip[aria-pressed="true"] { border-color:var(--green); background:#eaf5ee; color:#176b45; }
     .instruction-panel textarea { display:block; width:100%; min-height:76px; resize:vertical; padding:11px 12px; border:1px solid #ded2c8; border-radius:11px; font:inherit; font-size:13px; }
     .instruction-panel textarea:focus { outline:3px solid #b7794529; border-color:var(--caramel); }
+    .item-instruction-dialog { width:min(520px,calc(100% - 28px)); max-height:85vh; overflow:auto; border:0; border-radius:20px; padding:22px; color:var(--ink); box-shadow:0 24px 80px #1f130f44; }
+    .item-instruction-dialog::backdrop { background:#21150f88; backdrop-filter:blur(3px); }
+    .instruction-dialog-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .instruction-dialog-head h2 { margin:4px 0; }
+    .instruction-close { width:36px; height:36px; border:0; border-radius:50%; background:#f4eee8; color:var(--coffee); font-size:24px; }
+    .instruction-text-label { display:block; margin:14px 0 7px; color:var(--coffee); font-size:13px; font-weight:750; }
+    .item-instruction-dialog textarea { display:block; width:100%; min-height:86px; padding:12px; border:1px solid #ded2c8; border-radius:11px; font:inherit; font-size:14px; resize:vertical; }
+    .instruction-dialog-actions { display:flex; justify-content:space-between; gap:10px; margin-top:16px; }
+    .instruction-secondary,.instruction-save { min-height:44px; padding:10px 16px; border-radius:11px; font-weight:800; }
+    .instruction-secondary { border:1px solid #ded2c8; background:#fff; color:var(--coffee); }
+    .instruction-save { border:0; background:var(--green); color:#fff; }
+    .item-instruction-button { margin-top:9px; padding:7px 10px; border:1px solid #d8c5b3; border-radius:9px; background:#fffaf5; color:var(--coffee); font-size:12px; font-weight:800; }
+    .item-instruction-button.has-instructions { border-color:#b9dfc4; background:#eaf5ee; color:#176b45; }
     .field { margin-bottom: 15px; }
     .field label { display: block; color: var(--coffee); font-size: 13px; font-weight: 750; margin-bottom: 7px; }
     .field input {
@@ -348,22 +361,7 @@
                  autocomplete="email">
         </div>
 
-        <div class="instruction-panel">
-          <h3>Special instructions <span style="font-weight:500;color:var(--muted);font-size:12px;">(optional)</span></h3>
-          <p>Tell the kitchen how you would like your food prepared.</p>
-          <div class="instruction-chips" aria-label="Quick order instructions">
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No sugar">No sugar</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less spicy">Less spicy</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Extra spicy">Extra spicy</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No onion">No onion</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No garlic">No garlic</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less oil">Less oil</button>
-            <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No ice">No ice</button>
-          </div>
-          <label for="specialInstructions" style="display:block;margin-bottom:7px;color:var(--coffee);font-size:13px;font-weight:750;">Anything else?</label>
-          <textarea id="specialInstructions" maxlength="500" placeholder="Example: Please pack chutney separately..."></textarea>
-          <p style="margin:8px 0 0;">We’ll pass your request to the stall. Some requests may not be possible.</p>
-          </div>
+        <p class="section-hint" style="margin:12px 0;">Add special instructions separately for each dish using its “Add instructions” button.</p>
         </details>
 
 
@@ -412,6 +410,30 @@
     </section>
   </main>
 
+  <dialog id="itemInstructionDialog" class="item-instruction-dialog" aria-labelledby="itemInstructionTitle">
+    <form method="dialog" id="itemInstructionForm">
+      <div class="instruction-dialog-head">
+        <div><span class="eyebrow">OPTIONAL REQUEST</span><h2 id="itemInstructionTitle">Special instructions</h2><p id="itemInstructionItemName" class="section-hint"></p></div>
+        <button type="button" id="closeItemInstruction" class="instruction-close" aria-label="Close">×</button>
+      </div>
+      <p class="section-hint">Choose preferences for this dish, or write your own request.</p>
+      <div id="itemInstructionChips" class="instruction-chips" aria-label="Quick dish instructions">
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No sugar">No sugar</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less spicy">Less spicy</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Extra spicy">Extra spicy</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No onion">No onion</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No garlic">No garlic</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="Less oil">Less oil</button>
+        <button class="instruction-chip" type="button" aria-pressed="false" data-instruction="No ice">No ice</button>
+      </div>
+      <label for="itemInstructionText" class="instruction-text-label">Anything else for this dish?</label>
+      <textarea id="itemInstructionText" maxlength="500" placeholder="Example: Pack chutney separately..."></textarea>
+      <div class="instruction-dialog-actions">
+        <button type="button" id="clearItemInstruction" class="instruction-secondary">Clear</button>
+        <button type="button" id="saveItemInstruction" class="instruction-save">Save instructions</button>
+      </div>
+    </form>
+  </dialog>
   <button type="button" id="mobileOrderBar" class="mobile-order-bar" aria-label="Go to checkout"><span><strong id="mobileOrderCount">0 items</strong><small>View your order</small></span><strong>₹<span id="mobileOrderTotal">0.00</span>　→</strong></button>
   <footer id="pageFooter">Fresh food · Online ordering</footer><div class="customer-history-link"><a id="orderHistoryLink" href="order-history.html">My Orders</a></div>
 
@@ -441,6 +463,8 @@
     let menuItems = [];
     let menuCategories = [];
     const cartQuantities = new Map();
+    const itemInstructions = new Map();
+    let editingInstructionItemId = null;
     let activeCategory = "all";
     let menuSearchTerm = "";
 let stallOrderingPaused = false;
@@ -453,24 +477,44 @@ let stallOrderingPaused = false;
       message.className = type;
     }
 
-    const selectedOrderInstructions = new Set();
-    document.querySelectorAll("[data-instruction]").forEach(button => {
-      button.addEventListener("click", () => {
-        const instruction = button.dataset.instruction;
-        if (selectedOrderInstructions.has(instruction)) {
-          selectedOrderInstructions.delete(instruction);
-          button.setAttribute("aria-pressed", "false");
-        } else {
-          selectedOrderInstructions.add(instruction);
-          button.setAttribute("aria-pressed", "true");
-        }
-      });
+    const instructionDialog = document.getElementById("itemInstructionDialog");
+    const instructionText = document.getElementById("itemInstructionText");
+    const instructionChips = [...document.querySelectorAll("#itemInstructionChips .instruction-chip")];
+
+    function openItemInstruction(item) {
+      editingInstructionItemId = item.id;
+      document.getElementById("itemInstructionItemName").textContent = item.name;
+      const saved = itemInstructions.get(item.id) || { choices: [], text: "" };
+      instructionChips.forEach(button => button.setAttribute("aria-pressed", String(saved.choices.includes(button.dataset.instruction))));
+      instructionText.value = saved.text;
+      instructionDialog.showModal();
+    }
+
+    instructionChips.forEach(button => button.addEventListener("click", () => {
+      button.setAttribute("aria-pressed", String(button.getAttribute("aria-pressed") !== "true"));
+    }));
+    document.getElementById("closeItemInstruction").addEventListener("click", () => instructionDialog.close());
+    document.getElementById("clearItemInstruction").addEventListener("click", () => {
+      instructionChips.forEach(button => button.setAttribute("aria-pressed", "false"));
+      instructionText.value = "";
+    });
+    document.getElementById("saveItemInstruction").addEventListener("click", () => {
+      if (!editingInstructionItemId) return;
+      const choices = instructionChips.filter(button => button.getAttribute("aria-pressed") === "true").map(button => button.dataset.instruction);
+      const text = instructionText.value.trim();
+      if (choices.length || text) itemInstructions.set(editingInstructionItemId, { choices, text });
+      else itemInstructions.delete(editingInstructionItemId);
+      instructionDialog.close();
+      renderMenuItems();
     });
 
     function buildSpecialInstructions() {
-      const selected = [...selectedOrderInstructions];
-      const custom = document.getElementById("specialInstructions")?.value.trim() || "";
-      return [selected.join(", "), custom].filter(Boolean).join(". ").slice(0, 500);
+      return menuItems.map(item => {
+        const saved = itemInstructions.get(item.id);
+        if (!saved) return "";
+        const parts = [...saved.choices, saved.text].filter(Boolean);
+        return parts.length ? item.name + ": " + parts.join(", ") : "";
+      }).filter(Boolean).join("\\n").slice(0, 500);
     }
 
     function money(value) {
@@ -792,6 +836,13 @@ let stallOrderingPaused = false;
         price.className = "item-price";
         price.textContent = "₹" + money(item.price);
         details.append(price);
+
+        const instructionButton = document.createElement("button");
+        instructionButton.type = "button";
+        instructionButton.className = "item-instruction-button" + (itemInstructions.has(item.id) ? " has-instructions" : "");
+        instructionButton.textContent = itemInstructions.has(item.id) ? "✓ Instructions added · Edit" : "＋ Add instructions";
+        instructionButton.addEventListener("click", () => openItemInstruction(item));
+        details.append(instructionButton);
 
         const quantityControl = document.createElement("div");
         quantityControl.className = "quantity-control";
@@ -1146,6 +1197,7 @@ try {
 
         document.getElementById("orderForm").reset();
         cartQuantities.clear();
+        itemInstructions.clear();
         renderMenuItems();
         updateTotal();
       } catch (error) {
