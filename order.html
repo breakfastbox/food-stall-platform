@@ -555,7 +555,7 @@ let stallOrderingPaused = false;
 
     function buildUpiUri(amount) {
       const params = new URLSearchParams({ pa: stallUpiId, pn: stallUpiName || stallName, am: Number(amount).toFixed(2), cu: "INR", tn: "Food order " + stallName });
-      return "upi://pay?" + params.toString();
+      return "upi://pay?" + params.toString().replace(/\+/g, "%20");
     }
     function updateUpiPaymentPanel(amount = 0) {
       const panel = document.getElementById("upiPaymentPanel");
