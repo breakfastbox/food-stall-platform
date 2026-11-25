@@ -553,8 +553,14 @@ let stallOrderingPaused = false;
       }
     }
 
-    function buildUpiUri(amount) {
-      const params = new URLSearchParams({ pa: stallUpiId, pn: stallUpiName || stallName, am: Number(amount).toFixed(2), cu: "INR", tn: "Food order " + stallName });
+    function buildUpiUri(amount, includeNote = true) {
+      const params = new URLSearchParams({
+        pa: stallUpiId,
+        pn: stallUpiName || stallName,
+        am: Number(amount).toFixed(2),
+        cu: "INR",
+        ...(includeNote ? { tn: "Food order " + stallName } : {})
+      });
       return "upi://pay?" + params.toString().replace(/\+/g, "%20");
     }
     function updateUpiPaymentPanel(amount = 0) {
@@ -585,6 +591,9 @@ let stallOrderingPaused = false;
       document.getElementById("upiQrAmount").textContent = money(amount);
 
       const upiUri = buildUpiUri(amount);
+      // Test the app handoff without an optional transaction note. Keep
+      // the QR payload unchanged because scanning it is confirmed working.
+      const appUpiUri = buildUpiUri(amount, false);
       // Android: use an implicit UPI intent so the phone can offer any
       // installed UPI app (BHIM, Google Pay, PhonePe, Paytm, etc.).
       // Other platforms keep the standard UPI URI. The QR always stays generic.
@@ -592,7 +601,7 @@ let stallOrderingPaused = false;
       // installed UPI apps can resolve upi://pay; generic intent:// links
       // are not consistently supported by all browsers/devices.
       if (payLink) {
-        payLink.href = upiUri;
+        payLink.href = appUpiUri;
       }
       if (qrContainer) {
         qrContainer.replaceChildren();
