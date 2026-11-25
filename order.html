@@ -378,6 +378,8 @@
             <strong style="display:block;color:var(--coffee);">Pay this amount to <span id="upiPayeeName"></span></strong>
             <p style="margin:5px 0;color:var(--muted);font-size:13px;">UPI ID: <strong id="upiPayeeId"></strong></p>
             <div id="upiQrCode" style="display:flex;justify-content:center;align-items:center;min-height:190px;margin:12px auto;padding:12px;width:fit-content;max-width:100%;background:white;border:1px solid #e5e7eb;border-radius:12px;"></div>
+            <p style="margin:14px 0 6px;text-align:center;font-size:12px;color:#7c5b47;font-weight:700;">Diagnostic only: QR matching the Pay with UPI app button</p>
+            <div id="upiButtonTestQr" style="display:flex;justify-content:center;align-items:center;min-height:150px;margin:8px auto;padding:10px;width:fit-content;max-width:100%;background:white;border:1px dashed #c9b8a8;border-radius:12px;"></div>
             <p style="text-align:center;margin:6px 0 10px;font-weight:800;color:var(--green);"><span id="upiAmountPrefix">Amount: ₹</span><span id="upiQrAmount">0.00</span></p>
             <a id="upiPayLink" href="#" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#176b45;color:#fff;text-decoration:none;font-weight:800;">Pay with UPI app</a>
             <div class="field" style="margin:14px 0 0;">
@@ -612,6 +614,20 @@ let stallOrderingPaused = false;
             text: upiUri,
             width: 220,
             height: 220,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }
+      // Test-stall-only diagnostic QR uses the exact URI sent by the app button.
+      // Keep the original working QR above unchanged.
+      const buttonTestQr = document.getElementById("upiButtonTestQr");
+      if (buttonTestQr) {
+        buttonTestQr.replaceChildren();
+        if (typeof QRCode !== "undefined") {
+          new QRCode(buttonTestQr, {
+            text: appUpiUri,
+            width: 180,
+            height: 180,
             correctLevel: QRCode.CorrectLevel.M
           });
         }
