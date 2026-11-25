@@ -382,6 +382,7 @@
             <div id="upiButtonTestQr" style="display:flex;justify-content:center;align-items:center;min-height:150px;margin:8px auto;padding:10px;width:fit-content;max-width:100%;background:white;border:1px dashed #c9b8a8;border-radius:12px;"></div>
             <p style="text-align:center;margin:6px 0 10px;font-weight:800;color:var(--green);"><span id="upiAmountPrefix">Amount: ₹</span><span id="upiQrAmount">0.00</span></p>
             <a id="upiPayLink" href="#" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#176b45;color:#fff;text-decoration:none;font-weight:800;">Pay with UPI app</a>
+            <a id="upiGooglePayTestLink" href="#" style="display:block;text-align:center;margin-top:8px;padding:12px;border:1px solid #176b45;border-radius:10px;background:#fff;color:#176b45;text-decoration:none;font-weight:800;">Test Google Pay link (Mobile Test Stall)</a>
             <div class="field" style="margin:14px 0 0;">
               <label for="upiTransactionReference">UPI transaction reference / UTR (optional)</label>
               <input id="upiTransactionReference" type="text" maxlength="40" autocomplete="off" placeholder="Enter UTR if available (optional)">
@@ -604,6 +605,11 @@ let stallOrderingPaused = false;
       // are not consistently supported by all browsers/devices.
       if (payLink) {
         payLink.href = appUpiUri;
+      }
+      const googlePayTestLink = document.getElementById("upiGooglePayTestLink");
+      if (googlePayTestLink) {
+        // Google Pay's documented UPI scheme; expose only on the isolated test stall.
+        googlePayTestLink.href = appUpiUri.replace(/^upi:\/\/pay\?/, "tez://upi/pay?");
       }
       if (qrContainer) {
         qrContainer.replaceChildren();
